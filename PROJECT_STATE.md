@@ -2,7 +2,11 @@
 
 ## Current version
 
-0.2.0
+0.3.0
+
+## Accepted previous checkpoint
+
+Torben reported that the 0.2.0 GitHub Actions run was fully green. M1 is therefore accepted at CI level. A real-phone screenshot capture is still useful before later phone-specific calibration.
 
 ## Completed
 
@@ -19,29 +23,44 @@
 
 ### M1: Read-only Device Harness
 
-- separate `PogoInventory.Device` project
-- Android device abstraction with ADB and fake implementations
+- isolated `PogoInventory.Device` project
+- ADB and fake transports
 - exact-one-authorised-device selection
-- optional explicit serial selection
-- hard-coded read-only ADB operations only
-- device properties, screen size and battery parsing
-- screenshot capture and PNG validation
-- atomic snapshot output
-- SHA-256 screenshot manifest
-- command timeout and cancellation support
-- structured error codes and CLI exit codes
-- console event logging
-- fake-device CLI mode
-- parser, selection, cancellation and file-output self-tests
-- GitHub Actions build, test and fake-capture workflow
+- device, screen and battery metadata
+- validated PNG screenshot capture
+- atomic output and SHA-256 manifest
+- timeouts, cancellation, structured errors and CI coverage
+- no input-control API
+
+### M2: Generic Screen State Detector
+
+- isolated `PogoInventory.Vision` project
+- package-free PNG decoder for normal Android screenshot formats
+- decompression and dimension safety limits
+- normalised screen regions
+- Color, Grayscale and Edge fingerprints
+- Required, Optional and Forbidden anchors
+- profile validation with self-contained Base64 reference samples
+- explicit orientation, resolution and aspect-ratio checks
+- deterministic state scoring and winner-margin handling
+- `Unknown` for incomplete, conflicting or unsupported screens
+- detailed JSON evidence reports
+- CLI commands `screen-detect` and `screen-fingerprint`
+- synthetic, non-personal fixtures for all initial states
+- tests for known, incomplete, conflicting and landscape screens
+- CI commands for synthetic detection and fingerprint extraction
+
+## Important limitation
+
+The detector architecture is implemented, but the supplied profile is synthetic. It cannot yet classify real Pokémon GO screenshots. Phone-specific and layout-specific anchors must be created from real, redacted screenshots.
 
 ## Not completed
 
-- compilation in the assistant build environment
-- validation with Torben's real Android phone and installed Platform Tools
-- screen-state recognition
-- Pokémon GO screen anchors
-- popup and network-error detection
+- compilation of 0.3.0 in the assistant build environment
+- 0.3.0 GitHub Actions acceptance
+- real Pokémon GO screenshot fixture set
+- real-screen anchor calibration and false-positive testing
+- popup and network-error examples from the actual phone
 - Calcy integration
 - OCR and icon recognition
 - inventory scanning loop
@@ -50,35 +69,33 @@
 - full PvPoke / Ohbem integration
 - device-side tagging
 
-## Required user-side checkpoint
+## Required checkpoint after push
 
-After pushing version 0.2.0:
-
-1. Confirm the GitHub Actions CI run is green.
-2. Run `scripts\run-fake-device.ps1` on the Windows computer.
-3. Install Android Platform Tools.
-4. Run one real `scripts\capture-device.ps1` capture.
-5. Confirm that `screen.png` is a correct screenshot and metadata matches the phone.
-
-Do not start M2 against the real phone until these checks pass.
+1. Confirm the 0.3.0 GitHub Actions run is green.
+2. Run `scripts\detect-synthetic-screen.ps1` locally.
+3. Confirm the report selects `InventoryList`.
+4. Run `scripts\extract-synthetic-fingerprint.ps1`.
+5. Capture a small, redacted set of real Pokémon GO screens at the phone's fixed resolution.
+6. Keep those screenshots outside the public repository until they are reviewed and redacted.
 
 ## Next recommended milestone
 
-M2: Screen State Detector, read-only.
+M2b: Real-screen calibration and detector acceptance.
 
-The next package should classify screenshots into explicit states without sending input:
+Required real screenshots:
 
-- `PokemonDetails`
-- `InventoryList`
-- `AppraisalOpen`
-- `PokemonMenuOpen`
-- `TagDialogOpen`
-- `Loading`
-- `Popup`
-- `NetworkError`
-- `Unknown`
+- inventory list
+- Pokémon details
+- appraisal open
+- Pokémon menu open
+- tag dialog open
+- search open
+- loading screen if reproducible
+- ordinary popup
+- network-error popup or banner if reproducible
+- at least three visually different examples of the normal dynamic screens
 
-It must start with a generic anchor framework and recorded test fixtures. It must not add tapping or swiping.
+The next milestone must create a local private profile, select stable anchors and prove that unknown and conflicting screens fail closed. It must remain read-only.
 
 ## Design decisions preserved
 
@@ -87,6 +104,7 @@ It must start with a generic anchor framework and recorded test fixtures. It mus
 - no automatic transfer
 - no anti-detection behaviour or human imitation
 - unknown data results in REVIEW, never DELETE
-- DELETE requires an exact identity and a documented better duplicate
-- all ADB execution is isolated in `PogoInventory.Device`
-- every release includes updated project state and continuation prompt
+- DELETE requires exact identity and a documented better duplicate
+- all ADB execution remains isolated in `PogoInventory.Device`
+- vision is independent of ADB and file storage
+- every release updates project state and continuation prompt

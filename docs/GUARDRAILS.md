@@ -29,17 +29,18 @@ Do not add:
 
 Adaptive waiting is allowed only for correctness, such as waiting for a recognised screen state or stopping on timeout.
 
-## Current Device Harness is read-only
+## Current phone integration is read-only
 
-Version 0.2.0 permits only:
+Version 0.3.0 permits only:
 
 - device discovery
 - device metadata reads
 - screen-size reads
 - battery-state reads
 - screenshot capture
+- offline analysis of a PNG screenshot
 
-The public device interface must not expose taps, swipes, text input, app launches or arbitrary shell commands.
+The public device interface has no taps, swipes, text input, app launches or arbitrary shell commands. The vision project has no device-control dependency.
 
 ## Unknown is not false
 
@@ -53,13 +54,26 @@ unknown = not reliably determined
 
 Unknown critical values force REVIEW.
 
+## Unknown screen state is a hard stop
+
+A later scanner or executor must not act when:
+
+- screen state is `Unknown`
+- required anchors are missing
+- forbidden anchors are present
+- orientation or layout is unsupported
+- two states have conflicting evidence
+- confidence is below threshold
+
+False negatives are acceptable during calibration. False positive screen states are not.
+
 ## Exact identity before delete tagging
 
 A future tag executor may only apply a delete tag to an Exact match. High-confidence, ambiguous and mismatched observations must never receive a delete tag.
 
 ## Action whitelist
 
-When input control is eventually added, all actions must be named, validated operations. Arbitrary coordinates must not be exposed outside the device module.
+When input control is eventually added, all actions must be named and validated. Arbitrary coordinates must not be exposed outside the device module.
 
 Any input milestone requires:
 
@@ -71,9 +85,9 @@ Any input milestone requires:
 
 ## Fail closed
 
-The program must stop or return REVIEW when:
+The program must stop, return Unknown or return REVIEW when:
 
-- the screen state is unknown
+- screen state is unknown
 - a device is missing, unauthorised or ambiguous
 - a command times out
 - capture output is invalid
@@ -96,4 +110,4 @@ Every future tag action must record:
 
 ## Public repository data
 
-Do not commit real screenshots, device serials, inventory exports, databases or logs while the repository is public. Use ignored local data folders and review every commit before pushing.
+Do not commit real screenshots, device serials, inventory exports, databases, logs or real screen profiles while the repository is public. Use ignored local folders and review every commit before pushing.

@@ -39,7 +39,7 @@ Tag Executor
 Manual final transfer only
 ```
 
-## Implemented in 0.2.0
+## Implemented in 0.3.0
 
 ```text
 PogoInventory.Cli
@@ -48,52 +48,60 @@ PogoInventory.Cli
     |      |
     |      v
     |   PogoInventory.Core
-    |      +--> policy
-    |      +--> decision engine
-    |      +--> reports
     |
     +--> device-snapshot
+    |      |
+    |      v
+    |   PogoInventory.Device
+    |
+    +--> screen-detect
+    |      |
+    |      v
+    |   PogoInventory.Vision
+    |      +--> PNG decoder
+    |      +--> profile validation
+    |      +--> fingerprint extraction
+    |      +--> anchor evaluation
+    |      +--> state selection
+    |      +--> evidence report
+    |
+    +--> screen-fingerprint
            |
            v
-       DeviceSnapshotService
-           |
-           +--> IAndroidDeviceTransport
-           |      +--> AdbAndroidDeviceTransport
-           |      +--> FakeAndroidDeviceTransport
-           |
-           +--> device selection
-           +--> screenshot validation
-           +--> atomic file output
-           +--> SHA-256 manifest
+       anchor calibration helper
 ```
 
-## Projects
+## Project boundaries
 
 ### PogoInventory.Core
 
-Contains domain types and analysis logic. It has no dependency on Android, ADB, Calcy, OCR, UI frameworks or databases.
+Contains Pokémon observations, policy, conservative decision logic and reports. It has no dependency on Android, ADB, screen images, Calcy, OCR, databases or UI frameworks.
 
 ### PogoInventory.Device
 
 Owns all Android and ADB interaction.
 
-Public capabilities are deliberately limited to:
+Current public capabilities:
 
 - list devices
 - read metadata
 - capture a screenshot
 
-There is no input-control method in the interface.
+There is no input-control method or arbitrary shell method.
 
-The ADB implementation exposes no arbitrary shell API. Commands are assembled internally from a small read-only set:
+### PogoInventory.Vision
 
-```text
-adb devices -l
-adb -s <serial> shell getprop
-adb -s <serial> shell wm size
-adb -s <serial> shell dumpsys battery
-adb -s <serial> exec-out screencap -p
-```
+Owns screen-image parsing and classification. It has no dependency on ADB, Android, file locations or the inventory rule engine.
+
+Responsibilities:
+
+- decode supported PNG screenshots
+- validate image geometry
+- extract deterministic fingerprints from normalised regions
+- compare screen evidence against a validated profile
+- return `ScreenDetectionResult`
+
+The detector receives a `PixelImage` and a `ScreenDetectionProfile`. It does not know how the image was captured.
 
 ### PogoInventory.Cli
 
@@ -101,90 +109,145 @@ Provides:
 
 - `analyze`
 - `device-snapshot`
-
-It converts structured device failures to stable exit codes.
+- `screen-detect`
+- `screen-fingerprint`
 
 ### PogoInventory.SelfTest
 
-Runs deterministic tests without third-party test packages or a connected phone.
+Runs deterministic tests without third-party test frameworks or a connected phone.
 
-## Device snapshot flow
+## Screen detection flow
 
 ```text
-List devices
+PNG bytes
     |
     v
-Select exactly one authorised device
-    |
-    +--> zero: fail closed
-    +--> more than one: fail closed unless --serial is supplied
+Validate PNG structure and safety limits
     |
     v
-Read properties, screen and battery
+Decode to RGBA pixels
     |
     v
-Capture PNG screenshot
+Validate orientation, dimensions and aspect ratio
+    |
+    +--> invalid: Unknown with geometry reason
     |
     v
-Validate PNG signature
+For every state definition
+    |
+    +--> extract each named normalised-region fingerprint
+    +--> compare against every reference sample
+    +--> evaluate Required / Optional / Forbidden condition
+    +--> calculate deterministic score
     |
     v
-Write temporary files
+Keep eligible states above minimum score
+    |
+    +--> none: Unknown
+    +--> winner margin too small: Unknown
+    +--> one clear winner: classified state
     |
     v
-Atomically move into final paths
-    |
-    v
-Write SHA-256 manifest
+JSON evidence report
 ```
 
-## Failure model
+## Fingerprint modes
 
-Device failures use `DeviceHarnessException` and `DeviceErrorCode`.
+### Color
 
-Important categories:
+Stores average RGB values in a fixed-size grid. Best for stable colored UI controls.
 
-- ADB missing or unable to start
-- command timeout
-- command returned non-zero
-- no authorised device
-- multiple authorised devices
-- requested serial missing or unauthorised
-- invalid ADB output
-- invalid screenshot
-- file-system failure
+### Grayscale
 
-The caller must not infer success from partial output.
+Stores luminance only. Best where shape and brightness matter more than color.
+
+### Edge
+
+Stores local grayscale changes. Best for stable outlines where backgrounds vary.
+
+A future calibrated profile may combine modes across different anchors.
+
+## Anchor semantics
+
+### Required
+
+Must match its configured threshold. Failure makes the state ineligible.
+
+### Optional
+
+Contributes to the state score but does not independently reject the state.
+
+### Forbidden
+
+Must not match. A match makes the state ineligible. Forbidden anchors do not inflate the positive state score.
+
+## State selection rules
+
+The detector fails closed.
+
+A state is selected only when:
+
+- all required anchors match
+- no forbidden anchor matches
+- the weighted positive score meets `MinimumStateScore`
+- the winner exceeds the second eligible state by `MinimumWinnerMargin`
+
+Otherwise the output is `Unknown` with explicit reasons.
+
+## PNG safety boundary
+
+The internal decoder supports common Android screenshot formats:
+
+- 8-bit grayscale
+- 8-bit RGB
+- 8-bit grayscale with alpha
+- 8-bit RGBA
+- non-interlaced PNG
+- PNG filters 0 through 4
+
+It rejects:
+
+- invalid signatures or chunk lengths
+- unsupported color types or bit depths
+- interlaced images
+- dimensions above the configured hard limit
+- decompressed data beyond the exact expected size
+
+CRC validation is not implemented in 0.3.0. Structural validation, exact decompressed length and the Device Harness SHA-256 manifest provide the current integrity boundary.
+
+## Synthetic versus real profiles
+
+`data/screen-profile.synthetic.json` proves the classification framework. It contains no Pokémon GO or account data.
+
+A real profile must be generated locally from redacted screenshots. Stable anchors must avoid:
+
+- Pokémon artwork
+- Pokémon name
+- CP and HP values
+- trainer name
+- Stardust or Candy counts
+- dynamic background content
+
+Prefer stable buttons, panels, icons and dialog geometry.
 
 ## Future module boundaries
 
-### Screen State Detector
+### Real-screen calibration
 
-Must classify screenshots into explicit states and return evidence. It must not control the phone.
+Creates a private local profile and a confusion report from approved fixtures. Real images remain outside Git.
 
 ### Calcy Adapter
 
-Must remain behind an interface. Logcat, clipboard or intent integration is not a guaranteed public API and must be replaceable.
+Must remain behind an interface. Any intent, logcat or clipboard integration is replaceable and may be abandoned if unstable.
 
-### Visual Scanner
+### Observation Pipeline
 
-Must return nullable values. Failure to detect an icon is not absence.
-
-### Inventory Database
-
-Planned SQLite storage for observations, evidence, decisions, execution plans and audit logs.
+Consumes a verified screen state and scanner results. It must not proceed from `Unknown`.
 
 ### Identity Matcher
 
-Must assign one of:
-
-- Exact
-- HighConfidence
-- Ambiguous
-- Mismatch
-
-Only Exact may later receive a delete tag.
+Must assign Exact, HighConfidence, Ambiguous or Mismatch. Only Exact may later receive a delete tag.
 
 ### Tag Executor
 
-Must use a strict action whitelist and verified screen states. It must not contain code for transfer, evolve, purify, power-up, TM use, purchase, catch, battle, spin or location changes.
+Must use named actions, verified pre- and post-states, audit evidence and hard stop conditions. It must not contain transfer or gameplay functions.

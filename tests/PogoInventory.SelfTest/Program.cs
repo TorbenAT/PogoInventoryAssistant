@@ -7,6 +7,11 @@ using PogoInventory.Device.Adb;
 using PogoInventory.Device.Errors;
 using PogoInventory.Device.Models;
 using PogoInventory.Device.Transport;
+using PogoInventory.Vision.Imaging;
+using PogoInventory.Vision.Models;
+using PogoInventory.Vision.Profiles;
+using PogoInventory.Vision.Reporting;
+using PogoInventory.Vision.Errors;
 
 var tests = new (string Name, Func<Task> Run)[]
 {
@@ -26,7 +31,15 @@ var tests = new (string Name, Func<Task> Run)[]
     ("Fake snapshot writes PNG, metadata and manifest", FakeSnapshotWritesFilesAsync),
     ("Metadata serial mismatch is rejected", MetadataSerialMismatchIsRejectedAsync),
     ("Invalid screenshot is rejected", InvalidScreenshotIsRejectedAsync),
-    ("Cancelled snapshot does not write files", CancelledSnapshotDoesNotWriteFilesAsync)
+    ("Cancelled snapshot does not write files", CancelledSnapshotDoesNotWriteFilesAsync),
+    ("PNG decoder reads synthetic fixture", Sync(PngDecoderReadsSyntheticFixture)),
+    ("Known screen fixtures classify correctly", KnownScreenFixturesClassifyAsync),
+    ("Incomplete screen returns Unknown", IncompleteScreenReturnsUnknownAsync),
+    ("Conflicting screen returns Unknown", ConflictingScreenReturnsUnknownAsync),
+    ("Landscape screen fails closed", LandscapeScreenFailsClosedAsync),
+    ("Confidence thresholds are deterministic", ConfidenceThresholdsAreDeterministicAsync),
+    ("Invalid PNG is rejected", Sync(InvalidPngIsRejected)),
+    ("Screen evidence report writes JSON", ScreenEvidenceReportWritesJsonAsync)
 };
 
 var failed = 0;
@@ -363,6 +376,191 @@ static async Task CancelledSnapshotDoesNotWriteFilesAsync()
     {
         DeleteDirectory(directory);
     }
+}
+
+
+static void PngDecoderReadsSyntheticFixture()
+{
+    var image = LoadFixture("InventoryList.png");
+    AssertEqual(180, image.Width, "fixture width");
+    AssertEqual(360, image.Height, "fixture height");
+
+    var region = new NormalizedRegion
+    {
+        X = 0.05,
+        Y = 0.70,
+        Width = 0.25,
+        Height = 0.20
+    };
+    var fingerprint = FingerprintExtractor.Extract(
+        image,
+        region,
+        FingerprintMode.Color,
+        8,
+        8);
+    AssertEqual(8 * 8 * 3, fingerprint.Length, "color fingerprint length");
+    AssertEqual(1d, FingerprintComparer.Similarity(fingerprint, fingerprint), "self similarity");
+}
+
+static async Task KnownScreenFixturesClassifyAsync()
+{
+    var profile = await LoadSyntheticProfileAsync();
+    var detector = new ScreenStateDetector();
+    var fixtures = new Dictionary<string, ScreenState>(StringComparer.Ordinal)
+    {
+        ["InventoryList.png"] = ScreenState.InventoryList,
+        ["PokemonDetails.png"] = ScreenState.PokemonDetails,
+        ["AppraisalOpen.png"] = ScreenState.AppraisalOpen,
+        ["PokemonMenuOpen.png"] = ScreenState.PokemonMenuOpen,
+        ["TagDialogOpen.png"] = ScreenState.TagDialogOpen,
+        ["SearchOpen.png"] = ScreenState.SearchOpen,
+        ["Loading.png"] = ScreenState.Loading,
+        ["Popup.png"] = ScreenState.Popup,
+        ["NetworkError.png"] = ScreenState.NetworkError
+    };
+
+    foreach (var fixture in fixtures)
+    {
+        var result = detector.Detect(
+            LoadFixture(fixture.Key),
+            profile,
+            new DateTimeOffset(2026, 7, 13, 21, 0, 0, TimeSpan.Zero));
+        AssertEqual(fixture.Value, result.State, $"state for {fixture.Key}");
+        AssertTrue(result.Confidence >= 0.99, $"confidence for {fixture.Key}");
+    }
+}
+
+static async Task IncompleteScreenReturnsUnknownAsync()
+{
+    var result = new ScreenStateDetector().Detect(
+        LoadFixture("Incomplete.png"),
+        await LoadSyntheticProfileAsync());
+
+    AssertEqual(ScreenState.Unknown, result.State, "incomplete screen state");
+    AssertTrue(
+        result.Reasons.Contains("NoStatePassedRequiredAnchorsAndMinimumScore"),
+        "incomplete screen reason");
+}
+
+static async Task ConflictingScreenReturnsUnknownAsync()
+{
+    var result = new ScreenStateDetector().Detect(
+        LoadFixture("Conflict.png"),
+        await LoadSyntheticProfileAsync());
+
+    AssertEqual(ScreenState.Unknown, result.State, "conflicting screen state");
+    AssertTrue(
+        result.Reasons.Contains("ConflictingStateEvidence"),
+        "conflicting screen reason");
+    AssertTrue(
+        result.States.Count(x => x.Eligible && x.Score >= 0.96) >= 2,
+        "conflicting eligible state count");
+}
+
+static async Task LandscapeScreenFailsClosedAsync()
+{
+    var result = new ScreenStateDetector().Detect(
+        LoadFixture("Landscape.png"),
+        await LoadSyntheticProfileAsync());
+
+    AssertEqual(ScreenState.Unknown, result.State, "landscape screen state");
+    AssertEqual(ScreenOrientation.Landscape, result.Orientation, "landscape orientation");
+    AssertTrue(
+        result.Reasons.Any(x => x.StartsWith("UnsupportedOrientation:", StringComparison.Ordinal)),
+        "landscape reason");
+    AssertEqual(0, result.States.Count, "landscape evidence state count");
+}
+
+static async Task ConfidenceThresholdsAreDeterministicAsync()
+{
+    var profile = await LoadSyntheticProfileAsync();
+    var image = LoadFixture("InventoryListNoisy.png");
+    var detector = new ScreenStateDetector();
+
+    var first = detector.Detect(image, profile);
+    var second = detector.Detect(image, profile);
+
+    AssertEqual(ScreenState.InventoryList, first.State, "noisy fixture state");
+    AssertEqual(first.State, second.State, "repeated state");
+    AssertEqual(first.Confidence, second.Confidence, "repeated confidence");
+    AssertTrue(first.Confidence < 1d, "noisy confidence should be below one");
+    AssertTrue(first.Confidence > profile.MinimumStateScore, "noisy confidence should pass base threshold");
+
+    var stricter = profile with
+    {
+        MinimumStateScore = first.Confidence + 0.000001
+    };
+    var rejected = detector.Detect(image, stricter);
+    AssertEqual(ScreenState.Unknown, rejected.State, "strict threshold state");
+    AssertTrue(
+        rejected.Reasons.Contains("NoStatePassedRequiredAnchorsAndMinimumScore"),
+        "strict threshold reason");
+}
+
+
+static void InvalidPngIsRejected()
+{
+    try
+    {
+        _ = PngDecoder.Decode(new byte[] { 1, 2, 3, 4 });
+        throw new InvalidOperationException("Expected invalid PNG rejection.");
+    }
+    catch (ScreenVisionException exception) when (exception.Code == VisionErrorCode.InvalidPng)
+    {
+    }
+}
+
+static async Task ScreenEvidenceReportWritesJsonAsync()
+{
+    var directory = CreateTemporaryDirectory();
+    try
+    {
+        var result = new ScreenStateDetector().Detect(
+            LoadFixture("InventoryList.png"),
+            await LoadSyntheticProfileAsync(),
+            new DateTimeOffset(2026, 7, 13, 21, 30, 0, TimeSpan.Zero));
+        var path = Path.Combine(directory, "evidence.json");
+
+        await ScreenDetectionReportWriter.WriteAsync(result, path);
+
+        AssertTrue(File.Exists(path), "screen evidence report should exist");
+        using var json = JsonDocument.Parse(await File.ReadAllTextAsync(path));
+        AssertEqual("InventoryList", json.RootElement.GetProperty("state").GetString(), "reported state");
+        AssertTrue(
+            json.RootElement.GetProperty("states").GetArrayLength() >= 9,
+            "reported state evidence count");
+    }
+    finally
+    {
+        DeleteDirectory(directory);
+    }
+}
+
+static PixelImage LoadFixture(string name)
+{
+    var path = RepositoryPath("data", "screen-fixtures", name);
+    return PngDecoder.Decode(File.ReadAllBytes(path));
+}
+
+static Task<ScreenDetectionProfile> LoadSyntheticProfileAsync() =>
+    ScreenProfileLoader.LoadAsync(
+        RepositoryPath("data", "screen-profile.synthetic.json"));
+
+static string RepositoryPath(params string[] parts)
+{
+    var directory = new DirectoryInfo(Directory.GetCurrentDirectory());
+    while (directory is not null &&
+           !File.Exists(Path.Combine(directory.FullName, "PogoInventoryAssistant.sln")))
+    {
+        directory = directory.Parent;
+    }
+
+    if (directory is null)
+    {
+        throw new InvalidOperationException("Repository root could not be located.");
+    }
+
+    return parts.Aggregate(directory.FullName, Path.Combine);
 }
 
 static async Task RunSnapshotAsync(IReadOnlyList<AndroidDeviceDescriptor> devices)

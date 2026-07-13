@@ -1,0 +1,382 @@
+{
+  "schemaVersion": "1.0",
+  "name": "Synthetic safe test profile",
+  "requiredOrientation": "Portrait",
+  "minimumWidth": 160,
+  "minimumHeight": 320,
+  "minimumAspectRatio": 0.45,
+  "maximumAspectRatio": 0.55,
+  "minimumStateScore": 0.96,
+  "minimumWinnerMargin": 0.02,
+  "states": [
+    {
+      "state": "InventoryList",
+      "anchors": [
+        {
+          "name": "inventory-grid",
+          "region": {
+            "x": 0.05,
+            "y": 0.7,
+            "width": 0.25,
+            "height": 0.2
+          },
+          "mode": "Color",
+          "expectation": "Required",
+          "fingerprintWidth": 8,
+          "fingerprintHeight": 8,
+          "matchThreshold": 0.98,
+          "weight": 1.0,
+          "samplesBase64": [
+            "W6Gsqs/Vqs/VfLS9fLS9qs/Vqs/VW6Gsf7a/6/X36/X3rdHXrdHX6/X36/X3f7a/WJ+qqs/Vqs/VebK7ebK7qs/Vqs/VWJ+qf7a/6/X36/X3rdHXrdHX6/X36/X3f7a/e7S96/X36/X3qs/Vqs/V6/X36/X3e7S9WJ+qqs/Vqs/VebK7ebK7qs/Vqs/VWJ+qf7a/6/X36/X3rdHXrdHX6/X36/X3f7a/UJumlcPKlcPKbau1bau1lcPKlcPKUJum"
+          ]
+        },
+        {
+          "name": "network-banner-not-present",
+          "region": {
+            "x": 0.05,
+            "y": 0.18,
+            "width": 0.9,
+            "height": 0.1
+          },
+          "mode": "Color",
+          "expectation": "Forbidden",
+          "fingerprintWidth": 8,
+          "fingerprintHeight": 8,
+          "matchThreshold": 0.98,
+          "weight": 0.2,
+          "samplesBase64": [
+            "wyowwyowwyowwyowwyowwyowwyowwyowxjQ0yT9E12pu12pu12pu12pu12pu0FRZ1WZG0FRW552g552g552g552g552g23d64pBW2XFk66qs66qs66qs66qs66qs3X+DyT03z1FS4YqN4YqN4YqN4YqN4YqN12puwyowz1BV552g552g552g552g552g23d6wyow0FRZ66qs66qs66qs66qs66qs3X+DwyowxzY8z1BVz1BVz1BVz1BVz1BVy0NI"
+          ]
+        }
+      ]
+    },
+    {
+      "state": "PokemonDetails",
+      "anchors": [
+        {
+          "name": "details-cp",
+          "region": {
+            "x": 0.35,
+            "y": 0.05,
+            "width": 0.3,
+            "height": 0.15
+          },
+          "mode": "Color",
+          "expectation": "Required",
+          "fingerprintWidth": 8,
+          "fingerprintHeight": 8,
+          "matchThreshold": 0.98,
+          "weight": 1.0,
+          "samplesBase64": [
+            "QEpYQEpYU1xol5yjl5yjU1xoQEpYQEpYQEpYVl9roqetr6V0r6V0oqetVl9rQEpYQEpYl5ykTldkbGxWbGxWTldkl5ykQEpYVl5rmp+mQEpYQEpYQEpYQEpYmp+mVl5rTldkWWJuQEpYQEpYQEpYQEpYWWJuTldkQEpYQEpYQEpYQEpYQEpYQEpYQEpYQEpYQEpYUmVzWG58WG58WG58WG58UmVzQEpYQEpYSllnTV5tTV5tTV5tTV5tSllnQEpY"
+          ]
+        },
+        {
+          "name": "network-banner-not-present",
+          "region": {
+            "x": 0.05,
+            "y": 0.18,
+            "width": 0.9,
+            "height": 0.1
+          },
+          "mode": "Color",
+          "expectation": "Forbidden",
+          "fingerprintWidth": 8,
+          "fingerprintHeight": 8,
+          "matchThreshold": 0.98,
+          "weight": 0.2,
+          "samplesBase64": [
+            "wyowwyowwyowwyowwyowwyowwyowwyowxjQ0yT9E12pu12pu12pu12pu12pu0FRZ1WZG0FRW552g552g552g552g552g23d64pBW2XFk66qs66qs66qs66qs66qs3X+DyT03z1FS4YqN4YqN4YqN4YqN4YqN12puwyowz1BV552g552g552g552g552g23d6wyow0FRZ66qs66qs66qs66qs66qs3X+DwyowxzY8z1BVz1BVz1BVz1BVz1BVy0NI"
+          ]
+        }
+      ]
+    },
+    {
+      "state": "AppraisalOpen",
+      "anchors": [
+        {
+          "name": "appraisal-bars",
+          "region": {
+            "x": 0.35,
+            "y": 0.75,
+            "width": 0.3,
+            "height": 0.18
+          },
+          "mode": "Color",
+          "expectation": "Required",
+          "fingerprintWidth": 8,
+          "fingerprintHeight": 8,
+          "matchThreshold": 0.98,
+          "weight": 1.0,
+          "samplesBase64": [
+            "8eXW79jI79jI4trN4dvO4dvO4dvO7ebY67uq3EYw3EYwallaWlxgWlxgWlxgxsK48eHQ7sq17sq14sy62My90MvA0MvA6OHU8Meq624t624t624tomVGWlxgWlxgxsK48uTQ8tS18tS18tS16tO339G70MvA6OHU9NWq+qAt+qAt+qAt+qAt5pczWlxgxsK48ujW8uLI8uLI8uLI8uLI8OHJ4dvO7ebY8uvc8uvc8uvc8uvc8uvc8uvc8uvc8uvc"
+          ]
+        },
+        {
+          "name": "network-banner-not-present",
+          "region": {
+            "x": 0.05,
+            "y": 0.18,
+            "width": 0.9,
+            "height": 0.1
+          },
+          "mode": "Color",
+          "expectation": "Forbidden",
+          "fingerprintWidth": 8,
+          "fingerprintHeight": 8,
+          "matchThreshold": 0.98,
+          "weight": 0.2,
+          "samplesBase64": [
+            "wyowwyowwyowwyowwyowwyowwyowwyowxjQ0yT9E12pu12pu12pu12pu12pu0FRZ1WZG0FRW552g552g552g552g552g23d64pBW2XFk66qs66qs66qs66qs66qs3X+DyT03z1FS4YqN4YqN4YqN4YqN4YqN12puwyowz1BV552g552g552g552g552g23d6wyow0FRZ66qs66qs66qs66qs66qs3X+DwyowxzY8z1BVz1BVz1BVz1BVz1BVy0NI"
+          ]
+        }
+      ]
+    },
+    {
+      "state": "PokemonMenuOpen",
+      "anchors": [
+        {
+          "name": "menu-panel",
+          "region": {
+            "x": 0.72,
+            "y": 0.3,
+            "width": 0.23,
+            "height": 0.4
+          },
+          "mode": "Color",
+          "expectation": "Required",
+          "fingerprintWidth": 8,
+          "fingerprintHeight": 8,
+          "matchThreshold": 0.98,
+          "weight": 1.0,
+          "samplesBase64": [
+            "NDc8R0pOR0pOLzM4RElORElOPUFHNDc8LzI3DxIXDxIXDxIXDxIXDxIXDxIXLzI3LzI3PD9DPD9DJCgtOj5EOj5EMjc8LzI3LzI3DxIXDxIXDxIXDxIXDxIXDxIXLzI3LzI3PD9DPD9DJCgtOj5EOj5EMjc8LzI3LzI3MjQ5MjQ5ICMpMTU7MTU7Ky81LzI3LzI3GRwhGRwhExYbFxogFxogFhkeLzI3NDc8GRwhGRwhGRwhGRwhGRwhGRwhNDc8"
+          ]
+        },
+        {
+          "name": "network-banner-not-present",
+          "region": {
+            "x": 0.05,
+            "y": 0.18,
+            "width": 0.9,
+            "height": 0.1
+          },
+          "mode": "Color",
+          "expectation": "Forbidden",
+          "fingerprintWidth": 8,
+          "fingerprintHeight": 8,
+          "matchThreshold": 0.98,
+          "weight": 0.2,
+          "samplesBase64": [
+            "wyowwyowwyowwyowwyowwyowwyowwyowxjQ0yT9E12pu12pu12pu12pu12pu0FRZ1WZG0FRW552g552g552g552g552g23d64pBW2XFk66qs66qs66qs66qs66qs3X+DyT03z1FS4YqN4YqN4YqN4YqN4YqN12puwyowz1BV552g552g552g552g552g23d6wyow0FRZ66qs66qs66qs66qs66qs3X+DwyowxzY8z1BVz1BVz1BVz1BVz1BVy0NI"
+          ]
+        }
+      ]
+    },
+    {
+      "state": "TagDialogOpen",
+      "anchors": [
+        {
+          "name": "tag-dialog",
+          "region": {
+            "x": 0.35,
+            "y": 0.35,
+            "width": 0.3,
+            "height": 0.3
+          },
+          "mode": "Color",
+          "expectation": "Required",
+          "fingerprintWidth": 8,
+          "fingerprintHeight": 8,
+          "matchThreshold": 0.98,
+          "weight": 1.0,
+          "samplesBase64": [
+            "h2ygglqkglqkglqkglqkglqkglqkh2yglHCyuqHO4NHr4NHr4NHr4NHruqHOlHCylHCyjmqto4W9o4W9o4W9o4W9jmqtlHCylHCyp4nAwKnTwKnTwKnTwKnTp4nAlHCylHCyrZHEyLPZyLPZyLPZyLPZrZHElHCylHCyhF2lkm+wkm+wkm+wkm+whF2llHCylHCycESWcESWcESWcESWcESWcESWlHCyh2ygglqkglqkglqkglqkglqkglqkh2yg"
+          ]
+        },
+        {
+          "name": "network-banner-not-present",
+          "region": {
+            "x": 0.05,
+            "y": 0.18,
+            "width": 0.9,
+            "height": 0.1
+          },
+          "mode": "Color",
+          "expectation": "Forbidden",
+          "fingerprintWidth": 8,
+          "fingerprintHeight": 8,
+          "matchThreshold": 0.98,
+          "weight": 0.2,
+          "samplesBase64": [
+            "wyowwyowwyowwyowwyowwyowwyowwyowxjQ0yT9E12pu12pu12pu12pu12pu0FRZ1WZG0FRW552g552g552g552g552g23d64pBW2XFk66qs66qs66qs66qs66qs3X+DyT03z1FS4YqN4YqN4YqN4YqN4YqN12puwyowz1BV552g552g552g552g552g23d6wyow0FRZ66qs66qs66qs66qs66qs3X+DwyowxzY8z1BVz1BVz1BVz1BVz1BVy0NI"
+          ]
+        }
+      ]
+    },
+    {
+      "state": "SearchOpen",
+      "anchors": [
+        {
+          "name": "search-field",
+          "region": {
+            "x": 0.05,
+            "y": 0.05,
+            "width": 0.25,
+            "height": 0.12
+          },
+          "mode": "Color",
+          "expectation": "Required",
+          "fingerprintWidth": 8,
+          "fingerprintHeight": 8,
+          "matchThreshold": 0.98,
+          "weight": 1.0,
+          "samplesBase64": [
+            "bnR6v8TIv8TIv8TIv8TIv8TIv8TIbnR6v8TI3N/itbq+3N/i8vT28vT28vT2v8TIv8TIvsLG8vT2vsLG8vT2s7rAr7a8v8TIv8TI09fatbq+pKmu7e/y8vT28vT2v8TIv8TI8vT28vT25efqy87S8vT28vT2v8TIv8TI8vT28vT28vT28vT28vT28vT2v8TIv8TI8vT28vT28vT28vT28vT28vT2v8TIcHZ9v8TIv8TIv8TIv8TIv8TIv8TIcHZ9"
+          ]
+        },
+        {
+          "name": "network-banner-not-present",
+          "region": {
+            "x": 0.05,
+            "y": 0.18,
+            "width": 0.9,
+            "height": 0.1
+          },
+          "mode": "Color",
+          "expectation": "Forbidden",
+          "fingerprintWidth": 8,
+          "fingerprintHeight": 8,
+          "matchThreshold": 0.98,
+          "weight": 0.2,
+          "samplesBase64": [
+            "wyowwyowwyowwyowwyowwyowwyowwyowxjQ0yT9E12pu12pu12pu12pu12pu0FRZ1WZG0FRW552g552g552g552g552g23d64pBW2XFk66qs66qs66qs66qs66qs3X+DyT03z1FS4YqN4YqN4YqN4YqN4YqN12puwyowz1BV552g552g552g552g552g23d6wyow0FRZ66qs66qs66qs66qs66qs3X+DwyowxzY8z1BVz1BVz1BVz1BVz1BVy0NI"
+          ]
+        }
+      ]
+    },
+    {
+      "state": "Loading",
+      "anchors": [
+        {
+          "name": "loading-spinner",
+          "region": {
+            "x": 0.05,
+            "y": 0.35,
+            "width": 0.25,
+            "height": 0.3
+          },
+          "mode": "Color",
+          "expectation": "Required",
+          "fingerprintWidth": 8,
+          "fingerprintHeight": 8,
+          "matchThreshold": 0.98,
+          "weight": 1.0,
+          "samplesBase64": [
+            "ICQqICQqICQqICQqICQqICQqICQqICQqICQqICQqICQqICQqICQqICQqICQqICQqICQqICQqJSowIiYtICQrISUsICQqICQqJywyMzlALjU8JiwzISYsKC00XF9jODtBJywyNjxDVFtiOkBGRUlPbHB1YWRoODtBICQqICQqMzg/KS0zLDA2Oz9FICQqICQqICQqICQqICQqICQqICQqICQqICQqICQqICQqICQqICQqICQqICQqICQqICQqICQq"
+          ]
+        },
+        {
+          "name": "network-banner-not-present",
+          "region": {
+            "x": 0.05,
+            "y": 0.18,
+            "width": 0.9,
+            "height": 0.1
+          },
+          "mode": "Color",
+          "expectation": "Forbidden",
+          "fingerprintWidth": 8,
+          "fingerprintHeight": 8,
+          "matchThreshold": 0.98,
+          "weight": 0.2,
+          "samplesBase64": [
+            "wyowwyowwyowwyowwyowwyowwyowwyowxjQ0yT9E12pu12pu12pu12pu12pu0FRZ1WZG0FRW552g552g552g552g552g23d64pBW2XFk66qs66qs66qs66qs66qs3X+DyT03z1FS4YqN4YqN4YqN4YqN4YqN12puwyowz1BV552g552g552g552g552g23d6wyow0FRZ66qs66qs66qs66qs66qs3X+DwyowxzY8z1BVz1BVz1BVz1BVz1BVy0NI"
+          ]
+        }
+      ]
+    },
+    {
+      "state": "Popup",
+      "anchors": [
+        {
+          "name": "popup-card",
+          "region": {
+            "x": 0.5,
+            "y": 0.35,
+            "width": 0.2,
+            "height": 0.25
+          },
+          "mode": "Color",
+          "expectation": "Required",
+          "fingerprintWidth": 8,
+          "fingerprintHeight": 8,
+          "matchThreshold": 0.98,
+          "weight": 1.0,
+          "samplesBase64": [
+            "vsDA4eHez9HPz9HPz9HPz9HP4eHevsC/4eLg19jVrK6urK6urK6urK6u19jV4eLg4eLg5ufj0NLR0NLR0NLR7e7p9fXw4eLg4eLg9fXw9fXw9fXw9fXw9fXw9fXw4eLg4eLg9fXw9fXw9fXw9fXw9fXw9fXw4eLg4eLg9fXw9fXw9fXw9fXw9fXw9fXw4eLg4eLg9fXwdsbLZsDGZsDGdsbL9fXw4eLgvsDA7O3prdXXndDSndDSrdXX7O3pvsC/"
+          ]
+        },
+        {
+          "name": "network-banner-not-present",
+          "region": {
+            "x": 0.05,
+            "y": 0.18,
+            "width": 0.9,
+            "height": 0.1
+          },
+          "mode": "Color",
+          "expectation": "Forbidden",
+          "fingerprintWidth": 8,
+          "fingerprintHeight": 8,
+          "matchThreshold": 0.98,
+          "weight": 0.2,
+          "samplesBase64": [
+            "wyowwyowwyowwyowwyowwyowwyowwyowxjQ0yT9E12pu12pu12pu12pu12pu0FRZ1WZG0FRW552g552g552g552g552g23d64pBW2XFk66qs66qs66qs66qs66qs3X+DyT03z1FS4YqN4YqN4YqN4YqN4YqN12puwyowz1BV552g552g552g552g552g23d6wyow0FRZ66qs66qs66qs66qs66qs3X+DwyowxzY8z1BVz1BVz1BVz1BVz1BVy0NI"
+          ]
+        }
+      ]
+    },
+    {
+      "state": "NetworkError",
+      "anchors": [
+        {
+          "name": "network-banner",
+          "region": {
+            "x": 0.05,
+            "y": 0.18,
+            "width": 0.9,
+            "height": 0.1
+          },
+          "mode": "Color",
+          "expectation": "Required",
+          "fingerprintWidth": 8,
+          "fingerprintHeight": 8,
+          "matchThreshold": 0.98,
+          "weight": 1.0,
+          "samplesBase64": [
+            "wyowwyowwyowwyowwyowwyowwyowwyowxjQ0yT9E12pu12pu12pu12pu12pu0FRZ1WZG0FRW552g552g552g552g552g23d64pBW2XFk66qs66qs66qs66qs66qs3X+DyT03z1FS4YqN4YqN4YqN4YqN4YqN12puwyowz1BV552g552g552g552g552g23d6wyow0FRZ66qs66qs66qs66qs66qs3X+DwyowxzY8z1BVz1BVz1BVz1BVz1BVy0NI"
+          ]
+        },
+        {
+          "name": "popup-card-not-present",
+          "region": {
+            "x": 0.5,
+            "y": 0.35,
+            "width": 0.2,
+            "height": 0.25
+          },
+          "mode": "Color",
+          "expectation": "Forbidden",
+          "fingerprintWidth": 8,
+          "fingerprintHeight": 8,
+          "matchThreshold": 0.98,
+          "weight": 0.2,
+          "samplesBase64": [
+            "vsDA4eHez9HPz9HPz9HPz9HP4eHevsC/4eLg19jVrK6urK6urK6urK6u19jV4eLg4eLg5ufj0NLR0NLR0NLR7e7p9fXw4eLg4eLg9fXw9fXw9fXw9fXw9fXw9fXw4eLg4eLg9fXw9fXw9fXw9fXw9fXw9fXw4eLg4eLg9fXw9fXw9fXw9fXw9fXw9fXw4eLg4eLg9fXwdsbLZsDGZsDGdsbL9fXw4eLgvsDA7O3prdXXndDSndDSrdXX7O3pvsC/"
+          ]
+        }
+      ]
+    }
+  ]
+}

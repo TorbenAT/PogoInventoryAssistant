@@ -1,5 +1,23 @@
 # Changelog
 
+## 0.3.0
+
+- Added the isolated `PogoInventory.Vision` project.
+- Added a package-free PNG decoder for 8-bit non-interlaced grayscale, RGB, grayscale-alpha and RGBA images.
+- Added bounded PNG decompression, dimension limits and structured vision errors.
+- Added normalised screen regions and deterministic Color, Grayscale and Edge fingerprints.
+- Added Required, Optional and Forbidden screen anchors.
+- Added self-contained JSON screen profiles with Base64 reference fingerprints.
+- Added explicit orientation, minimum resolution and aspect-ratio validation.
+- Added deterministic state scoring, confidence thresholds and winner-margin conflict handling.
+- Added detailed per-state and per-anchor evidence models.
+- Added `screen-detect` and `screen-fingerprint` CLI commands.
+- Added synthetic fixtures for InventoryList, PokemonDetails, AppraisalOpen, PokemonMenuOpen, TagDialogOpen, SearchOpen, Loading, Popup and NetworkError.
+- Added incomplete, conflicting, noisy and landscape fixtures for fail-closed tests.
+- Added self-tests for PNG decoding, known states, Unknown handling, orientation and threshold determinism.
+- Extended CI with synthetic screen detection and fingerprint extraction.
+- Added Screen State Detector documentation and updated project handoff files.
+
 ## 0.2.0
 
 - Added the isolated `PogoInventory.Device` project.

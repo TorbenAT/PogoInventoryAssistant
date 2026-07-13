@@ -2,17 +2,25 @@
 
 ## Version
 
-0.2.0
+0.3.0
+
+## Previous accepted result
+
+Torben reported that the 0.2.0 GitHub Actions workflow was fully green.
 
 ## Performed in the assistant build environment
 
-- All repository JSON files were parsed successfully.
-- The solution and project references were inspected for consistency.
-- The Device Harness exposes only list, metadata and screenshot operations.
-- The ADB implementation contains only the documented read-only commands.
-- The fake PNG fixture has a valid PNG signature and valid chunk CRC values.
-- C# source delimiters were checked for balanced parentheses, brackets and braces.
-- PowerShell and YAML files were reviewed structurally.
+- Expanded the complete 0.2.0 repository and applied the 0.3.0 changes.
+- Parsed all 57 C# source files with a C# syntax parser.
+- Result: zero syntax-tree errors or missing syntax nodes.
+- Parsed the synthetic screen profile as JSON.
+- Opened and verified all nine known-state PNG fixtures with an independent image library.
+- Confirmed all known-state fixtures are 180 x 360 portrait images.
+- Independently checked the synthetic profile fingerprints and fixture geometry.
+- Verified that the clean InventoryList fixture has exact similarity 1.0.
+- Verified that the noisy InventoryList fixture remains above the configured threshold but below 1.0.
+- Verified that the Conflict fixture contains two exact required anchors.
+- Reviewed solution, project references, scripts and CI structure.
 - No Android device, ADB command, Pokémon GO account or external game service was accessed.
 
 ## Not performed in the assistant build environment
@@ -24,46 +32,52 @@ The environment did not contain:
 - ADB
 - an Android phone
 
-The solution was therefore not compiled or executed here.
+The 0.3.0 solution was therefore not compiled or executed here. The first authoritative compilation and runtime result is the GitHub Actions run after push.
 
 ## Automated validation added
 
-GitHub Actions now performs on each push and on pull requests:
+GitHub Actions performs:
 
 1. .NET 8 restore
-2. Release build with warnings treated as errors by the projects
+2. Release build
 3. package-free self-tests
 4. inventory analysis demo
-5. fake device snapshot
-6. upload of generated validation output
+5. fake Android snapshot
+6. synthetic InventoryList screen detection
+7. synthetic anchor fingerprint extraction
+8. upload of generated validation output
 
-The GitHub Actions result is the first authoritative compilation result for this release.
+Self-tests cover:
+
+- all existing inventory and Device Harness tests
+- PNG decoding and dimensions
+- all nine known screen states
+- incomplete screen returns Unknown
+- conflicting screen returns Unknown
+- landscape screen fails closed
+- confidence and threshold behaviour are deterministic
 
 ## Required acceptance sequence
 
-On the Windows computer:
+After pushing 0.3.0:
 
 ```powershell
 .\scripts\build.ps1
 .\scripts\test.ps1
 .\scripts\run-demo.ps1
 .\scripts\run-fake-device.ps1
-```
-
-Then perform one real read-only capture:
-
-```powershell
-.\scripts\capture-device.ps1 `
-  -AdbPath "C:\Android\platform-tools\adb.exe"
+.\scripts\detect-synthetic-screen.ps1
+.\scripts\extract-synthetic-fingerprint.ps1
 ```
 
 Acceptance requires:
 
-- CI is green
+- GitHub Actions is green
 - all self-tests pass
-- fake output contains PNG and two JSON files
-- real `screen.png` is visually correct
-- metadata matches the intended phone
-- no phone state was changed
+- synthetic screen report selects `InventoryList`
+- synthetic fingerprint output is valid JSON
+- no phone state is changed
 
-Any build, test or capture failure must be fixed before M2 begins.
+## Real-screen limitation
+
+The bundled profile is deliberately synthetic and must not be presented as a working Pokémon GO detector. Real-screen acceptance requires a private redacted fixture set and a calibrated local profile in the next milestone.

@@ -16,3 +16,7 @@ private/
 *.sqlite
 *.sqlite3
 *.log
+
+# Real screen calibration stays local while the repository is public.
+data/screen-profile.local.json
+data/screen-fixtures-real/

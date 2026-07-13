@@ -1,14 +1,14 @@
 # Pogo Inventory Assistant
 
-Version 0.2.0
+Version 0.3.0
 
 Pogo Inventory Assistant is being built as a conservative, local inventory and decision assistant for Pokémon GO. The final transfer remains manual.
 
-Version 0.2.0 completes the first isolated Android milestone: a read-only Device Harness.
+Version 0.3.0 adds a read-only Screen State Detector. It analyses PNG screenshots and returns a state plus a full evidence report. It does not control the phone.
 
 ## What works now
 
-### Inventory analysis from 0.1.0
+### Inventory analysis
 
 - domain model for scanned Pokémon
 - configurable decision policy
@@ -17,30 +17,52 @@ Version 0.2.0 completes the first isolated Android milestone: a read-only Device
 - preliminary PvP preservation heuristic
 - JSON and Markdown decision reports
 
-### Read-only Android Device Harness in 0.2.0
+### Read-only Android Device Harness
 
 - discovers Android devices through ADB
 - requires exactly one authorised device unless `--serial` is supplied
-- reads manufacturer, model, Android version, API level and build fingerprint
-- reads physical and overridden screen size
-- reads battery percentage, power state and temperature where Android exposes them
-- captures one PNG screenshot through `adb exec-out screencap -p`
-- validates the PNG signature
-- writes metadata and a SHA-256 capture manifest
-- supports command timeouts and cancellation
-- uses structured error codes and explicit logging
-- includes a fake Android transport for tests and development without a phone
+- reads device, screen and battery metadata
+- captures a validated PNG screenshot
+- writes a SHA-256 capture manifest
+- supports timeouts, cancellation and a fake Android transport
 
-The Device Harness contains no methods for taps, swipes, text input, tags or other device changes.
+### Read-only Screen State Detector
+
+- decodes 8-bit, non-interlaced PNG screenshots without a third-party image package
+- validates orientation, dimensions and aspect ratio
+- uses named anchors in normalised screen regions
+- supports Color, Grayscale and Edge fingerprints
+- supports Required, Optional and Forbidden anchors
+- returns confidence, per-state scores and per-anchor evidence
+- fails closed to `Unknown` on incomplete, conflicting or unsupported screens
+- writes a deterministic JSON evidence report
+- includes synthetic fixtures for all initial states
+
+Initial states:
+
+```text
+InventoryList
+PokemonDetails
+AppraisalOpen
+PokemonMenuOpen
+TagDialogOpen
+SearchOpen
+Loading
+Popup
+NetworkError
+Unknown
+```
+
+The included profile is synthetic test data. It does not yet recognise the real Pokémon GO interface. Real anchors must be calibrated from redacted screenshots captured on Torben's Android phone.
 
 ## Requirements
 
 - Windows 10 or 11
 - Visual Studio 2022 or .NET 8 SDK
-- Android Platform Tools for a real phone capture
+- Android Platform Tools for real phone screenshots
 - USB debugging enabled on the Android phone
 
-## First validation
+## Validate the repository
 
 From PowerShell in the repository folder:
 
@@ -49,78 +71,90 @@ From PowerShell in the repository folder:
 .\scripts\test.ps1
 .\scripts\run-demo.ps1
 .\scripts\run-fake-device.ps1
+.\scripts\detect-synthetic-screen.ps1
+.\scripts\extract-synthetic-fingerprint.ps1
 ```
 
-The fake-device command needs no Android phone and writes:
+## Detect a screen from a PNG
+
+```powershell
+dotnet run --project .\src\PogoInventory.Cli -- screen-detect `
+  --image .\data\screen-fixtures\InventoryList.png `
+  --profile .\data\screen-profile.synthetic.json `
+  --out .\out\screen-detection\inventory-list.json
+```
+
+Expected state:
 
 ```text
-out\fake-device\screen.png
-out\fake-device\device-metadata.json
-out\fake-device\device-snapshot.json
+InventoryList
 ```
+
+The JSON report contains:
+
+- selected state
+- confidence
+- image dimensions, orientation and aspect ratio
+- rejection or classification reasons
+- every state score
+- every anchor similarity and threshold
+
+## Extract an anchor fingerprint
+
+```powershell
+dotnet run --project .\src\PogoInventory.Cli -- screen-fingerprint `
+  --image .\data\screen-fixtures\InventoryList.png `
+  --region "0.05,0.70,0.25,0.20" `
+  --mode Color `
+  --width 8 `
+  --height 8 `
+  --out .\out\screen-fingerprint\inventory-grid.json
+```
+
+Regions use normalised values:
+
+```text
+x,y,width,height
+```
+
+Each value is relative to the full screenshot and must stay inside 0 to 1.
 
 ## Capture from a real Android phone
 
-Connect the phone by USB, unlock it and approve the USB debugging prompt.
-
-If `adb` is available on PATH:
-
-```powershell
-.\scripts\capture-device.ps1
-```
-
-With an explicit Platform Tools path:
+Connect the phone by USB, unlock it and approve USB debugging.
 
 ```powershell
 .\scripts\capture-device.ps1 `
   -AdbPath "C:\Android\platform-tools\adb.exe"
 ```
 
-If more than one authorised Android device is connected:
-
-```powershell
-adb devices -l
-
-.\scripts\capture-device.ps1 `
-  -AdbPath "C:\Android\platform-tools\adb.exe" `
-  -Serial "YOUR_DEVICE_SERIAL"
-```
-
-The capture command is equivalent to:
-
-```powershell
-dotnet run --project .\src\PogoInventory.Cli -- device-snapshot `
-  --out .\out\device `
-  --adb "C:\Android\platform-tools\adb.exe"
-```
-
-## Analysis demo
-
-```powershell
-.\scripts\run-demo.ps1
-```
-
-Expected sample result:
+Output:
 
 ```text
-KEEP: 6
-REVIEW: 3
-DELETE: 1
+out\device\screen.png
+out\device\device-metadata.json
+out\device\device-snapshot.json
 ```
+
+Do not commit real screenshots, device serials, inventory exports or scan databases while the repository is public.
 
 ## Safety boundary
 
-The repository deliberately does not contain automatic transfer or gameplay functions. Later input control must use a named action whitelist and verified screen states. Random timing or tap positions intended to disguise automation are prohibited by the project guardrails.
+The repository contains no methods for:
 
-## Public repository warning
-
-Do not commit real inventory exports, screenshots, device serials, SQLite databases or capture output while the repository is public. The relevant local-data folders and database extensions are ignored by `.gitignore`, but review every commit before pushing.
+- taps or swipes
+- text input or tagging
+- automatic transfer
+- evolve, power-up, purify or TM use
+- purchases, catching, spinning, raids or battles
+- location changes
+- randomised or human-like input
 
 Read next:
 
 - `PROJECT_STATE.md`
 - `NEXT_PROMPT.md`
-- `docs/DEVICE_HARNESS.md`
+- `docs/SCREEN_STATE_DETECTOR.md`
 - `docs/GUARDRAILS.md`
 - `docs/ARCHITECTURE.md`
 - `VALIDATION_REPORT.md`

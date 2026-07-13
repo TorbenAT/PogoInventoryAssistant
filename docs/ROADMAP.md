@@ -22,22 +22,31 @@ Read-only only:
 - atomic output and SHA-256 manifest
 - no device input
 
-Pending acceptance checks:
+Torben reported a green 0.2.0 GitHub Actions run.
 
-- green GitHub Actions run
-- successful fake capture on the Windows computer
-- one successful real-phone capture
+## M2 Generic Screen State Detector, complete in 0.3.0
 
-## M2 Screen State Detector, next
-
-- image-anchor framework
+- package-free PNG decoder
+- deterministic image fingerprints
 - normalised screen regions
+- named Required, Optional and Forbidden anchors
 - known screen states
 - Unknown and conflicting-state handling
-- orientation and resolution validation
-- synthetic or redacted test fixtures
+- orientation, resolution and aspect-ratio validation
+- synthetic and non-personal fixtures
 - JSON evidence report
 - no device input
+
+## M2b Real-screen calibration, next
+
+- private redacted real-screen fixture set
+- stable UI anchors independent of Pokémon and account data
+- multiple samples per dynamic state
+- local profile ignored by Git
+- confusion report
+- false-positive and partial-screen tests
+- zero false positive acceptance requirement
+- read-only only
 
 ## M3 Calcy Spike
 

@@ -1,8 +1,10 @@
 # Third-party status
 
-Version 0.2.0 contains no copied source code from PGo-CalcaBotaBotaCalca, Calcy IV, PvPoke, Ohbem, scrcpy or other external projects.
+Version 0.3.0 contains no copied source code from PGo-CalcaBotaBotaCalca, Calcy IV, PvPoke, Ohbem, scrcpy or other external projects.
 
-The .NET projects currently use only the .NET 8 base class library and contain no NuGet package references.
+The .NET projects use only the .NET 8 base class library and contain no NuGet package references.
+
+The PNG decoder, fingerprint extractor and screen-state detector were implemented inside this repository for the project. The committed synthetic fixtures were generated specifically for testing and contain no Pokémon GO artwork or personal data.
 
 The GitHub Actions workflow references the standard actions:
 

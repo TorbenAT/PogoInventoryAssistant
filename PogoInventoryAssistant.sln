@@ -6,6 +6,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PogoInventory.Core", "src\P
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PogoInventory.Device", "src\PogoInventory.Device\PogoInventory.Device.csproj", "{C67A1E56-00B2-4D20-9A58-4517070EEA12}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PogoInventory.Vision", "src\PogoInventory.Vision\PogoInventory.Vision.csproj", "{5E1A789B-98F0-44DA-9E16-63310AC6DDB2}"
+EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PogoInventory.Cli", "src\PogoInventory.Cli\PogoInventory.Cli.csproj", "{144ED50C-C4BD-4BDF-B96A-A487BA3B58F9}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PogoInventory.SelfTest", "tests\PogoInventory.SelfTest\PogoInventory.SelfTest.csproj", "{7D7B82BA-EC72-44C4-B5C4-9E88644543A5}"
@@ -24,6 +26,10 @@ Global
 		{C67A1E56-00B2-4D20-9A58-4517070EEA12}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{C67A1E56-00B2-4D20-9A58-4517070EEA12}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{C67A1E56-00B2-4D20-9A58-4517070EEA12}.Release|Any CPU.Build.0 = Release|Any CPU
+		{5E1A789B-98F0-44DA-9E16-63310AC6DDB2}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{5E1A789B-98F0-44DA-9E16-63310AC6DDB2}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{5E1A789B-98F0-44DA-9E16-63310AC6DDB2}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{5E1A789B-98F0-44DA-9E16-63310AC6DDB2}.Release|Any CPU.Build.0 = Release|Any CPU
 		{144ED50C-C4BD-4BDF-B96A-A487BA3B58F9}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{144ED50C-C4BD-4BDF-B96A-A487BA3B58F9}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{144ED50C-C4BD-4BDF-B96A-A487BA3B58F9}.Release|Any CPU.ActiveCfg = Release|Any CPU

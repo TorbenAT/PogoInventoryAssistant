@@ -10,6 +10,11 @@ using PogoInventory.Device.Adb;
 using PogoInventory.Device.Errors;
 using PogoInventory.Device.Logging;
 using PogoInventory.Device.Transport;
+using PogoInventory.Vision.Errors;
+using PogoInventory.Vision.Imaging;
+using PogoInventory.Vision.Models;
+using PogoInventory.Vision.Profiles;
+using PogoInventory.Vision.Reporting;
 
 return await MainAsync(args);
 
@@ -38,6 +43,12 @@ static async Task<int> MainAsync(string[] args)
             "device-snapshot" => await CaptureDeviceSnapshotAsync(
                 args.Skip(1).ToArray(),
                 cancellationSource.Token),
+            "screen-detect" => await DetectScreenAsync(
+                args.Skip(1).ToArray(),
+                cancellationSource.Token),
+            "screen-fingerprint" => await ExtractScreenFingerprintAsync(
+                args.Skip(1).ToArray(),
+                cancellationSource.Token),
             _ => UnknownCommand(args[0])
         };
     }
@@ -45,6 +56,11 @@ static async Task<int> MainAsync(string[] args)
     {
         Console.Error.WriteLine($"[{exception.Code}] {exception.Message}");
         return DeviceExitCode(exception.Code);
+    }
+    catch (ScreenVisionException exception)
+    {
+        Console.Error.WriteLine($"[{exception.Code}] {exception.Message}");
+        return VisionExitCode(exception.Code);
     }
     catch (OperationCanceledException)
     {
@@ -154,6 +170,73 @@ static async Task<int> CaptureDeviceSnapshotAsync(
     return 0;
 }
 
+static async Task<int> DetectScreenAsync(
+    string[] args,
+    CancellationToken cancellationToken)
+{
+    var options = ParseOptions(args);
+    var imagePath = Require(options, "image");
+    var profilePath = Require(options, "profile");
+    var outputPath = Require(options, "out");
+
+    var png = await File.ReadAllBytesAsync(imagePath, cancellationToken);
+    var image = PngDecoder.Decode(png);
+    var profile = await ScreenProfileLoader.LoadAsync(profilePath, cancellationToken);
+    var result = new ScreenStateDetector().Detect(image, profile);
+
+    await ScreenDetectionReportWriter.WriteAsync(result, outputPath, cancellationToken);
+
+    Console.WriteLine($"State: {result.State}");
+    Console.WriteLine($"Confidence: {result.Confidence:F6}");
+    Console.WriteLine($"Image: {result.ImageWidth}x{result.ImageHeight} ({result.Orientation})");
+    Console.WriteLine($"Evidence report: {Path.GetFullPath(outputPath)}");
+    return 0;
+}
+
+static async Task<int> ExtractScreenFingerprintAsync(
+    string[] args,
+    CancellationToken cancellationToken)
+{
+    var options = ParseOptions(args);
+    var imagePath = Require(options, "image");
+    var outputPath = Require(options, "out");
+    var region = ParseRegion(Require(options, "region"));
+    var mode = ParseFingerprintMode(Optional(options, "mode") ?? "grayscale");
+    var width = ParsePositiveInt(options, "width", 16);
+    var height = ParsePositiveInt(options, "height", 16);
+
+    var png = await File.ReadAllBytesAsync(imagePath, cancellationToken);
+    var image = PngDecoder.Decode(png);
+    var fingerprint = FingerprintExtractor.Extract(image, region, mode, width, height);
+
+    var result = new ScreenFingerprintResult
+    {
+        SourceImage = Path.GetFileName(imagePath),
+        Region = region,
+        Mode = mode,
+        FingerprintWidth = width,
+        FingerprintHeight = height,
+        FingerprintBase64 = Convert.ToBase64String(fingerprint)
+    };
+
+    var fullPath = Path.GetFullPath(outputPath);
+    var directory = Path.GetDirectoryName(fullPath);
+    if (!string.IsNullOrWhiteSpace(directory))
+    {
+        Directory.CreateDirectory(directory);
+    }
+
+    await File.WriteAllTextAsync(
+        fullPath,
+        JsonSerializer.Serialize(
+            result,
+            ScreenProfileLoader.CreateJsonOptions(writeIndented: true)),
+        cancellationToken);
+
+    Console.WriteLine($"Fingerprint written to: {fullPath}");
+    return 0;
+}
+
 static Dictionary<string, string> ParseOptions(
     string[] args,
     params string[] flagNames)
@@ -212,6 +295,45 @@ static int ParsePositiveInt(
     return value;
 }
 
+static NormalizedRegion ParseRegion(string value)
+{
+    var parts = value.Split(',', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries);
+    if (parts.Length != 4)
+    {
+        throw new ArgumentException("--region must contain x,y,width,height using normalised values.");
+    }
+
+    var parsed = parts.Select(part =>
+    {
+        if (!double.TryParse(
+                part,
+                NumberStyles.Float,
+                CultureInfo.InvariantCulture,
+                out var number))
+        {
+            throw new ArgumentException($"Invalid normalised region value: {part}");
+        }
+
+        return number;
+    }).ToArray();
+
+    var region = new NormalizedRegion
+    {
+        X = parsed[0],
+        Y = parsed[1],
+        Width = parsed[2],
+        Height = parsed[3]
+    };
+    region.Validate();
+    return region;
+}
+
+static FingerprintMode ParseFingerprintMode(string value) =>
+    Enum.TryParse<FingerprintMode>(value, ignoreCase: true, out var mode)
+        ? mode
+        : throw new ArgumentException(
+            "--mode must be Color, Grayscale or Edge.");
+
 static string Require(IReadOnlyDictionary<string, string> options, string key) =>
     options.TryGetValue(key, out var value) && !string.IsNullOrWhiteSpace(value)
         ? value
@@ -246,6 +368,18 @@ static int DeviceExitCode(DeviceErrorCode code) =>
         _ => 1
     };
 
+static int VisionExitCode(VisionErrorCode code) =>
+    code switch
+    {
+        VisionErrorCode.InvalidPng => 30,
+        VisionErrorCode.UnsupportedPng => 31,
+        VisionErrorCode.InvalidProfile => 32,
+        VisionErrorCode.InvalidRegion => 33,
+        VisionErrorCode.InvalidFingerprint => 34,
+        VisionErrorCode.FileSystemFailure => 35,
+        _ => 1
+    };
+
 static void PrintHelp()
 {
     Console.WriteLine("Pogo Inventory Assistant");
@@ -256,6 +390,9 @@ static void PrintHelp()
     Console.WriteLine("  device-snapshot --out <directory> [--adb <adb.exe>] [--serial <serial>] [--timeout-seconds <n>]");
     Console.WriteLine("  device-snapshot --fake --out <directory>");
     Console.WriteLine();
-    Console.WriteLine("The device-snapshot command is read-only. It can list devices, read metadata and capture one screenshot.");
-    Console.WriteLine("It contains no tap, swipe, text input or game-changing action.");
+    Console.WriteLine("  screen-detect --image <screen.png> --profile <profile.json> --out <evidence.json>");
+    Console.WriteLine("  screen-fingerprint --image <screen.png> --region <x,y,w,h> --out <fingerprint.json>");
+    Console.WriteLine("                     [--mode <Color|Grayscale|Edge>] [--width <n>] [--height <n>]");
+    Console.WriteLine();
+    Console.WriteLine("Device snapshot and screen analysis are read-only. They contain no tap, swipe, text input or game-changing action.");
 }

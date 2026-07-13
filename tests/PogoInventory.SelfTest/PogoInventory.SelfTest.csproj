@@ -9,5 +9,6 @@
   <ItemGroup>
     <ProjectReference Include="..\..\src\PogoInventory.Core\PogoInventory.Core.csproj" />
     <ProjectReference Include="..\..\src\PogoInventory.Device\PogoInventory.Device.csproj" />
+    <ProjectReference Include="..\..\src\PogoInventory.Vision\PogoInventory.Vision.csproj" />
   </ItemGroup>
 </Project>
