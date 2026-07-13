@@ -2,58 +2,91 @@
 
 ## Current version
 
-0.1.0
+0.2.0
 
 ## Completed
 
-- Repository and solution structure
-- Core Pokémon observation model
-- Nullable status fields so unknown is not silently treated as false
-- Policy loaded from JSON
-- Conservative KEEP / REVIEW / DELETE analysis
-- Hard protection for 4*, shiny, mythical, background, favorite, old and Trade-marked Pokémon
-- REVIEW protection for legendary, Ultra Beast, shadow, purified, lucky, costume, Dynamax, Gigantamax, special move, XXL and XXS
-- Living-dex style minimum copy preservation within ordinary duplicates
-- First-pass PvP candidate preservation using low Attack and high Defense/HP
-- Exact-identity requirement before DELETE
-- Better-duplicate requirement before DELETE
+### M0: Foundation
+
+- repository and .NET 8 solution structure
+- Pokémon observation model with nullable special-status fields
+- JSON decision policy
+- conservative KEEP / REVIEW / DELETE analysis
+- duplicate grouping and strictly-better duplicate requirement
+- preliminary PvP candidate preservation
 - JSON and Markdown decision reports
-- Self-test project
-- Architecture, rules, guardrails and roadmap
+- package-free self-tests
+
+### M1: Read-only Device Harness
+
+- separate `PogoInventory.Device` project
+- Android device abstraction with ADB and fake implementations
+- exact-one-authorised-device selection
+- optional explicit serial selection
+- hard-coded read-only ADB operations only
+- device properties, screen size and battery parsing
+- screenshot capture and PNG validation
+- atomic snapshot output
+- SHA-256 screenshot manifest
+- command timeout and cancellation support
+- structured error codes and CLI exit codes
+- console event logging
+- fake-device CLI mode
+- parser, selection, cancellation and file-output self-tests
+- GitHub Actions build, test and fake-capture workflow
 
 ## Not completed
 
-- ADB connection
-- Screen capture
-- Screen-state recognition
+- compilation in the assistant build environment
+- validation with Torben's real Android phone and installed Platform Tools
+- screen-state recognition
+- Pokémon GO screen anchors
+- popup and network-error detection
 - Calcy integration
 - OCR and icon recognition
-- SQLite database
-- Full PvPoke / Ohbem integration
-- Scan checkpoints
-- Device-side tagging
-- Audit screenshots
-- Rollback
+- inventory scanning loop
+- SQLite database and checkpoints
+- exact Pokémon fingerprinting
+- full PvPoke / Ohbem integration
+- device-side tagging
+
+## Required user-side checkpoint
+
+After pushing version 0.2.0:
+
+1. Confirm the GitHub Actions CI run is green.
+2. Run `scripts\run-fake-device.ps1` on the Windows computer.
+3. Install Android Platform Tools.
+4. Run one real `scripts\capture-device.ps1` capture.
+5. Confirm that `screen.png` is a correct screenshot and metadata matches the phone.
+
+Do not start M2 against the real phone until these checks pass.
 
 ## Next recommended milestone
 
-M1: Device Harness in read-only mode.
+M2: Screen State Detector, read-only.
 
-The next package should:
+The next package should classify screenshots into explicit states without sending input:
 
-1. Detect exactly one authorised Android device through ADB.
-2. Read device model, resolution, battery and temperature where available.
-3. Capture screenshots to disk.
-4. Never send taps or swipes in the first iteration.
-5. Provide a simulator interface so later components are testable without a phone.
-6. Add an explicit action whitelist before input control is introduced.
+- `PokemonDetails`
+- `InventoryList`
+- `AppraisalOpen`
+- `PokemonMenuOpen`
+- `TagDialogOpen`
+- `Loading`
+- `Popup`
+- `NetworkError`
+- `Unknown`
 
-## Design decisions already made
+It must start with a generic anchor framework and recorded test fixtures. It must not add tapping or swiping.
+
+## Design decisions preserved
 
 - C# and .NET 8
-- No hidden game API
-- No automatic transfer
-- No anti-detection behaviour or human imitation
-- Unknown data results in REVIEW, never DELETE
+- no hidden game API
+- no automatic transfer
+- no anti-detection behaviour or human imitation
+- unknown data results in REVIEW, never DELETE
 - DELETE requires an exact identity and a documented better duplicate
-- Each package must include an updated `PROJECT_STATE.md` and `NEXT_PROMPT.md`
+- all ADB execution is isolated in `PogoInventory.Device`
+- every release includes updated project state and continuation prompt

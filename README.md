@@ -1,66 +1,126 @@
 # Pogo Inventory Assistant
 
-Version 0.1.0
+Version 0.2.0
 
-This first package is a safe, local foundation for the inventory project. It does not connect to Pokémon GO, send ADB commands, tag Pokémon or transfer anything.
+Pogo Inventory Assistant is being built as a conservative, local inventory and decision assistant for Pokémon GO. The final transfer remains manual.
 
-It currently provides:
+Version 0.2.0 completes the first isolated Android milestone: a read-only Device Harness.
 
-- a domain model for scanned Pokémon
-- a configurable decision policy
-- a conservative KEEP / REVIEW / DELETE rule engine
+## What works now
+
+### Inventory analysis from 0.1.0
+
+- domain model for scanned Pokémon
+- configurable decision policy
+- conservative KEEP / REVIEW / DELETE rule engine
 - duplicate grouping
-- a first-pass PvP preservation heuristic
-- JSON and Markdown plan output
-- a self-test project without third-party packages
-- project state, architecture and handoff documents
+- preliminary PvP preservation heuristic
+- JSON and Markdown decision reports
+
+### Read-only Android Device Harness in 0.2.0
+
+- discovers Android devices through ADB
+- requires exactly one authorised device unless `--serial` is supplied
+- reads manufacturer, model, Android version, API level and build fingerprint
+- reads physical and overridden screen size
+- reads battery percentage, power state and temperature where Android exposes them
+- captures one PNG screenshot through `adb exec-out screencap -p`
+- validates the PNG signature
+- writes metadata and a SHA-256 capture manifest
+- supports command timeouts and cancellation
+- uses structured error codes and explicit logging
+- includes a fake Android transport for tests and development without a phone
+
+The Device Harness contains no methods for taps, swipes, text input, tags or other device changes.
 
 ## Requirements
 
 - Windows 10 or 11
-- Visual Studio 2022 or the .NET SDK
-- .NET 8 SDK
+- Visual Studio 2022 or .NET 8 SDK
+- Android Platform Tools for a real phone capture
+- USB debugging enabled on the Android phone
 
-## Run the demo
+## First validation
 
 From PowerShell in the repository folder:
+
+```powershell
+.\scripts\build.ps1
+.\scripts\test.ps1
+.\scripts\run-demo.ps1
+.\scripts\run-fake-device.ps1
+```
+
+The fake-device command needs no Android phone and writes:
+
+```text
+out\fake-device\screen.png
+out\fake-device\device-metadata.json
+out\fake-device\device-snapshot.json
+```
+
+## Capture from a real Android phone
+
+Connect the phone by USB, unlock it and approve the USB debugging prompt.
+
+If `adb` is available on PATH:
+
+```powershell
+.\scripts\capture-device.ps1
+```
+
+With an explicit Platform Tools path:
+
+```powershell
+.\scripts\capture-device.ps1 `
+  -AdbPath "C:\Android\platform-tools\adb.exe"
+```
+
+If more than one authorised Android device is connected:
+
+```powershell
+adb devices -l
+
+.\scripts\capture-device.ps1 `
+  -AdbPath "C:\Android\platform-tools\adb.exe" `
+  -Serial "YOUR_DEVICE_SERIAL"
+```
+
+The capture command is equivalent to:
+
+```powershell
+dotnet run --project .\src\PogoInventory.Cli -- device-snapshot `
+  --out .\out\device `
+  --adb "C:\Android\platform-tools\adb.exe"
+```
+
+## Analysis demo
 
 ```powershell
 .\scripts\run-demo.ps1
 ```
 
-The generated files are written to:
+Expected sample result:
 
 ```text
-out\decision-plan.json
-out\decision-plan.md
+KEEP: 6
+REVIEW: 3
+DELETE: 1
 ```
 
-## Run the self-tests
+## Safety boundary
 
-```powershell
-.\scripts\test.ps1
-```
+The repository deliberately does not contain automatic transfer or gameplay functions. Later input control must use a named action whitelist and verified screen states. Random timing or tap positions intended to disguise automation are prohibited by the project guardrails.
 
-## Use your own JSON inventory later
+## Public repository warning
 
-```powershell
-dotnet run --project .\src\PogoInventory.Cli -- analyze `
-  --inventory .\data\sample-inventory.json `
-  --policy .\data\policy.json `
-  --out .\out
-```
+Do not commit real inventory exports, screenshots, device serials, SQLite databases or capture output while the repository is public. The relevant local-data folders and database extensions are ignored by `.gitignore`, but review every commit before pushing.
 
-## Important limitation
-
-Version 0.1.0 only analyses an inventory JSON file. The scanner, ADB device harness, Calcy adapter and automatic tagging are intentionally not implemented yet. They are separate milestones so each part can be tested before anything touches the phone.
-
-Read these next:
+Read next:
 
 - `PROJECT_STATE.md`
 - `NEXT_PROMPT.md`
-- `docs/ARCHITECTURE.md`
-- `docs/DECISION_RULES.md`
+- `docs/DEVICE_HARNESS.md`
 - `docs/GUARDRAILS.md`
-- `docs/ROADMAP.md`
+- `docs/ARCHITECTURE.md`
 - `VALIDATION_REPORT.md`

@@ -1,0 +1,48 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  build-and-test:
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install .NET 8
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "8.0.x"
+
+      - name: Restore
+        run: dotnet restore .\PogoInventoryAssistant.sln
+
+      - name: Build
+        run: dotnet build .\PogoInventoryAssistant.sln --configuration Release --no-restore
+
+      - name: Run self-tests
+        run: dotnet run --project .\tests\PogoInventory.SelfTest --configuration Release --no-build
+
+      - name: Run analysis demo
+        run: >-
+          dotnet run --project .\src\PogoInventory.Cli --configuration Release --no-build --
+          analyze --inventory .\data\sample-inventory.json --policy .\data\policy.json --out .\out\analysis
+
+      - name: Run fake device snapshot
+        run: >-
+          dotnet run --project .\src\PogoInventory.Cli --configuration Release --no-build --
+          device-snapshot --fake --out .\out\fake-device
+
+      - name: Upload validation output
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: validation-output
+          path: out
+          if-no-files-found: warn

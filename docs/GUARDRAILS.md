@@ -29,6 +29,18 @@ Do not add:
 
 Adaptive waiting is allowed only for correctness, such as waiting for a recognised screen state or stopping on timeout.
 
+## Current Device Harness is read-only
+
+Version 0.2.0 permits only:
+
+- device discovery
+- device metadata reads
+- screen-size reads
+- battery-state reads
+- screenshot capture
+
+The public device interface must not expose taps, swipes, text input, app launches or arbitrary shell commands.
+
 ## Unknown is not false
 
 Special-status fields use nullable booleans.
@@ -49,6 +61,26 @@ A future tag executor may only apply a delete tag to an Exact match. High-confid
 
 When input control is eventually added, all actions must be named, validated operations. Arbitrary coordinates must not be exposed outside the device module.
 
+Any input milestone requires:
+
+- approved screen state before the action
+- approved named action
+- expected screen state after the action
+- timeout and stop behaviour
+- before and after evidence
+
+## Fail closed
+
+The program must stop or return REVIEW when:
+
+- the screen state is unknown
+- a device is missing, unauthorised or ambiguous
+- a command times out
+- capture output is invalid
+- identity is not exact
+- critical data is unknown
+- sequence or inventory counts do not reconcile
+
 ## Auditability
 
 Every future tag action must record:
@@ -61,3 +93,7 @@ Every future tag action must record:
 - action performed
 - result
 - timestamp
+
+## Public repository data
+
+Do not commit real screenshots, device serials, inventory exports, databases or logs while the repository is public. Use ignored local data folders and review every commit before pushing.

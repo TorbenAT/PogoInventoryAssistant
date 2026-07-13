@@ -10,7 +10,7 @@
 - self-tests
 - guardrails and project handoff
 
-## M1 Device Harness, next
+## M1 Device Harness, complete in 0.2.0
 
 Read-only only:
 
@@ -19,15 +19,25 @@ Read-only only:
 - capture screenshots
 - fake device implementation
 - timeouts, cancellation and structured errors
+- atomic output and SHA-256 manifest
 - no device input
 
-## M2 Screen State Detector
+Pending acceptance checks:
+
+- green GitHub Actions run
+- successful fake capture on the Windows computer
+- one successful real-phone capture
+
+## M2 Screen State Detector, next
 
 - image-anchor framework
+- normalised screen regions
 - known screen states
-- Unknown and popup detection
-- recorded-screen test fixtures
-- no input beyond optional simulator actions
+- Unknown and conflicting-state handling
+- orientation and resolution validation
+- synthetic or redacted test fixtures
+- JSON evidence report
+- no device input
 
 ## M3 Calcy Spike
 

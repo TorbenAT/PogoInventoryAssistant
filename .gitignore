@@ -2,6 +2,17 @@ bin/
 obj/
 out/
 .vs/
+.idea/
 *.user
 *.suo
 *.zip
+
+# Real device and inventory data must stay local, especially while the repository is public.
+captures/
+local-data/
+private/
+*.db
+*.db-*
+*.sqlite
+*.sqlite3
+*.log
