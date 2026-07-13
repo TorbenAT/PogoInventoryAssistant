@@ -1,0 +1,16 @@
+{
+  "version": "0.1.0",
+  "oldPokemonCutoff": "2018-12-31",
+  "minimumOrdinaryCopiesPerSpeciesForm": 1,
+  "deleteRequiresExactIdentity": true,
+  "deleteRequiresStrictlyBetterDuplicate": true,
+  "tradeTagNames": ["Trade"],
+  "tradeNicknameFragments": ["Trade distan"],
+  "pvpHeuristic": {
+    "enabled": true,
+    "maximumAttackIv": 5,
+    "minimumDefenseIv": 10,
+    "minimumHpIv": 10,
+    "preserveBestCandidatePerGroup": true
+  }
+}
