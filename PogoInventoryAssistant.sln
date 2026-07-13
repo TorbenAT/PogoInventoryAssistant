@@ -2,6 +2,8 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
 VisualStudioVersion = 17.0.31903.59
 MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PogoInventory.Calibration", "src\PogoInventory.Calibration\PogoInventory.Calibration.csproj", "{E2A481BB-6B14-49AB-9BF4-0E8845A77B69}"
+EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PogoInventory.Core", "src\PogoInventory.Core\PogoInventory.Core.csproj", "{A9D8628E-419A-4EFA-A14D-DF6D442C1A0A}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PogoInventory.Device", "src\PogoInventory.Device\PogoInventory.Device.csproj", "{C67A1E56-00B2-4D20-9A58-4517070EEA12}"
@@ -18,6 +20,10 @@ Global
 		Release|Any CPU = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{E2A481BB-6B14-49AB-9BF4-0E8845A77B69}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{E2A481BB-6B14-49AB-9BF4-0E8845A77B69}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{E2A481BB-6B14-49AB-9BF4-0E8845A77B69}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{E2A481BB-6B14-49AB-9BF4-0E8845A77B69}.Release|Any CPU.Build.0 = Release|Any CPU
 		{A9D8628E-419A-4EFA-A14D-DF6D442C1A0A}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{A9D8628E-419A-4EFA-A14D-DF6D442C1A0A}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{A9D8628E-419A-4EFA-A14D-DF6D442C1A0A}.Release|Any CPU.ActiveCfg = Release|Any CPU

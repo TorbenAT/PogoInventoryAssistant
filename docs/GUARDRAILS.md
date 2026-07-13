@@ -31,7 +31,7 @@ Adaptive waiting is allowed only for correctness, such as waiting for a recognis
 
 ## Current phone integration is read-only
 
-Version 0.3.1 permits only:
+Version 0.4.0 permits only:
 
 - device discovery
 - device metadata reads
@@ -39,6 +39,9 @@ Version 0.3.1 permits only:
 - battery-state reads
 - screenshot capture
 - offline analysis of a PNG screenshot
+- local fixture indexing and SHA-256 verification
+- local fingerprint profile generation
+- offline calibration acceptance reports
 
 The public device interface has no taps, swipes, text input, app launches or arbitrary shell commands. The vision project has no device-control dependency.
 
@@ -111,3 +114,13 @@ Every future tag action must record:
 ## Public repository data
 
 Do not commit real screenshots, device serials, inventory exports, databases, logs or real screen profiles while the repository is public. Use ignored local folders and review every commit before pushing.
+
+## Calibration fixture integrity
+
+- Real calibration commands require an initialised workspace marker.
+- Every approved fixture is locked by SHA-256.
+- A changed file loses approval and must be reviewed again.
+- Unapproved fixtures cannot become profile samples.
+- Path traversal and rooted fixture paths are rejected.
+- Composite Unknown fixtures still participate in false-positive acceptance even when excluded from individual anchor-separation metrics.
+- A profile is not accepted with false positives, known-state misclassifications or weak anchors under the configured policy.

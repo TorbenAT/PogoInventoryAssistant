@@ -39,7 +39,7 @@ Tag Executor
 Manual final transfer only
 ```
 
-## Implemented in 0.3.0
+## Implemented in 0.4.0
 
 ```text
 PogoInventory.Cli
@@ -66,9 +66,19 @@ PogoInventory.Cli
     |      +--> evidence report
     |
     +--> screen-fingerprint
+    |      |
+    |      v
+    |   anchor fingerprint helper
+    |
+    +--> calibration-init / calibration-index
+    |      |
+    |      v
+    |   PogoInventory.Calibration
+    |
+    +--> calibration-build-profile / calibration-validate
            |
-           v
-       anchor calibration helper
+           +--> PogoInventory.Calibration
+           +--> PogoInventory.Vision
 ```
 
 ## Project boundaries
@@ -111,6 +121,10 @@ Provides:
 - `device-snapshot`
 - `screen-detect`
 - `screen-fingerprint`
+- `calibration-init`
+- `calibration-index`
+- `calibration-build-profile`
+- `calibration-validate`
 
 ### PogoInventory.SelfTest
 
@@ -251,3 +265,46 @@ Must assign Exact, HighConfidence, Ambiguous or Mismatch. Only Exact may later r
 ### Tag Executor
 
 Must use named actions, verified pre- and post-states, audit evidence and hard stop conditions. It must not contain transfer or gameplay functions.
+
+
+## PogoInventory.Calibration
+
+This project converts approved private screenshots into a versioned local detector profile and validates it. It references `PogoInventory.Vision` but has no device-control dependency.
+
+Responsibilities:
+
+- initialise a deliberate private workspace
+- index PNG fixtures by expected state
+- lock approval to SHA-256
+- validate privacy review and safe paths
+- load anchor plans
+- extract multiple reference fingerprints
+- generate a `ScreenDetectionProfile`
+- run all approved fixtures through the detector
+- calculate recall, false positives, misclassifications and confusion
+- report weak anchors and separation
+
+The calibration project does not know how to tap, swipe, launch an app or modify Pokémon GO.
+
+### Data flow
+
+```text
+private PNG fixtures
+        │
+        ▼
+fixture manifest + safety approval + SHA-256
+        │
+        ▼
+anchor plan
+        │
+        ▼
+local screen profile
+        │
+        ▼
+acceptance runner
+        │
+        ├── JSON report
+        ├── Markdown report
+        ├── confusion CSV
+        └── fixture CSV
+```

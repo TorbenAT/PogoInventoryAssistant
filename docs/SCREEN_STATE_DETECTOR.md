@@ -117,10 +117,10 @@ They contain no personal or account data.
 
 ## Real calibration workflow
 
-Keep real screenshots in an ignored local folder such as:
+Version 0.4.0 implements the workflow described in `REAL_SCREEN_CALIBRATION.md`. Use the ignored private workspace:
 
 ```text
-private\screen-calibration\
+local-data\screen-calibration\
 ```
 
 Recommended steps:
@@ -154,8 +154,8 @@ Version 0.3.1 validates profiles and decodes reference samples on every detectio
 
 - no OCR
 - no icon-specific classifier
-- no automatic profile builder
 - no real Pokémon GO anchors
+- no accepted real Pokémon GO profile
 - no cross-device layout adaptation
 - no CRC validation in the PNG decoder
 - no continuous capture loop

@@ -1,0 +1,354 @@
+{
+  "schemaVersion": "1.0",
+  "name": "Synthetic calibration acceptance fixture set",
+  "profileName": "Synthetic generated calibration profile",
+  "acceptance": {
+    "maximumFalsePositives": 0,
+    "maximumMisclassifications": 0,
+    "maximumWeakAnchors": 0,
+    "minimumWinnerMargin": 0.02,
+    "minimumAnchorSeparation": 0.02,
+    "states": [
+      {
+        "state": "InventoryList",
+        "minimumApprovedFixtures": 2,
+        "minimumRecall": 1.0
+      },
+      {
+        "state": "PokemonDetails",
+        "minimumApprovedFixtures": 1,
+        "minimumRecall": 1.0
+      },
+      {
+        "state": "AppraisalOpen",
+        "minimumApprovedFixtures": 1,
+        "minimumRecall": 1.0
+      },
+      {
+        "state": "PokemonMenuOpen",
+        "minimumApprovedFixtures": 1,
+        "minimumRecall": 1.0
+      },
+      {
+        "state": "TagDialogOpen",
+        "minimumApprovedFixtures": 1,
+        "minimumRecall": 1.0
+      },
+      {
+        "state": "SearchOpen",
+        "minimumApprovedFixtures": 1,
+        "minimumRecall": 1.0
+      },
+      {
+        "state": "Loading",
+        "minimumApprovedFixtures": 1,
+        "minimumRecall": 1.0
+      },
+      {
+        "state": "Popup",
+        "minimumApprovedFixtures": 1,
+        "minimumRecall": 1.0
+      },
+      {
+        "state": "NetworkError",
+        "minimumApprovedFixtures": 1,
+        "minimumRecall": 1.0
+      },
+      {
+        "state": "Unknown",
+        "minimumApprovedFixtures": 4,
+        "minimumRecall": 1.0
+      }
+    ]
+  },
+  "fixtures": [
+    {
+      "id": "inventory-list",
+      "relativePath": "InventoryList.png",
+      "expectedState": "InventoryList",
+      "sha256": "9be46237e35643a1eaacaefb8777a04a6e70f9446fbe2b1441f954f20c3f1de5",
+      "safetyReview": {
+        "accountIdentitySafe": true,
+        "locationSafe": true,
+        "notificationsSafe": true,
+        "otherPersonalDataSafe": true,
+        "approvedForCalibration": true,
+        "reviewedBy": "Synthetic fixture generator",
+        "reviewedAtUtc": "2026-07-13T20:30:00+00:00"
+      },
+      "tags": [
+        "synthetic",
+        "public-safe"
+      ],
+      "notes": "Synthetic non-personal fixture."
+    },
+    {
+      "id": "inventory-list-noisy",
+      "relativePath": "InventoryListNoisy.png",
+      "expectedState": "InventoryList",
+      "sha256": "06f9b4d6aca9bff6b5a34ce335c78f891b28712ce21518bd51e6feed8d11ad2c",
+      "safetyReview": {
+        "accountIdentitySafe": true,
+        "locationSafe": true,
+        "notificationsSafe": true,
+        "otherPersonalDataSafe": true,
+        "approvedForCalibration": true,
+        "reviewedBy": "Synthetic fixture generator",
+        "reviewedAtUtc": "2026-07-13T20:30:00+00:00"
+      },
+      "tags": [
+        "synthetic",
+        "public-safe"
+      ],
+      "notes": "Synthetic non-personal fixture."
+    },
+    {
+      "id": "pokemon-details",
+      "relativePath": "PokemonDetails.png",
+      "expectedState": "PokemonDetails",
+      "sha256": "290b553911f38ee0ea0b2cb6f4b0ad107d6d8ece2ea9d04f3a57b932bf00c4a3",
+      "safetyReview": {
+        "accountIdentitySafe": true,
+        "locationSafe": true,
+        "notificationsSafe": true,
+        "otherPersonalDataSafe": true,
+        "approvedForCalibration": true,
+        "reviewedBy": "Synthetic fixture generator",
+        "reviewedAtUtc": "2026-07-13T20:30:00+00:00"
+      },
+      "tags": [
+        "synthetic",
+        "public-safe"
+      ],
+      "notes": "Synthetic non-personal fixture."
+    },
+    {
+      "id": "appraisal-open",
+      "relativePath": "AppraisalOpen.png",
+      "expectedState": "AppraisalOpen",
+      "sha256": "ebcd9942fcc98c85aeb921e32b02c87d09d84752f6ffc6f4584ba28bd98e640a",
+      "safetyReview": {
+        "accountIdentitySafe": true,
+        "locationSafe": true,
+        "notificationsSafe": true,
+        "otherPersonalDataSafe": true,
+        "approvedForCalibration": true,
+        "reviewedBy": "Synthetic fixture generator",
+        "reviewedAtUtc": "2026-07-13T20:30:00+00:00"
+      },
+      "tags": [
+        "synthetic",
+        "public-safe"
+      ],
+      "notes": "Synthetic non-personal fixture."
+    },
+    {
+      "id": "pokemon-menu-open",
+      "relativePath": "PokemonMenuOpen.png",
+      "expectedState": "PokemonMenuOpen",
+      "sha256": "8848fedfe5174a52c4f31b71a477520220dcfbc710a5334c09732f8b023b5368",
+      "safetyReview": {
+        "accountIdentitySafe": true,
+        "locationSafe": true,
+        "notificationsSafe": true,
+        "otherPersonalDataSafe": true,
+        "approvedForCalibration": true,
+        "reviewedBy": "Synthetic fixture generator",
+        "reviewedAtUtc": "2026-07-13T20:30:00+00:00"
+      },
+      "tags": [
+        "synthetic",
+        "public-safe"
+      ],
+      "notes": "Synthetic non-personal fixture."
+    },
+    {
+      "id": "tag-dialog-open",
+      "relativePath": "TagDialogOpen.png",
+      "expectedState": "TagDialogOpen",
+      "sha256": "507b7d15e3ce97b67caf632c921a1b64102393270b9c1ccd0bb86e4e9b7c9960",
+      "safetyReview": {
+        "accountIdentitySafe": true,
+        "locationSafe": true,
+        "notificationsSafe": true,
+        "otherPersonalDataSafe": true,
+        "approvedForCalibration": true,
+        "reviewedBy": "Synthetic fixture generator",
+        "reviewedAtUtc": "2026-07-13T20:30:00+00:00"
+      },
+      "tags": [
+        "synthetic",
+        "public-safe"
+      ],
+      "notes": "Synthetic non-personal fixture."
+    },
+    {
+      "id": "search-open",
+      "relativePath": "SearchOpen.png",
+      "expectedState": "SearchOpen",
+      "sha256": "a035191978480704bc1958744f509bdbd12524d8d7e92c680dc5165b1fbc495f",
+      "safetyReview": {
+        "accountIdentitySafe": true,
+        "locationSafe": true,
+        "notificationsSafe": true,
+        "otherPersonalDataSafe": true,
+        "approvedForCalibration": true,
+        "reviewedBy": "Synthetic fixture generator",
+        "reviewedAtUtc": "2026-07-13T20:30:00+00:00"
+      },
+      "tags": [
+        "synthetic",
+        "public-safe"
+      ],
+      "notes": "Synthetic non-personal fixture."
+    },
+    {
+      "id": "loading",
+      "relativePath": "Loading.png",
+      "expectedState": "Loading",
+      "sha256": "b9c653488cfaa90a650ce9e8ed8db75d9ad5dd5150b6238fb627317f069e528b",
+      "safetyReview": {
+        "accountIdentitySafe": true,
+        "locationSafe": true,
+        "notificationsSafe": true,
+        "otherPersonalDataSafe": true,
+        "approvedForCalibration": true,
+        "reviewedBy": "Synthetic fixture generator",
+        "reviewedAtUtc": "2026-07-13T20:30:00+00:00"
+      },
+      "tags": [
+        "synthetic",
+        "public-safe"
+      ],
+      "notes": "Synthetic non-personal fixture."
+    },
+    {
+      "id": "popup",
+      "relativePath": "Popup.png",
+      "expectedState": "Popup",
+      "sha256": "79b24b1d45e6c8e58cbbf48d5c0ba03ff14dc4c484a5d7df03e8b3b9ce71cbf6",
+      "safetyReview": {
+        "accountIdentitySafe": true,
+        "locationSafe": true,
+        "notificationsSafe": true,
+        "otherPersonalDataSafe": true,
+        "approvedForCalibration": true,
+        "reviewedBy": "Synthetic fixture generator",
+        "reviewedAtUtc": "2026-07-13T20:30:00+00:00"
+      },
+      "tags": [
+        "synthetic",
+        "public-safe"
+      ],
+      "notes": "Synthetic non-personal fixture."
+    },
+    {
+      "id": "network-error",
+      "relativePath": "NetworkError.png",
+      "expectedState": "NetworkError",
+      "sha256": "e6a870ec55139f0da11186aea5e1f28355898d4f2a7f62d299da0d9b7ca8623c",
+      "safetyReview": {
+        "accountIdentitySafe": true,
+        "locationSafe": true,
+        "notificationsSafe": true,
+        "otherPersonalDataSafe": true,
+        "approvedForCalibration": true,
+        "reviewedBy": "Synthetic fixture generator",
+        "reviewedAtUtc": "2026-07-13T20:30:00+00:00"
+      },
+      "tags": [
+        "synthetic",
+        "public-safe"
+      ],
+      "notes": "Synthetic non-personal fixture."
+    },
+    {
+      "id": "unknown",
+      "relativePath": "Unknown.png",
+      "expectedState": "Unknown",
+      "sha256": "97ff631c733011e565489e94c3e21470f197894e60d965db57c6ef369d95f8ee",
+      "safetyReview": {
+        "accountIdentitySafe": true,
+        "locationSafe": true,
+        "notificationsSafe": true,
+        "otherPersonalDataSafe": true,
+        "approvedForCalibration": true,
+        "reviewedBy": "Synthetic fixture generator",
+        "reviewedAtUtc": "2026-07-13T20:30:00+00:00"
+      },
+      "tags": [
+        "negative",
+        "public-safe",
+        "synthetic",
+        "unrelated"
+      ],
+      "notes": "Synthetic non-personal fixture."
+    },
+    {
+      "id": "incomplete",
+      "relativePath": "Incomplete.png",
+      "expectedState": "Unknown",
+      "sha256": "839234cd8161361223ed0aa3e8f9d40aa6e898961d13509579efffc57f655101",
+      "safetyReview": {
+        "accountIdentitySafe": true,
+        "locationSafe": true,
+        "notificationsSafe": true,
+        "otherPersonalDataSafe": true,
+        "approvedForCalibration": true,
+        "reviewedBy": "Synthetic fixture generator",
+        "reviewedAtUtc": "2026-07-13T20:30:00+00:00"
+      },
+      "tags": [
+        "negative",
+        "partial-state",
+        "public-safe",
+        "synthetic"
+      ],
+      "notes": "Synthetic non-personal fixture."
+    },
+    {
+      "id": "conflict",
+      "relativePath": "Conflict.png",
+      "expectedState": "Unknown",
+      "sha256": "d5f6f10d64e866d05a22c96635f539eedc0055a708278e68a4d122ab7ee7ac80",
+      "safetyReview": {
+        "accountIdentitySafe": true,
+        "locationSafe": true,
+        "notificationsSafe": true,
+        "otherPersonalDataSafe": true,
+        "approvedForCalibration": true,
+        "reviewedBy": "Synthetic fixture generator",
+        "reviewedAtUtc": "2026-07-13T20:30:00+00:00"
+      },
+      "tags": [
+        "mixed-state",
+        "negative",
+        "public-safe",
+        "synthetic"
+      ],
+      "notes": "Synthetic non-personal fixture."
+    },
+    {
+      "id": "landscape",
+      "relativePath": "Landscape.png",
+      "expectedState": "Unknown",
+      "sha256": "51068eaf7c4ec37b57335d5e3960eda31d8bec113e190444f4d842bde979e235",
+      "safetyReview": {
+        "accountIdentitySafe": true,
+        "locationSafe": true,
+        "notificationsSafe": true,
+        "otherPersonalDataSafe": true,
+        "approvedForCalibration": true,
+        "reviewedBy": "Synthetic fixture generator",
+        "reviewedAtUtc": "2026-07-13T20:30:00+00:00"
+      },
+      "tags": [
+        "negative",
+        "public-safe",
+        "synthetic",
+        "unsupported-layout"
+      ],
+      "notes": "Synthetic non-personal fixture."
+    }
+  ]
+}

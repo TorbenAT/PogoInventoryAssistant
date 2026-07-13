@@ -1,15 +1,11 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
-    <OutputType>Exe</OutputType>
     <TargetFramework>net8.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
   </PropertyGroup>
   <ItemGroup>
-    <ProjectReference Include="..\PogoInventory.Calibration\PogoInventory.Calibration.csproj" />
-    <ProjectReference Include="..\PogoInventory.Core\PogoInventory.Core.csproj" />
-    <ProjectReference Include="..\PogoInventory.Device\PogoInventory.Device.csproj" />
     <ProjectReference Include="..\PogoInventory.Vision\PogoInventory.Vision.csproj" />
   </ItemGroup>
 </Project>

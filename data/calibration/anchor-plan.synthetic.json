@@ -1,0 +1,382 @@
+{
+  "schemaVersion": "1.0",
+  "requiredOrientation": "Portrait",
+  "minimumWidth": 160,
+  "minimumHeight": 320,
+  "minimumAspectRatio": 0.45,
+  "maximumAspectRatio": 0.55,
+  "minimumStateScore": 0.96,
+  "minimumWinnerMargin": 0.02,
+  "name": "Synthetic generated anchor plan",
+  "states": [
+    {
+      "state": "InventoryList",
+      "anchors": [
+        {
+          "name": "inventory-grid",
+          "region": {
+            "x": 0.05,
+            "y": 0.7,
+            "width": 0.25,
+            "height": 0.2
+          },
+          "mode": "Color",
+          "expectation": "Required",
+          "fingerprintWidth": 8,
+          "fingerprintHeight": 8,
+          "matchThreshold": 0.98,
+          "weight": 1.0,
+          "sampleFixtureIds": [
+            "inventory-list"
+          ]
+        },
+        {
+          "name": "network-banner-not-present",
+          "region": {
+            "x": 0.05,
+            "y": 0.18,
+            "width": 0.9,
+            "height": 0.1
+          },
+          "mode": "Color",
+          "expectation": "Forbidden",
+          "fingerprintWidth": 8,
+          "fingerprintHeight": 8,
+          "matchThreshold": 0.98,
+          "weight": 0.2,
+          "sampleFixtureIds": [
+            "network-error"
+          ]
+        }
+      ]
+    },
+    {
+      "state": "PokemonDetails",
+      "anchors": [
+        {
+          "name": "details-cp",
+          "region": {
+            "x": 0.35,
+            "y": 0.05,
+            "width": 0.3,
+            "height": 0.15
+          },
+          "mode": "Color",
+          "expectation": "Required",
+          "fingerprintWidth": 8,
+          "fingerprintHeight": 8,
+          "matchThreshold": 0.98,
+          "weight": 1.0,
+          "sampleFixtureIds": [
+            "pokemon-details"
+          ]
+        },
+        {
+          "name": "network-banner-not-present",
+          "region": {
+            "x": 0.05,
+            "y": 0.18,
+            "width": 0.9,
+            "height": 0.1
+          },
+          "mode": "Color",
+          "expectation": "Forbidden",
+          "fingerprintWidth": 8,
+          "fingerprintHeight": 8,
+          "matchThreshold": 0.98,
+          "weight": 0.2,
+          "sampleFixtureIds": [
+            "network-error"
+          ]
+        }
+      ]
+    },
+    {
+      "state": "AppraisalOpen",
+      "anchors": [
+        {
+          "name": "appraisal-bars",
+          "region": {
+            "x": 0.35,
+            "y": 0.75,
+            "width": 0.3,
+            "height": 0.18
+          },
+          "mode": "Color",
+          "expectation": "Required",
+          "fingerprintWidth": 8,
+          "fingerprintHeight": 8,
+          "matchThreshold": 0.98,
+          "weight": 1.0,
+          "sampleFixtureIds": [
+            "appraisal-open"
+          ]
+        },
+        {
+          "name": "network-banner-not-present",
+          "region": {
+            "x": 0.05,
+            "y": 0.18,
+            "width": 0.9,
+            "height": 0.1
+          },
+          "mode": "Color",
+          "expectation": "Forbidden",
+          "fingerprintWidth": 8,
+          "fingerprintHeight": 8,
+          "matchThreshold": 0.98,
+          "weight": 0.2,
+          "sampleFixtureIds": [
+            "network-error"
+          ]
+        }
+      ]
+    },
+    {
+      "state": "PokemonMenuOpen",
+      "anchors": [
+        {
+          "name": "menu-panel",
+          "region": {
+            "x": 0.72,
+            "y": 0.3,
+            "width": 0.23,
+            "height": 0.4
+          },
+          "mode": "Color",
+          "expectation": "Required",
+          "fingerprintWidth": 8,
+          "fingerprintHeight": 8,
+          "matchThreshold": 0.98,
+          "weight": 1.0,
+          "sampleFixtureIds": [
+            "pokemon-menu-open"
+          ]
+        },
+        {
+          "name": "network-banner-not-present",
+          "region": {
+            "x": 0.05,
+            "y": 0.18,
+            "width": 0.9,
+            "height": 0.1
+          },
+          "mode": "Color",
+          "expectation": "Forbidden",
+          "fingerprintWidth": 8,
+          "fingerprintHeight": 8,
+          "matchThreshold": 0.98,
+          "weight": 0.2,
+          "sampleFixtureIds": [
+            "network-error"
+          ]
+        }
+      ]
+    },
+    {
+      "state": "TagDialogOpen",
+      "anchors": [
+        {
+          "name": "tag-dialog",
+          "region": {
+            "x": 0.35,
+            "y": 0.35,
+            "width": 0.3,
+            "height": 0.3
+          },
+          "mode": "Color",
+          "expectation": "Required",
+          "fingerprintWidth": 8,
+          "fingerprintHeight": 8,
+          "matchThreshold": 0.98,
+          "weight": 1.0,
+          "sampleFixtureIds": [
+            "tag-dialog-open"
+          ]
+        },
+        {
+          "name": "network-banner-not-present",
+          "region": {
+            "x": 0.05,
+            "y": 0.18,
+            "width": 0.9,
+            "height": 0.1
+          },
+          "mode": "Color",
+          "expectation": "Forbidden",
+          "fingerprintWidth": 8,
+          "fingerprintHeight": 8,
+          "matchThreshold": 0.98,
+          "weight": 0.2,
+          "sampleFixtureIds": [
+            "network-error"
+          ]
+        }
+      ]
+    },
+    {
+      "state": "SearchOpen",
+      "anchors": [
+        {
+          "name": "search-field",
+          "region": {
+            "x": 0.05,
+            "y": 0.05,
+            "width": 0.25,
+            "height": 0.12
+          },
+          "mode": "Color",
+          "expectation": "Required",
+          "fingerprintWidth": 8,
+          "fingerprintHeight": 8,
+          "matchThreshold": 0.98,
+          "weight": 1.0,
+          "sampleFixtureIds": [
+            "search-open"
+          ]
+        },
+        {
+          "name": "network-banner-not-present",
+          "region": {
+            "x": 0.05,
+            "y": 0.18,
+            "width": 0.9,
+            "height": 0.1
+          },
+          "mode": "Color",
+          "expectation": "Forbidden",
+          "fingerprintWidth": 8,
+          "fingerprintHeight": 8,
+          "matchThreshold": 0.98,
+          "weight": 0.2,
+          "sampleFixtureIds": [
+            "network-error"
+          ]
+        }
+      ]
+    },
+    {
+      "state": "Loading",
+      "anchors": [
+        {
+          "name": "loading-spinner",
+          "region": {
+            "x": 0.05,
+            "y": 0.35,
+            "width": 0.25,
+            "height": 0.3
+          },
+          "mode": "Color",
+          "expectation": "Required",
+          "fingerprintWidth": 8,
+          "fingerprintHeight": 8,
+          "matchThreshold": 0.98,
+          "weight": 1.0,
+          "sampleFixtureIds": [
+            "loading"
+          ]
+        },
+        {
+          "name": "network-banner-not-present",
+          "region": {
+            "x": 0.05,
+            "y": 0.18,
+            "width": 0.9,
+            "height": 0.1
+          },
+          "mode": "Color",
+          "expectation": "Forbidden",
+          "fingerprintWidth": 8,
+          "fingerprintHeight": 8,
+          "matchThreshold": 0.98,
+          "weight": 0.2,
+          "sampleFixtureIds": [
+            "network-error"
+          ]
+        }
+      ]
+    },
+    {
+      "state": "Popup",
+      "anchors": [
+        {
+          "name": "popup-card",
+          "region": {
+            "x": 0.5,
+            "y": 0.35,
+            "width": 0.2,
+            "height": 0.25
+          },
+          "mode": "Color",
+          "expectation": "Required",
+          "fingerprintWidth": 8,
+          "fingerprintHeight": 8,
+          "matchThreshold": 0.98,
+          "weight": 1.0,
+          "sampleFixtureIds": [
+            "popup"
+          ]
+        },
+        {
+          "name": "network-banner-not-present",
+          "region": {
+            "x": 0.05,
+            "y": 0.18,
+            "width": 0.9,
+            "height": 0.1
+          },
+          "mode": "Color",
+          "expectation": "Forbidden",
+          "fingerprintWidth": 8,
+          "fingerprintHeight": 8,
+          "matchThreshold": 0.98,
+          "weight": 0.2,
+          "sampleFixtureIds": [
+            "network-error"
+          ]
+        }
+      ]
+    },
+    {
+      "state": "NetworkError",
+      "anchors": [
+        {
+          "name": "network-banner",
+          "region": {
+            "x": 0.05,
+            "y": 0.18,
+            "width": 0.9,
+            "height": 0.1
+          },
+          "mode": "Color",
+          "expectation": "Required",
+          "fingerprintWidth": 8,
+          "fingerprintHeight": 8,
+          "matchThreshold": 0.98,
+          "weight": 1.0,
+          "sampleFixtureIds": [
+            "network-error"
+          ]
+        },
+        {
+          "name": "popup-card-not-present",
+          "region": {
+            "x": 0.5,
+            "y": 0.35,
+            "width": 0.2,
+            "height": 0.25
+          },
+          "mode": "Color",
+          "expectation": "Forbidden",
+          "fingerprintWidth": 8,
+          "fingerprintHeight": 8,
+          "matchThreshold": 0.98,
+          "weight": 0.2,
+          "sampleFixtureIds": [
+            "popup"
+          ]
+        }
+      ]
+    }
+  ]
+}

@@ -1,4 +1,9 @@
 using System.Text.Json;
+using PogoInventory.Calibration.Errors;
+using PogoInventory.Calibration.Models;
+using PogoInventory.Calibration.Reporting;
+using PogoInventory.Calibration.Services;
+using PogoInventory.Calibration.Workspace;
 using PogoInventory.Core.Analysis;
 using PogoInventory.Core.Models;
 using PogoInventory.Core.Policy;
@@ -40,7 +45,15 @@ var tests = new (string Name, Func<Task> Run)[]
     ("Landscape screen fails closed", LandscapeScreenFailsClosedAsync),
     ("Confidence thresholds are deterministic", ConfidenceThresholdsAreDeterministicAsync),
     ("Invalid PNG is rejected", Sync(InvalidPngIsRejected)),
-    ("Screen evidence report writes JSON", ScreenEvidenceReportWritesJsonAsync)
+    ("Screen evidence report writes JSON", ScreenEvidenceReportWritesJsonAsync),
+    ("Calibration workspace creates private structure", CalibrationWorkspaceCreatesPrivateStructureAsync),
+    ("Calibration index preserves and resets approvals", CalibrationIndexPreservesAndResetsApprovalsAsync),
+    ("Calibration rejects fixture path traversal", Sync(CalibrationRejectsFixturePathTraversal)),
+    ("Synthetic calibration profile builds", SyntheticCalibrationProfileBuildsAsync),
+    ("Synthetic calibration acceptance passes", SyntheticCalibrationAcceptancePassesAsync),
+    ("Calibration false positive fails acceptance", CalibrationFalsePositiveFailsAcceptanceAsync),
+    ("Calibration rejects changed approved fixture", CalibrationRejectsChangedApprovedFixtureAsync),
+    ("Calibration report writes all formats", CalibrationReportWritesAllFormatsAsync)
 };
 
 var failed = 0;
@@ -546,6 +559,316 @@ static async Task ScreenEvidenceReportWritesJsonAsync()
     finally
     {
         DeleteDirectory(directory);
+    }
+}
+
+static async Task CalibrationWorkspaceCreatesPrivateStructureAsync()
+{
+    var directory = CreateTemporaryDirectory();
+    try
+    {
+        var workspace = await CalibrationWorkspace.InitializeAsync(
+            Path.Combine(directory, "calibration"));
+
+        AssertTrue(File.Exists(workspace.MarkerPath), "workspace marker should exist");
+        AssertTrue(File.Exists(workspace.ManifestPath), "fixture manifest should exist");
+        AssertTrue(File.Exists(workspace.AnchorPlanPath), "anchor plan should exist");
+        AssertTrue(Directory.Exists(workspace.FixturesPath), "fixtures directory should exist");
+        AssertTrue(
+            Directory.Exists(Path.Combine(workspace.FixturesPath, "Unknown")),
+            "Unknown negative-fixture directory should exist");
+
+        var reopened = CalibrationWorkspace.Open(workspace.RootPath);
+        AssertEqual(workspace.RootPath, reopened.RootPath, "reopened workspace path");
+    }
+    finally
+    {
+        DeleteDirectory(directory);
+    }
+}
+
+static async Task CalibrationIndexPreservesAndResetsApprovalsAsync()
+{
+    var directory = CreateTemporaryDirectory();
+    try
+    {
+        var workspace = await CalibrationWorkspace.InitializeAsync(
+            Path.Combine(directory, "calibration"));
+        var target = Path.Combine(workspace.FixturesPath, "InventoryList", "one.png");
+        File.Copy(RepositoryPath("data", "screen-fixtures", "InventoryList.png"), target);
+
+        var first = await FixtureIndexer.IndexAsync(workspace);
+        AssertEqual(1, first.NewFixtureCount, "new fixture count");
+
+        var manifest = await FixtureManifestLoader.LoadAsync(workspace.ManifestPath);
+        var approvedFixture = manifest.Fixtures.Single() with
+        {
+            SafetyReview = CompleteSafetyReview()
+        };
+        manifest = manifest with { Fixtures = new[] { approvedFixture } };
+        await File.WriteAllTextAsync(
+            workspace.ManifestPath,
+            JsonSerializer.Serialize(
+                manifest,
+                CalibrationJson.CreateOptions(writeIndented: true)));
+
+        var second = await FixtureIndexer.IndexAsync(workspace);
+        AssertEqual(1, second.PreservedApprovalCount, "preserved approval count");
+
+        File.Copy(
+            RepositoryPath("data", "screen-fixtures", "InventoryListNoisy.png"),
+            target,
+            overwrite: true);
+        var third = await FixtureIndexer.IndexAsync(workspace);
+        AssertEqual(1, third.ChangedFixtureCount, "changed fixture count");
+
+        var changed = await FixtureManifestLoader.LoadAsync(workspace.ManifestPath);
+        AssertTrue(
+            !changed.Fixtures.Single().SafetyReview.ApprovedForCalibration,
+            "changed fixture approval should be reset");
+    }
+    finally
+    {
+        DeleteDirectory(directory);
+    }
+}
+
+static void CalibrationRejectsFixturePathTraversal()
+{
+    var manifest = new ScreenFixtureManifest
+    {
+        Name = "Unsafe",
+        ProfileName = "Unsafe",
+        Fixtures = new[]
+        {
+            new ScreenFixtureDefinition
+            {
+                Id = "escape",
+                RelativePath = "../escape.png",
+                ExpectedState = ScreenState.Unknown,
+                Sha256 = new string('0', 64),
+                SafetyReview = CompleteSafetyReview()
+            }
+        }
+    };
+
+    try
+    {
+        FixtureManifestLoader.Validate(manifest);
+        throw new InvalidOperationException("Expected unsafe calibration path rejection.");
+    }
+    catch (CalibrationException exception) when (exception.Code == CalibrationErrorCode.UnsafePath)
+    {
+    }
+}
+
+static async Task SyntheticCalibrationProfileBuildsAsync()
+{
+    var directory = CreateTemporaryDirectory();
+    try
+    {
+        var output = Path.Combine(directory, "profile.json");
+        var profile = await BuildSyntheticCalibrationProfileAsync(output);
+
+        AssertTrue(File.Exists(output), "generated profile should exist");
+        AssertEqual(9, profile.States.Count, "generated state count");
+        AssertEqual(18, profile.States.Sum(x => x.Anchors.Count), "generated anchor count");
+        AssertEqual(
+            "Synthetic generated calibration profile",
+            profile.Name,
+            "generated profile name");
+    }
+    finally
+    {
+        DeleteDirectory(directory);
+    }
+}
+
+static async Task SyntheticCalibrationAcceptancePassesAsync()
+{
+    var directory = CreateTemporaryDirectory();
+    try
+    {
+        var profile = await BuildSyntheticCalibrationProfileAsync(
+            Path.Combine(directory, "profile.json"));
+        var manifest = await LoadSyntheticCalibrationManifestAsync();
+        var report = await CalibrationAcceptanceRunner.RunAsync(
+            manifest,
+            profile,
+            RepositoryPath("data", "screen-fixtures"));
+
+        AssertTrue(report.Accepted, "synthetic calibration should be accepted");
+        AssertEqual(14, report.ApprovedFixtureCount, "approved synthetic fixture count");
+        AssertEqual(0, report.FalsePositiveCount, "synthetic false positives");
+        AssertEqual(0, report.MisclassificationCount, "synthetic misclassifications");
+        AssertEqual(0, report.FalseNegativeCount, "synthetic false negatives");
+        AssertEqual(0, report.WeakAnchorCount, "synthetic weak anchors");
+    }
+    finally
+    {
+        DeleteDirectory(directory);
+    }
+}
+
+static async Task CalibrationFalsePositiveFailsAcceptanceAsync()
+{
+    var directory = CreateTemporaryDirectory();
+    try
+    {
+        var profile = await BuildSyntheticCalibrationProfileAsync(
+            Path.Combine(directory, "profile.json"));
+        var source = await LoadSyntheticCalibrationManifestAsync();
+        var inventory = source.Fixtures.Single(x => x.Id == "inventory-list") with
+        {
+            ExpectedState = ScreenState.Unknown
+        };
+        var manifest = source with
+        {
+            Acceptance = source.Acceptance with
+            {
+                MaximumWeakAnchors = 100,
+                States = new[]
+                {
+                    new StateAcceptanceRequirement
+                    {
+                        State = ScreenState.Unknown,
+                        MinimumApprovedFixtures = 1,
+                        MinimumRecall = 1.0
+                    }
+                }
+            },
+            Fixtures = new[] { inventory }
+        };
+
+        var report = await CalibrationAcceptanceRunner.RunAsync(
+            manifest,
+            profile,
+            RepositoryPath("data", "screen-fixtures"));
+
+        AssertTrue(!report.Accepted, "false-positive calibration should be rejected");
+        AssertEqual(1, report.FalsePositiveCount, "false-positive count");
+    }
+    finally
+    {
+        DeleteDirectory(directory);
+    }
+}
+
+static async Task CalibrationRejectsChangedApprovedFixtureAsync()
+{
+    var directory = CreateTemporaryDirectory();
+    try
+    {
+        var target = Path.Combine(directory, "screen.png");
+        var original = RepositoryPath("data", "screen-fixtures", "InventoryList.png");
+        File.Copy(original, target);
+        var hash = await CalibrationHash.Sha256Async(target);
+        var manifest = new ScreenFixtureManifest
+        {
+            Name = "Hash test",
+            ProfileName = "Hash test",
+            Fixtures = new[]
+            {
+                new ScreenFixtureDefinition
+                {
+                    Id = "screen",
+                    RelativePath = "screen.png",
+                    ExpectedState = ScreenState.InventoryList,
+                    Sha256 = hash,
+                    SafetyReview = CompleteSafetyReview()
+                }
+            }
+        };
+
+        File.Copy(
+            RepositoryPath("data", "screen-fixtures", "PokemonDetails.png"),
+            target,
+            overwrite: true);
+        await ExpectCalibrationErrorAsync(
+            CalibrationErrorCode.FixtureHashMismatch,
+            () => FixtureRepository.LoadApprovedAsync(manifest, directory));
+    }
+    finally
+    {
+        DeleteDirectory(directory);
+    }
+}
+
+static async Task CalibrationReportWritesAllFormatsAsync()
+{
+    var directory = CreateTemporaryDirectory();
+    try
+    {
+        var profile = await BuildSyntheticCalibrationProfileAsync(
+            Path.Combine(directory, "profile.json"));
+        var manifest = await LoadSyntheticCalibrationManifestAsync();
+        var report = await CalibrationAcceptanceRunner.RunAsync(
+            manifest,
+            profile,
+            RepositoryPath("data", "screen-fixtures"));
+        var output = Path.Combine(directory, "reports");
+
+        await CalibrationReportWriter.WriteAsync(report, output);
+
+        AssertTrue(
+            File.Exists(Path.Combine(output, "calibration-acceptance.json")),
+            "calibration JSON report should exist");
+        AssertTrue(
+            File.Exists(Path.Combine(output, "calibration-acceptance.md")),
+            "calibration Markdown report should exist");
+        AssertTrue(
+            File.Exists(Path.Combine(output, "confusion-matrix.csv")),
+            "confusion matrix should exist");
+        AssertTrue(
+            File.Exists(Path.Combine(output, "fixture-results.csv")),
+            "fixture results should exist");
+    }
+    finally
+    {
+        DeleteDirectory(directory);
+    }
+}
+
+static FixtureSafetyReview CompleteSafetyReview() =>
+    new()
+    {
+        AccountIdentitySafe = true,
+        LocationSafe = true,
+        NotificationsSafe = true,
+        OtherPersonalDataSafe = true,
+        ApprovedForCalibration = true,
+        ReviewedBy = "Self-test",
+        ReviewedAtUtc = new DateTimeOffset(2026, 7, 13, 20, 30, 0, TimeSpan.Zero)
+    };
+
+static async Task<ScreenDetectionProfile> BuildSyntheticCalibrationProfileAsync(
+    string outputPath)
+{
+    var manifest = await LoadSyntheticCalibrationManifestAsync();
+    var plan = await AnchorPlanLoader.LoadAsync(
+        RepositoryPath("data", "calibration", "anchor-plan.synthetic.json"));
+    return await CalibrationProfileBuilder.BuildAsync(
+        manifest,
+        plan,
+        RepositoryPath("data", "screen-fixtures"),
+        outputPath);
+}
+
+static Task<ScreenFixtureManifest> LoadSyntheticCalibrationManifestAsync() =>
+    FixtureManifestLoader.LoadAsync(
+        RepositoryPath("data", "calibration", "fixture-manifest.synthetic.json"));
+
+static async Task ExpectCalibrationErrorAsync(
+    CalibrationErrorCode expectedCode,
+    Func<Task> action)
+{
+    try
+    {
+        await action();
+        throw new InvalidOperationException($"Expected CalibrationException {expectedCode}.");
+    }
+    catch (CalibrationException exception) when (exception.Code == expectedCode)
+    {
     }
 }
 

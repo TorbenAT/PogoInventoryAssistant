@@ -20,3 +20,8 @@ private/
 # Real screen calibration stays local while the repository is public.
 data/screen-profile.local.json
 data/screen-fixtures-real/
+# Private calibration workspace metadata and generated local files.
+**/.pogo-private-calibration
+**/fixture-manifest.local.json
+**/anchor-plan.local.json
+**/screen-profile.local.json

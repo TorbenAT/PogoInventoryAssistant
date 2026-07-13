@@ -1,6 +1,10 @@
 using System.Globalization;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using PogoInventory.Calibration.Errors;
+using PogoInventory.Calibration.Reporting;
+using PogoInventory.Calibration.Services;
+using PogoInventory.Calibration.Workspace;
 using PogoInventory.Core.Analysis;
 using PogoInventory.Core.Models;
 using PogoInventory.Core.Policy;
@@ -49,8 +53,25 @@ static async Task<int> MainAsync(string[] args)
             "screen-fingerprint" => await ExtractScreenFingerprintAsync(
                 args.Skip(1).ToArray(),
                 cancellationSource.Token),
+            "calibration-init" => await InitializeCalibrationAsync(
+                args.Skip(1).ToArray(),
+                cancellationSource.Token),
+            "calibration-index" => await IndexCalibrationAsync(
+                args.Skip(1).ToArray(),
+                cancellationSource.Token),
+            "calibration-build-profile" => await BuildCalibrationProfileAsync(
+                args.Skip(1).ToArray(),
+                cancellationSource.Token),
+            "calibration-validate" => await ValidateCalibrationAsync(
+                args.Skip(1).ToArray(),
+                cancellationSource.Token),
             _ => UnknownCommand(args[0])
         };
+    }
+    catch (CalibrationException exception)
+    {
+        Console.Error.WriteLine($"[{exception.Code}] {exception.Message}");
+        return CalibrationExitCode(exception.Code);
     }
     catch (DeviceHarnessException exception)
     {
@@ -237,6 +258,143 @@ static async Task<int> ExtractScreenFingerprintAsync(
     return 0;
 }
 
+static async Task<int> InitializeCalibrationAsync(
+    string[] args,
+    CancellationToken cancellationToken)
+{
+    var options = ParseOptions(args);
+    var workspacePath = Require(options, "workspace");
+    var workspace = await CalibrationWorkspace.InitializeAsync(
+        workspacePath,
+        cancellationToken);
+
+    Console.WriteLine("Private calibration workspace initialised.");
+    Console.WriteLine($"Root: {workspace.RootPath}");
+    Console.WriteLine($"Fixtures: {workspace.FixturesPath}");
+    Console.WriteLine($"Manifest: {workspace.ManifestPath}");
+    Console.WriteLine($"Anchor plan: {workspace.AnchorPlanPath}");
+    Console.WriteLine("Real screenshots remain local and are ignored by Git when the workspace is under local-data/.");
+    return 0;
+}
+
+static async Task<int> IndexCalibrationAsync(
+    string[] args,
+    CancellationToken cancellationToken)
+{
+    var options = ParseOptions(args);
+    var workspace = CalibrationWorkspace.Open(Require(options, "workspace"));
+    var result = await FixtureIndexer.IndexAsync(workspace, cancellationToken);
+
+    Console.WriteLine($"Indexed fixtures: {result.FixtureCount}");
+    Console.WriteLine($"New: {result.NewFixtureCount}");
+    Console.WriteLine($"Changed and approval reset: {result.ChangedFixtureCount}");
+    Console.WriteLine($"Approvals preserved: {result.PreservedApprovalCount}");
+    Console.WriteLine($"Manifest: {result.ManifestPath}");
+    return 0;
+}
+
+static async Task<int> BuildCalibrationProfileAsync(
+    string[] args,
+    CancellationToken cancellationToken)
+{
+    var options = ParseOptions(args, "synthetic");
+    string manifestPath;
+    string anchorPlanPath;
+    string fixturesPath;
+    string outputPath;
+
+    if (Optional(options, "workspace") is { } workspacePath)
+    {
+        var workspace = CalibrationWorkspace.Open(workspacePath);
+        manifestPath = workspace.ManifestPath;
+        anchorPlanPath = workspace.AnchorPlanPath;
+        fixturesPath = workspace.FixturesPath;
+        outputPath = workspace.ProfilePath;
+    }
+    else
+    {
+        if (!options.ContainsKey("synthetic"))
+        {
+            throw new ArgumentException(
+                "Use --workspace for real screenshots. Explicit paths are only allowed with --synthetic.");
+        }
+
+        manifestPath = Require(options, "manifest");
+        anchorPlanPath = Require(options, "anchors");
+        fixturesPath = Require(options, "fixtures");
+        outputPath = Require(options, "out");
+    }
+
+    var manifest = await FixtureManifestLoader.LoadAsync(manifestPath, cancellationToken);
+    var plan = await AnchorPlanLoader.LoadAsync(anchorPlanPath, cancellationToken);
+    var profile = await CalibrationProfileBuilder.BuildAsync(
+        manifest,
+        plan,
+        fixturesPath,
+        outputPath,
+        cancellationToken);
+
+    Console.WriteLine($"Profile built: {Path.GetFullPath(outputPath)}");
+    Console.WriteLine($"States: {profile.States.Count}");
+    Console.WriteLine($"Anchors: {profile.States.Sum(x => x.Anchors.Count)}");
+    Console.WriteLine($"Minimum winner margin: {profile.MinimumWinnerMargin:F6}");
+    return 0;
+}
+
+static async Task<int> ValidateCalibrationAsync(
+    string[] args,
+    CancellationToken cancellationToken)
+{
+    var options = ParseOptions(args, "synthetic");
+    string manifestPath;
+    string fixturesPath;
+    string profilePath;
+    string outputDirectory;
+
+    if (Optional(options, "workspace") is { } workspacePath)
+    {
+        var workspace = CalibrationWorkspace.Open(workspacePath);
+        manifestPath = workspace.ManifestPath;
+        fixturesPath = workspace.FixturesPath;
+        profilePath = workspace.ProfilePath;
+        outputDirectory = Path.Combine(workspace.ReportsPath, "acceptance");
+    }
+    else
+    {
+        if (!options.ContainsKey("synthetic"))
+        {
+            throw new ArgumentException(
+                "Use --workspace for real screenshots. Explicit paths are only allowed with --synthetic.");
+        }
+
+        manifestPath = Require(options, "manifest");
+        fixturesPath = Require(options, "fixtures");
+        profilePath = Require(options, "profile");
+        outputDirectory = Require(options, "out");
+    }
+
+    var manifest = await FixtureManifestLoader.LoadAsync(manifestPath, cancellationToken);
+    var profile = await ScreenProfileLoader.LoadAsync(profilePath, cancellationToken);
+    var report = await CalibrationAcceptanceRunner.RunAsync(
+        manifest,
+        profile,
+        fixturesPath,
+        cancellationToken);
+    await CalibrationReportWriter.WriteAsync(
+        report,
+        outputDirectory,
+        cancellationToken);
+
+    Console.WriteLine($"Calibration result: {(report.Accepted ? "ACCEPTED" : "REJECTED")}");
+    Console.WriteLine($"Approved fixtures: {report.ApprovedFixtureCount}");
+    Console.WriteLine($"False positives: {report.FalsePositiveCount}");
+    Console.WriteLine($"Misclassifications: {report.MisclassificationCount}");
+    Console.WriteLine($"False negatives: {report.FalseNegativeCount}");
+    Console.WriteLine($"Weak anchors: {report.WeakAnchorCount}");
+    Console.WriteLine($"Reports: {Path.GetFullPath(outputDirectory)}");
+    return report.Accepted ? 0 : 4;
+}
+
 static Dictionary<string, string> ParseOptions(
     string[] args,
     params string[] flagNames)
@@ -351,6 +509,19 @@ static int UnknownCommand(string command)
     return 2;
 }
 
+static int CalibrationExitCode(CalibrationErrorCode code) =>
+    code switch
+    {
+        CalibrationErrorCode.InvalidWorkspace => 40,
+        CalibrationErrorCode.InvalidManifest => 41,
+        CalibrationErrorCode.InvalidAnchorPlan => 42,
+        CalibrationErrorCode.FixtureMissing => 43,
+        CalibrationErrorCode.FixtureHashMismatch => 44,
+        CalibrationErrorCode.UnsafePath => 45,
+        CalibrationErrorCode.FileSystemFailure => 46,
+        _ => 1
+    };
+
 static int DeviceExitCode(DeviceErrorCode code) =>
     code switch
     {
@@ -394,5 +565,13 @@ static void PrintHelp()
     Console.WriteLine("  screen-fingerprint --image <screen.png> --region <x,y,w,h> --out <fingerprint.json>");
     Console.WriteLine("                     [--mode <Color|Grayscale|Edge>] [--width <n>] [--height <n>]");
     Console.WriteLine();
-    Console.WriteLine("Device snapshot and screen analysis are read-only. They contain no tap, swipe, text input or game-changing action.");
+    Console.WriteLine("  calibration-init --workspace <private-local-directory>");
+    Console.WriteLine("  calibration-index --workspace <private-local-directory>");
+    Console.WriteLine("  calibration-build-profile --workspace <private-local-directory>");
+    Console.WriteLine("  calibration-validate --workspace <private-local-directory>");
+    Console.WriteLine();
+    Console.WriteLine("  calibration-build-profile --synthetic --manifest <file> --anchors <file> --fixtures <dir> --out <file>");
+    Console.WriteLine("  calibration-validate --synthetic --manifest <file> --fixtures <dir> --profile <file> --out <dir>");
+    Console.WriteLine();
+    Console.WriteLine("Device snapshot, screen analysis and calibration are read-only. They contain no tap, swipe, text input or game-changing action.");
 }

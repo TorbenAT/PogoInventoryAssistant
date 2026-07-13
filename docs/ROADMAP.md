@@ -37,16 +37,25 @@ Torben reported a green 0.2.0 GitHub Actions run.
 - JSON evidence report
 - no device input
 
-## M2b Real-screen calibration, next
+## M2b Calibration workflow, complete in 0.4.0
 
-- private redacted real-screen fixture set
-- stable UI anchors independent of Pokémon and account data
-- multiple samples per dynamic state
-- local profile ignored by Git
-- confusion report
-- false-positive and partial-screen tests
-- zero false positive acceptance requirement
+- private workspace
+- fixture indexing and SHA-256 locking
+- anchor-plan profile generation
+- acceptance policy and confusion report
+- weak-anchor diagnostics
+- synthetic CI validation
 - read-only only
+
+## M2c Real-screen acceptance, next
+
+- capture approved private fixtures
+- select stable real UI anchors
+- build phone-specific local profile
+- zero false positives
+- zero known-state misclassifications
+- zero weak anchors
+- manual acceptance report review
 
 ## M3 Calcy Spike
 

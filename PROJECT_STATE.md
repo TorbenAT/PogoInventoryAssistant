@@ -2,29 +2,23 @@
 
 ## Current version
 
-0.3.1
+0.4.0
 
-## Hotfix status
+## Accepted checkpoint
 
-The first 0.3.0 GitHub Actions build found a compile-time type mismatch in the PNG Paeth filter. Version 0.3.1 contains the narrow compiler fix plus a dedicated Paeth-filter regression fixture and exact pixel test. No functional milestone scope changed.
-
-## Accepted previous checkpoint
-
-
-Torben reported that the 0.2.0 GitHub Actions run was fully green. M1 is therefore accepted at CI level. A real-phone screenshot capture is still useful before later phone-specific calibration.
+Torben reported that the complete 0.3.1 GitHub Actions run was green. The foundation, read-only Device Harness, generic Screen State Detector and PNG Paeth regression fix are accepted at CI level.
 
 ## Completed
 
 ### M0: Foundation
 
-- repository and .NET 8 solution structure
-- Pokémon observation model with nullable special-status fields
-- JSON decision policy
-- conservative KEEP / REVIEW / DELETE analysis
+- .NET 8 solution and repository structure
+- Pokémon observation model
+- configurable decision policy
+- conservative KEEP / REVIEW / DELETE engine
 - duplicate grouping and strictly-better duplicate requirement
-- preliminary PvP candidate preservation
-- JSON and Markdown decision reports
-- package-free self-tests
+- preliminary PvP preservation
+- decision reports and package-free self-tests
 
 ### M1: Read-only Device Harness
 
@@ -32,84 +26,95 @@ Torben reported that the 0.2.0 GitHub Actions run was fully green. M1 is therefo
 - ADB and fake transports
 - exact-one-authorised-device selection
 - device, screen and battery metadata
-- validated PNG screenshot capture
-- atomic output and SHA-256 manifest
-- timeouts, cancellation, structured errors and CI coverage
-- no input-control API
+- validated screenshot capture
+- atomic files and SHA-256 manifest
+- timeouts, cancellation and structured errors
+- no input API
 
-### M2: Generic Screen State Detector
+### M2a: Generic Screen State Detector
 
 - isolated `PogoInventory.Vision` project
-- package-free PNG decoder for normal Android screenshot formats
-- decompression and dimension safety limits
-- normalised screen regions
+- package-free PNG decoder
+- normalised UI regions
 - Color, Grayscale and Edge fingerprints
 - Required, Optional and Forbidden anchors
-- profile validation with self-contained Base64 reference samples
-- explicit orientation, resolution and aspect-ratio checks
-- deterministic state scoring and winner-margin handling
-- `Unknown` for incomplete, conflicting or unsupported screens
-- detailed JSON evidence reports
-- CLI commands `screen-detect` and `screen-fingerprint`
-- synthetic, non-personal fixtures for all initial states
-- tests for known, incomplete, conflicting and landscape screens
-- CI commands for synthetic detection and fingerprint extraction
+- geometry validation
+- deterministic state score and winner margin
+- fail-closed Unknown
+- detailed evidence reports
+- synthetic fixtures and CI tests
+
+### M2b: Calibration and acceptance harness
+
+- isolated `PogoInventory.Calibration` project
+- private workspace marker and standard local layout
+- fixture indexing by expected-state folder
+- SHA-256 fixture locking
+- approval preservation only for unchanged files
+- automatic approval reset after file changes
+- path traversal protection
+- explicit privacy and redaction review fields
+- versioned fixture manifest
+- versioned anchor plan
+- multiple sample fixtures per anchor
+- local screen-profile generation
+- acceptance policy with per-state coverage and recall
+- false-positive, false-negative and misclassification classification
+- confusion matrix
+- weak-anchor and positive-negative separation analysis
+- JSON, Markdown and CSV reports
+- synthetic end-to-end profile generation and acceptance in CI
+- PowerShell workflow scripts
+- calibration and fixture-approval documentation
 
 ## Important limitation
 
-The detector architecture is implemented, but the supplied profile is synthetic. It cannot yet classify real Pokémon GO screenshots. Phone-specific and layout-specific anchors must be created from real, redacted screenshots.
+The calibration engine is complete, but no real screenshots or real Pokémon GO anchor plan have been supplied. The committed profile remains synthetic and must not be used for phone automation.
 
 ## Not completed
 
-- compilation of 0.3.1 in the assistant build environment
-- 0.3.1 GitHub Actions acceptance
-- real Pokémon GO screenshot fixture set
-- real-screen anchor calibration and false-positive testing
-- popup and network-error examples from the actual phone
+- real Android screenshot fixture set
+- real phone-specific anchor plan
+- accepted real screen profile
 - Calcy integration
-- OCR and icon recognition
-- inventory scanning loop
-- SQLite database and checkpoints
-- exact Pokémon fingerprinting
+- OCR or icon recognition
+- inventory scanning state machine
+- SQLite and checkpoints
+- exact Pokémon identity
 - full PvPoke / Ohbem integration
-- device-side tagging
+- any input-control or tagging executor
 
 ## Required checkpoint after push
 
-1. Confirm the 0.3.1 GitHub Actions run is green.
-2. Run `scripts\detect-synthetic-screen.ps1` locally.
-3. Confirm the report selects `InventoryList`.
-4. Run `scripts\extract-synthetic-fingerprint.ps1`.
-5. Capture a small, redacted set of real Pokémon GO screens at the phone's fixed resolution.
-6. Keep those screenshots outside the public repository until they are reviewed and redacted.
+1. Confirm GitHub Actions is green for version 0.4.0.
+2. Confirm all 34 self-tests pass.
+3. Confirm synthetic calibration profile generation succeeds.
+4. Confirm synthetic acceptance returns ACCEPTED with zero false positives, misclassifications, false negatives and weak anchors.
+5. On the Windows computer, initialise `local-data\screen-calibration`.
+6. Capture and approve the first real fixture set.
+7. Keep all real screenshots and generated local profiles out of Git.
 
 ## Next recommended milestone
 
-M2b: Real-screen calibration and detector acceptance.
+M2c: Real-screen fixture capture, anchor selection and detector acceptance.
 
-Required real screenshots:
+The next milestone is data-driven. Do not begin Calcy integration until the real fixture report has:
 
-- inventory list
-- Pokémon details
-- appraisal open
-- Pokémon menu open
-- tag dialog open
-- search open
-- loading screen if reproducible
-- ordinary popup
-- network-error popup or banner if reproducible
-- at least three visually different examples of the normal dynamic screens
-
-The next milestone must create a local private profile, select stable anchors and prove that unknown and conflicting screens fail closed. It must remain read-only.
+- zero false positives
+- zero wrong known-state classifications
+- zero weak anchors
+- required state coverage
+- accepted recall thresholds
 
 ## Design decisions preserved
 
 - C# and .NET 8
 - no hidden game API
 - no automatic transfer
-- no anti-detection behaviour or human imitation
-- unknown data results in REVIEW, never DELETE
-- DELETE requires exact identity and a documented better duplicate
-- all ADB execution remains isolated in `PogoInventory.Device`
-- vision is independent of ADB and file storage
+- no anti-detection or human imitation
+- unknown data produces REVIEW or stop
+- DELETE requires exact identity and a better documented duplicate
+- all ADB process execution remains isolated in `PogoInventory.Device`
+- calibration and vision remain read-only
+- real data stays local while the repository is public
 - every release updates project state and continuation prompt

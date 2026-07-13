@@ -28,11 +28,13 @@ out\
 data\screen-fixtures-real\
 ```
 
-The local real-screen profile should use the ignored path:
+Use the initialised ignored workspace:
 
 ```text
-data\screen-profile.local.json
+local-data\screen-calibration\
 ```
+
+It contains the real fixtures, local manifest, anchor plan, generated profile and acceptance reports.
 
 The application should later support a configurable data directory outside the repository.
 
@@ -48,3 +50,10 @@ Before approving a real screenshot as a public fixture, verify that:
 - device identifiers are absent
 - Pokémon details are not linked to a private inventory export
 - the image is needed for a stable UI anchor rather than account-specific content
+
+
+## Hash-locked approval
+
+The fixture manifest records a SHA-256 for every PNG. Approval is valid only for those exact bytes. Re-indexing a changed fixture resets its approval.
+
+Approval for local calibration does not approve a screenshot for public Git history. Public sharing requires a separate explicit review and should prefer a synthetic replacement or minimal redacted crop.

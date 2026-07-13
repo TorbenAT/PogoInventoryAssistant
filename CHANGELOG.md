@@ -1,5 +1,25 @@
 # Changelog
 
+## 0.4.0
+
+- Added the isolated `PogoInventory.Calibration` project.
+- Added a private calibration workspace with a mandatory marker and ignored local layout.
+- Added state-folder fixture indexing and stable fixture identifiers.
+- Added SHA-256 locking, approval preservation for unchanged files and approval reset after changes.
+- Added explicit account, location, notification, other-data and calibration approval fields.
+- Added strict fixture path-containment checks.
+- Added versioned fixture manifests and anchor plans.
+- Added multiple approved fixture samples per anchor.
+- Added local profile generation from approved PNG fixtures.
+- Added per-state coverage and recall requirements.
+- Added false-positive, false-negative and known-state misclassification accounting.
+- Added confusion-matrix, weak-anchor and similarity-separation reports.
+- Added JSON, Markdown and CSV acceptance outputs.
+- Added synthetic calibration data and end-to-end CI profile generation and validation.
+- Added eight calibration self-tests, bringing the expected total to 34.
+- Added local PowerShell calibration scripts and detailed privacy and fixture-approval documentation.
+- Preserved the read-only boundary with no taps, swipes, text input, tagging or transfer.
+
 ## 0.3.1
 
 - Fixed the `PngDecoder` Paeth-filter compile failure reported by GitHub Actions.
