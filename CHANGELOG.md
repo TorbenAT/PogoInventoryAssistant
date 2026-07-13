@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.3.1
+
+- Fixed the `PngDecoder` Paeth-filter compile failure reported by GitHub Actions.
+- Changed `Paeth` to accept and return `int`, matching the integer values produced by PNG unfiltering before the final checked byte conversion.
+- No detector behaviour, thresholds, phone access or safety boundary changed.
+- Added a 3 x 2 RGBA PNG fixture whose second row uses PNG Paeth filter type 4.
+- Added a regression self-test that verifies exact reconstructed RGBA pixels.
+- Added a regression note and updated handoff documents.
+
 ## 0.3.0
 
 - Added the isolated `PogoInventory.Vision` project.

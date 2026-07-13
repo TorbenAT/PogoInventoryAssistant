@@ -2,9 +2,14 @@
 
 ## Current version
 
-0.3.0
+0.3.1
+
+## Hotfix status
+
+The first 0.3.0 GitHub Actions build found a compile-time type mismatch in the PNG Paeth filter. Version 0.3.1 contains the narrow compiler fix plus a dedicated Paeth-filter regression fixture and exact pixel test. No functional milestone scope changed.
 
 ## Accepted previous checkpoint
+
 
 Torben reported that the 0.2.0 GitHub Actions run was fully green. M1 is therefore accepted at CI level. A real-phone screenshot capture is still useful before later phone-specific calibration.
 
@@ -56,8 +61,8 @@ The detector architecture is implemented, but the supplied profile is synthetic.
 
 ## Not completed
 
-- compilation of 0.3.0 in the assistant build environment
-- 0.3.0 GitHub Actions acceptance
+- compilation of 0.3.1 in the assistant build environment
+- 0.3.1 GitHub Actions acceptance
 - real Pokémon GO screenshot fixture set
 - real-screen anchor calibration and false-positive testing
 - popup and network-error examples from the actual phone
@@ -71,7 +76,7 @@ The detector architecture is implemented, but the supplied profile is synthetic.
 
 ## Required checkpoint after push
 
-1. Confirm the 0.3.0 GitHub Actions run is green.
+1. Confirm the 0.3.1 GitHub Actions run is green.
 2. Run `scripts\detect-synthetic-screen.ps1` locally.
 3. Confirm the report selects `InventoryList`.
 4. Run `scripts\extract-synthetic-fingerprint.ps1`.

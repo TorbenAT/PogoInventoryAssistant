@@ -31,7 +31,7 @@ Adaptive waiting is allowed only for correctness, such as waiting for a recognis
 
 ## Current phone integration is read-only
 
-Version 0.3.0 permits only:
+Version 0.3.1 permits only:
 
 - device discovery
 - device metadata reads

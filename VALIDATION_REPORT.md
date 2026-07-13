@@ -2,7 +2,31 @@
 
 ## Version
 
-0.3.0
+0.3.1
+
+## GitHub Actions issue addressed
+
+The first 0.3.0 CI build failed with three `CS1503` errors at `PngDecoder.cs(238,55-65)`.
+
+Root cause:
+
+- `left`, `up` and `upLeft` are inferred as `int` because their conditional expressions use integer literal `0`.
+- `Paeth` accepted three `byte` arguments.
+- C# does not implicitly narrow `int` to `byte`.
+
+Hotfix:
+
+- changed `Paeth(byte, byte, byte) -> byte`
+- to `Paeth(int, int, int) -> int`
+- kept the existing final `unchecked((byte)(...))` conversion at the reconstructed output byte
+
+The fix is narrow and does not change the intended arithmetic.
+
+Regression coverage added:
+
+- a valid 3 x 2 RGBA PNG with the second scanline encoded using Paeth filter type 4
+- exact assertions for all pixels on the filtered row
+- the package-free self-test suite now contains 26 tests
 
 ## Previous accepted result
 
@@ -10,7 +34,7 @@ Torben reported that the 0.2.0 GitHub Actions workflow was fully green.
 
 ## Performed in the assistant build environment
 
-- Expanded the complete 0.2.0 repository and applied the 0.3.0 changes.
+- Expanded the complete 0.2.0 repository and applied the 0.3.1 changes.
 - Parsed all 57 C# source files with a C# syntax parser.
 - Result: zero syntax-tree errors or missing syntax nodes.
 - Parsed the synthetic screen profile as JSON.
@@ -32,7 +56,7 @@ The environment did not contain:
 - ADB
 - an Android phone
 
-The 0.3.0 solution was therefore not compiled or executed here. The first authoritative compilation and runtime result is the GitHub Actions run after push.
+The 0.3.1 solution was therefore not compiled or executed here. The first authoritative compilation and runtime result is the GitHub Actions run after push.
 
 ## Automated validation added
 
@@ -59,7 +83,7 @@ Self-tests cover:
 
 ## Required acceptance sequence
 
-After pushing 0.3.0:
+After pushing 0.3.1:
 
 ```powershell
 .\scripts\build.ps1

@@ -299,7 +299,7 @@ public static class PngDecoder
         return rgba;
     }
 
-    private static byte Paeth(byte left, byte up, byte upLeft)
+    private static int Paeth(int left, int up, int upLeft)
     {
         var prediction = left + up - upLeft;
         var distanceLeft = Math.Abs(prediction - left);

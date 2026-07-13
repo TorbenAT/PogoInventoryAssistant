@@ -8,7 +8,7 @@ I am building Pogo Inventory Assistant in C# and .NET 8.
 
 Open and inspect the repository before changing anything. Treat `PROJECT_STATE.md` as the source of truth, verify it against the code, and preserve `docs/GUARDRAILS.md` and `AGENTS.md`.
 
-Current version: 0.3.0.
+Current version: 0.3.1.
 
 Completed:
 
@@ -22,7 +22,7 @@ Completed:
 - synthetic fixtures and tests for all initial screen states
 - CLI commands for screen detection and fingerprint extraction
 
-Before implementing the next milestone, fix any CI issue found in 0.3.0.
+The 0.3.1 hotfix resolves the PNG Paeth-filter compile error found by CI. Verify CI is green before implementing the next milestone.
 
 Build the next isolated milestone: M2b Real-screen calibration and detector acceptance. Keep it read-only.
 

@@ -148,7 +148,7 @@ Do not rely on one large full-screen fingerprint. Prefer several small, independ
 
 ## Performance
 
-Version 0.3.0 validates profiles and decodes reference samples on every detection. This is acceptable for isolated screenshots and tests. A later continuous scanner should compile and cache a validated profile once per run.
+Version 0.3.1 validates profiles and decodes reference samples on every detection. This is acceptable for isolated screenshots and tests. A later continuous scanner should compile and cache a validated profile once per run.
 
 ## Known limitations
 

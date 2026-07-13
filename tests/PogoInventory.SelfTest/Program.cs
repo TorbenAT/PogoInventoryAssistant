@@ -33,6 +33,7 @@ var tests = new (string Name, Func<Task> Run)[]
     ("Invalid screenshot is rejected", InvalidScreenshotIsRejectedAsync),
     ("Cancelled snapshot does not write files", CancelledSnapshotDoesNotWriteFilesAsync),
     ("PNG decoder reads synthetic fixture", Sync(PngDecoderReadsSyntheticFixture)),
+    ("PNG decoder reconstructs Paeth-filtered row", Sync(PngDecoderReconstructsPaethFilteredRow)),
     ("Known screen fixtures classify correctly", KnownScreenFixturesClassifyAsync),
     ("Incomplete screen returns Unknown", IncompleteScreenReturnsUnknownAsync),
     ("Conflicting screen returns Unknown", ConflictingScreenReturnsUnknownAsync),
@@ -400,6 +401,18 @@ static void PngDecoderReadsSyntheticFixture()
         8);
     AssertEqual(8 * 8 * 3, fingerprint.Length, "color fingerprint length");
     AssertEqual(1d, FingerprintComparer.Similarity(fingerprint, fingerprint), "self similarity");
+}
+
+static void PngDecoderReconstructsPaethFilteredRow()
+{
+    var image = LoadFixture("PaethFilterRgba.png");
+    AssertEqual(3, image.Width, "Paeth fixture width");
+    AssertEqual(2, image.Height, "Paeth fixture height");
+    AssertEqual(new Rgba32(10, 20, 30, 255), image.GetPixel(0, 0), "row 0 pixel 0");
+    AssertEqual(new Rgba32(70, 80, 90, 255), image.GetPixel(2, 0), "row 0 pixel 2");
+    AssertEqual(new Rgba32(15, 25, 35, 255), image.GetPixel(0, 1), "Paeth row pixel 0");
+    AssertEqual(new Rgba32(45, 55, 65, 255), image.GetPixel(1, 1), "Paeth row pixel 1");
+    AssertEqual(new Rgba32(75, 85, 95, 255), image.GetPixel(2, 1), "Paeth row pixel 2");
 }
 
 static async Task KnownScreenFixturesClassifyAsync()

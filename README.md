@@ -1,10 +1,10 @@
 # Pogo Inventory Assistant
 
-Version 0.3.0
+Version 0.3.1
 
 Pogo Inventory Assistant is being built as a conservative, local inventory and decision assistant for Pokémon GO. The final transfer remains manual.
 
-Version 0.3.0 adds a read-only Screen State Detector. It analyses PNG screenshots and returns a state plus a full evidence report. It does not control the phone.
+Version 0.3.1 adds a read-only Screen State Detector. It analyses PNG screenshots and returns a state plus a full evidence report. It does not control the phone.
 
 ## What works now
 
