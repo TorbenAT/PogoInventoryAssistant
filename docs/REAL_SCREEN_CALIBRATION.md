@@ -2,13 +2,13 @@
 
 ## Purpose
 
-Version 0.4.0 adds a controlled workflow for turning private, redacted Pokémon GO screenshots into a local screen-detection profile and proving that the profile fails closed.
+Version 0.5.0 provides a controlled workflow for turning private Pokémon GO screenshots into a local screen-detection profile and proving that the detector fails closed.
 
-The workflow is read-only. It does not connect calibration to taps, swipes, text input, tagging or transfer.
+The workflow is read-only. It does not add taps, swipes, text input, tagging or transfer.
 
 ## Private workspace
 
-Initialise the default ignored workspace:
+Initialise or upgrade the default ignored workspace:
 
 ```powershell
 .\scripts\init-local-calibration.ps1
@@ -20,8 +20,21 @@ Default layout:
 local-data\screen-calibration\
 ├── .pogo-private-calibration
 ├── PRIVATE-README.txt
+├── capture-plan.local.json
+├── capture-session.local.json
 ├── fixture-manifest.local.json
 ├── anchor-plan.local.json
+├── incoming\
+│   ├── InventoryList\
+│   ├── PokemonDetails\
+│   ├── AppraisalOpen\
+│   ├── PokemonMenuOpen\
+│   ├── TagDialogOpen\
+│   ├── SearchOpen\
+│   ├── Loading\
+│   ├── Popup\
+│   ├── NetworkError\
+│   └── Unknown\
 ├── fixtures\
 │   ├── InventoryList\
 │   ├── PokemonDetails\
@@ -34,12 +47,14 @@ local-data\screen-calibration\
 │   ├── NetworkError\
 │   └── Unknown\
 ├── profiles\screen-profile.local.json
-└── reports\acceptance\
+└── reports\
+    ├── capture\
+    └── acceptance\
 ```
 
 The marker file is mandatory. Real-screen commands refuse to use an arbitrary directory that has not been explicitly initialised.
 
-## Capture coverage
+## Fixed phone configuration
 
 Keep the Android phone fixed to one configuration:
 
@@ -49,64 +64,123 @@ Keep the Android phone fixed to one configuration:
 - same display size and font scale
 - same Pokémon GO language
 - same Android navigation mode
-- no floating overlays except the UI being deliberately tested
+- no floating windows or notification banners
 
-Minimum target set:
+The first capture locks the local session to the device serial and exact screenshot dimensions.
+
+## Capture coverage
+
+The default capture plan targets:
 
 - 3 visually different InventoryList screens
 - 3 visually different PokemonDetails screens
 - 3 visually different AppraisalOpen screens
-- 1 or more examples of every menu, dialog and search state
-- loading, popup and network-error examples where reproducible
-- at least 4 Unknown negatives
+- 2 PokemonMenuOpen screens
+- 2 TagDialogOpen screens
+- 2 SearchOpen screens
+- 2 Popup screens
+- 1 genuine Loading example and 1 genuine NetworkError example, collected last if necessary but required before acceptance
+- 6 Unknown negatives
 
-Unknown negatives must include:
+Unknown negatives should include:
 
-- unrelated screen
-- partial Pokémon GO screen
-- deliberately mixed/conflicting screen if safely reproducible
-- unsupported orientation or layout
+- an unrelated screen or app
+- the Pokémon GO map
+- a partial transition
+- an unsupported orientation or layout
+- an interrupting overlay
+- a visually conflicting screen
 
-## File placement and indexing
+## Guided capture
 
-Place each PNG under the folder matching its expected state. Example:
+Start the guided session:
 
-```text
-fixtures\PokemonDetails\details-001.png
+```powershell
+.\scripts\start-local-calibration-capture.ps1 `
+  -AdbPath "C:\Android\platform-tools\adb.exe"
 ```
 
-Then run:
+For each requested state:
+
+1. Navigate manually on the phone.
+2. Confirm the correct screen is fully visible.
+3. Confirm no notification or personal overlay is visible.
+4. Press Enter on the computer.
+5. The read-only ADB layer captures one screenshot.
+
+Type `q` to stop. The session can resume later.
+
+A screenshot first lands in:
+
+```text
+incoming\<ExpectedState>\
+```
+
+Incoming screenshots are not approved fixtures and cannot be used to build a detector profile.
+
+## Status and capture ids
+
+```powershell
+.\scripts\show-local-calibration-capture-status.ps1
+```
+
+The report shows:
+
+- unique captures
+- pixel-identical duplicates
+- promoted fixtures
+- remaining examples per state
+- next recommended state
+- all capture ids
+
+## Single-state capture
+
+```powershell
+.\scripts\capture-local-calibration-state.ps1 `
+  -State PokemonDetails `
+  -AdbPath "C:\Android\platform-tools\adb.exe" `
+  -Notes "Different species and background"
+```
+
+## Duplicate and integrity rules
+
+- Every capture is locked by SHA-256.
+- Existing capture files are re-verified before another screenshot is added.
+- A changed or missing file stops the workflow.
+- Pixel-identical captures do not count toward variation coverage.
+- Identical bytes cannot be assigned to different expected states.
+- Duplicate captures cannot be promoted.
+
+## Privacy review and promotion
+
+Open each incoming PNG locally and complete the fixture checklist.
+
+Then promote the capture:
+
+```powershell
+.\scripts\approve-local-calibration-capture.ps1 `
+  -CaptureId "<capture-id>" `
+  -ReviewedBy "Torben"
+```
+
+The script requires the exact confirmation text `APPROVE`.
+
+Promotion:
+
+- re-verifies the incoming hash
+- rejects duplicate captures
+- copies the PNG into `fixtures\<ScreenState>\`
+- records a complete local safety review
+- links the fixture to the original capture id
+- supports safe retry if a previous promotion was interrupted
+
+Approval applies only to local calibration. It does not approve public sharing.
+
+Run the indexer afterwards as an additional consistency check:
 
 ```powershell
 .\scripts\index-local-calibration.ps1
 ```
-
-Indexing:
-
-- computes SHA-256 for every PNG
-- creates stable fixture ids
-- infers the expected state from the folder name
-- preserves approval only when the file hash is unchanged
-- resets approval when a file changes
-- rejects files outside a recognised state folder
-
-## Manual safety approval
-
-Open `fixture-manifest.local.json` and review each image. Set these fields to `true` only after visual review:
-
-```json
-{
-  "accountIdentitySafe": true,
-  "locationSafe": true,
-  "notificationsSafe": true,
-  "otherPersonalDataSafe": true,
-  "approvedForCalibration": true
-}
-```
-
-Also set `reviewedBy` and `reviewedAtUtc`.
-
-A fixture is ignored until every safety field is true. If the PNG changes, its hash changes and approval is rejected or reset.
 
 ## Anchor plan
 
@@ -130,10 +204,10 @@ Bad anchors:
 - CP number
 - account name
 - location text
-- dynamic candy, Stardust or weight values
+- dynamic Candy, Stardust, weight or height values
 - full-screen fingerprint
 
-Each anchor lists fixture ids used to generate its reference samples:
+Each anchor lists promoted fixture ids used to generate its reference samples:
 
 ```json
 {
@@ -145,7 +219,10 @@ Each anchor lists fixture ids used to generate its reference samples:
   "fingerprintHeight": 12,
   "matchThreshold": 0.92,
   "weight": 1.0,
-  "sampleFixtureIds": ["pokemondetails-details-001", "pokemondetails-details-002"]
+  "sampleFixtureIds": [
+    "guided-0001-pokemondetails-...",
+    "guided-0002-pokemondetails-..."
+  ]
 }
 ```
 
@@ -157,7 +234,7 @@ Required and Optional samples must come from the same state. Forbidden anchors m
 .\scripts\build-local-calibration-profile.ps1
 ```
 
-The generated profile contains only compact fingerprints, not the original PNG files. It remains local and ignored by Git.
+The generated profile contains compact fingerprints, not the original PNG files. It remains local and ignored by Git.
 
 The build fails when:
 
@@ -203,31 +280,18 @@ The default real-screen policy requires:
 - zero wrong known-state classifications
 - no weak anchors
 - profile winner margin at least 0.05
-- minimum fixture coverage for every state
+- minimum fixture coverage for every required state
 - at least 90 percent recall for the three core dynamic states
 - Unknown recall of 100 percent
 
-False negatives may be tolerated only within the explicit per-state recall threshold. They remain visible in the report. A false positive is a hard blocker.
-
-## Negative-fixture tags
-
-The acceptance engine evaluates every fixture for classification. For anchor-quality separation, these tags have special meaning on Unknown fixtures:
-
-```text
-mixed-state
-partial-state
-unsupported-layout
-```
-
-They are excluded only from individual anchor separation because they can intentionally contain a valid anchor. They are still included in the full false-positive acceptance test.
-
-Use `unrelated` for a clean negative that should contribute to anchor separation.
+False negatives may be tolerated only within an explicit per-state recall threshold. A false positive is a hard blocker.
 
 ## Stop condition
 
 Do not begin Calcy integration or a continuous scanning loop until:
 
-- all required real fixtures are approved
+- required real fixtures are captured and promoted
+- all fixture hashes and reviews are valid
 - acceptance is green
 - false positives are zero
 - misclassifications are zero

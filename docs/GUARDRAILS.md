@@ -31,19 +31,39 @@ Adaptive waiting is allowed only for correctness, such as waiting for a recognis
 
 ## Current phone integration is read-only
 
-Version 0.4.0 permits only:
+Version 0.5.0 permits only:
 
 - device discovery
 - device metadata reads
 - screen-size reads
 - battery-state reads
 - screenshot capture
-- offline analysis of a PNG screenshot
+- offline analysis of PNG screenshots
+- private guided screenshot collection after manual navigation
 - local fixture indexing and SHA-256 verification
 - local fingerprint profile generation
 - offline calibration acceptance reports
 
-The public device interface has no taps, swipes, text input, app launches or arbitrary shell commands. The vision project has no device-control dependency.
+The public device interface has no taps, swipes, text input, app launches or arbitrary shell commands.
+
+## Calibration capture remains manual-navigation only
+
+The guided session may tell the user which screen to open. It must not navigate there itself.
+
+Each capture requires an explicit user action on the computer after the requested phone screen is visible. This is not permission to add phone input control.
+
+## Incoming is not approved
+
+A captured screenshot remains under `incoming/` until explicit local privacy review.
+
+Promotion requires confirmation that these were reviewed:
+
+- account identity
+- location
+- notifications
+- other personal data
+
+A duplicate capture cannot be promoted. A changed capture fails hash verification.
 
 ## Unknown is not false
 
@@ -94,6 +114,8 @@ The program must stop, return Unknown or return REVIEW when:
 - a device is missing, unauthorised or ambiguous
 - a command times out
 - capture output is invalid
+- capture device or geometry changes
+- a local capture file changes after recording
 - identity is not exact
 - critical data is unknown
 - sequence or inventory counts do not reconcile
@@ -113,14 +135,14 @@ Every future tag action must record:
 
 ## Public repository data
 
-Do not commit real screenshots, device serials, inventory exports, databases, logs or real screen profiles while the repository is public. Use ignored local folders and review every commit before pushing.
+Do not commit real screenshots, device serials, capture sessions, inventory exports, databases, logs or real screen profiles while the repository is public. Use ignored local folders and review every commit before pushing.
 
 ## Calibration fixture integrity
 
 - Real calibration commands require an initialised workspace marker.
-- Every approved fixture is locked by SHA-256.
-- A changed file loses approval and must be reviewed again.
-- Unapproved fixtures cannot become profile samples.
-- Path traversal and rooted fixture paths are rejected.
+- Every recorded capture and approved fixture is locked by SHA-256.
+- A changed file loses trust and must be reviewed again.
+- Unapproved incoming screenshots cannot become profile samples.
+- Path traversal and rooted paths are rejected.
 - Composite Unknown fixtures still participate in false-positive acceptance even when excluded from individual anchor-separation metrics.
 - A profile is not accepted with false positives, known-state misclassifications or weak anchors under the configured policy.

@@ -47,9 +47,21 @@ Torben reported a green 0.2.0 GitHub Actions run.
 - synthetic CI validation
 - read-only only
 
-## M2c Real-screen acceptance, next
+## M2c-a Guided real-screen capture, complete in 0.5.0
 
-- capture approved private fixtures
+- private incoming capture staging
+- versioned state coverage plan
+- manual navigation with explicit Enter-to-capture
+- device serial and exact geometry session locks
+- SHA-256 capture integrity
+- duplicate screenshot detection
+- progress and missing-state reports
+- explicit privacy review before fixture promotion
+- no phone input automation
+
+## M2c-b Real-screen acceptance, next
+
+- collect and approve private fixtures on the fixed Android configuration
 - select stable real UI anchors
 - build phone-specific local profile
 - zero false positives

@@ -39,7 +39,7 @@ Tag Executor
 Manual final transfer only
 ```
 
-## Implemented in 0.4.0
+## Implemented in 0.5.0
 
 ```text
 PogoInventory.Cli
@@ -76,9 +76,19 @@ PogoInventory.Cli
     |   PogoInventory.Calibration
     |
     +--> calibration-build-profile / calibration-validate
+    |      |
+    |      +--> PogoInventory.Calibration
+    |      +--> PogoInventory.Vision
+    |
+    +--> calibration-capture / calibration-capture-session
+    |      |
+    |      +--> PogoInventory.Calibration
+    |      +--> PogoInventory.Device read-only transport
+    |      +--> PogoInventory.Vision PNG geometry validation
+    |
+    +--> calibration-capture-status / calibration-capture-approve
            |
            +--> PogoInventory.Calibration
-           +--> PogoInventory.Vision
 ```
 
 ## Project boundaries
@@ -125,6 +135,10 @@ Provides:
 - `calibration-index`
 - `calibration-build-profile`
 - `calibration-validate`
+- `calibration-capture`
+- `calibration-capture-session`
+- `calibration-capture-status`
+- `calibration-capture-approve`
 
 ### PogoInventory.SelfTest
 
@@ -269,14 +283,20 @@ Must use named actions, verified pre- and post-states, audit evidence and hard s
 
 ## PogoInventory.Calibration
 
-This project converts approved private screenshots into a versioned local detector profile and validates it. It references `PogoInventory.Vision` but has no device-control dependency.
+This project manages private screenshot collection, approval, profile generation and acceptance. It references `PogoInventory.Vision` and the read-only `PogoInventory.Device` interface.
 
 Responsibilities:
 
 - initialise a deliberate private workspace
+- define required capture coverage
+- capture screenshots through the read-only device transport after manual navigation
+- lock a session to one device serial and exact image geometry
+- detect pixel-identical captures
+- keep incoming screenshots separate from approved fixtures
+- verify every capture and fixture by SHA-256
+- require explicit privacy review before promotion
 - index PNG fixtures by expected state
-- lock approval to SHA-256
-- validate privacy review and safe paths
+- validate safe paths
 - load anchor plans
 - extract multiple reference fingerprints
 - generate a `ScreenDetectionProfile`
@@ -284,7 +304,7 @@ Responsibilities:
 - calculate recall, false positives, misclassifications and confusion
 - report weak anchors and separation
 
-The calibration project does not know how to tap, swipe, launch an app or modify Pokémon GO.
+The calibration project has no phone-input capability. It cannot tap, swipe, type, launch an app or modify Pokémon GO.
 
 ### Data flow
 
@@ -308,3 +328,36 @@ acceptance runner
         ├── confusion CSV
         └── fixture CSV
 ```
+
+## Guided capture flow
+
+```text
+manual phone navigation
+        │
+        ▼
+explicit Enter on computer
+        │
+        ▼
+read-only ADB screenshot
+        │
+        ├── validate portrait and minimum size
+        ├── enforce locked serial and exact geometry
+        ├── calculate SHA-256
+        └── detect pixel-identical duplicate
+        │
+        ▼
+private incoming/<ExpectedState>/
+        │
+        ▼
+manual privacy and state review
+        │
+        ▼
+explicit promotion
+        │
+        ├── hash re-verification
+        ├── duplicate rejection
+        ├── approved fixture copy
+        └── manifest and session linkage
+```
+
+Incoming screenshots are not visible to profile generation. Only promoted fixtures with complete safety review can become anchor samples.

@@ -8,6 +8,7 @@ Before real inventory collection begins, make the repository private or keep eve
 
 - phone serial numbers
 - real Pokémon GO screenshots
+- incoming capture-session files
 - account names or trainer identifiers
 - full inventory exports
 - capture manifests from a real phone
@@ -16,44 +17,76 @@ Before real inventory collection begins, make the repository private or keep eve
 - log files containing personal data
 - authentication tokens or ADB keys
 
-## Local folders
+## Default private workspace
 
-Use ignored local folders such as:
-
-```text
-captures\
-local-data\
-private\
-out\
-data\screen-fixtures-real\
-```
-
-Use the initialised ignored workspace:
+Use:
 
 ```text
 local-data\screen-calibration\
 ```
 
-It contains the real fixtures, local manifest, anchor plan, generated profile and acceptance reports.
+The entire `local-data` tree is ignored by Git.
 
-The application should later support a configurable data directory outside the repository.
+The calibration workspace contains:
+
+```text
+incoming\                    unreviewed screenshots
+fixtures\                    reviewed local fixtures
+capture-plan.local.json      required screen coverage
+capture-session.local.json   device serial, geometry, hashes and capture ids
+fixture-manifest.local.json  approved fixture hashes and privacy review
+anchor-plan.local.json       local anchor design
+profiles\                    generated local detector profile
+reports\                     capture and acceptance reports
+```
+
+## Incoming versus fixture
+
+A screenshot captured through ADB is written to `incoming/<ScreenState>/`.
+
+Incoming means:
+
+- the expected state has not necessarily been confirmed
+- privacy has not been approved
+- the screenshot cannot be used to build a detector profile
+- it must not be committed
+
+Promotion into `fixtures/<ScreenState>/` requires explicit local review and hash verification.
+
+## Capture-session personal data
+
+The session records the Android device serial and model to prevent accidental mixing of phones. That file is private even when screenshots appear harmless.
+
+Do not paste the complete capture session into a public issue, commit or chat. Share only aggregate capture status unless a specific field is required for debugging.
+
+## Screenshot review
+
+Before promotion, verify:
+
+- trainer and account identity are absent or acceptably protected for local use
+- map or location information is absent
+- notification banners and message previews are absent
+- email addresses, contacts and device identifiers are absent from the image
+- the expected screen state is correct
+- the image adds useful variation rather than repeating identical pixels
+
+The promotion confirmation approves the image only for local calibration. It does not approve public distribution.
 
 ## Test fixtures
 
-Only synthetic, cropped or manually redacted fixtures may be committed to a public repository. A fixture must not expose a real account, location, device serial, notification content or other personal information.
+Only synthetic, cropped or manually redacted fixtures may be committed to a public repository. Prefer a synthetic replacement or the smallest possible UI crop.
 
-Before approving a real screenshot as a public fixture, verify that:
+## Hash-locked trust
 
-- trainer name is absent or redacted
-- location information is absent
-- notification banners are absent or redacted
-- device identifiers are absent
-- Pokémon details are not linked to a private inventory export
-- the image is needed for a stable UI anchor rather than account-specific content
+The capture session and fixture manifest record SHA-256 values.
 
+- a changed incoming capture is rejected
+- a changed approved fixture loses trust
+- a duplicate screenshot does not count toward variation coverage
+- a promoted fixture is linked to its original capture id
 
-## Hash-locked approval
+Approval applies only to the exact bytes that were reviewed.
 
-The fixture manifest records a SHA-256 for every PNG. Approval is valid only for those exact bytes. Re-indexing a changed fixture resets its approval.
+## Capture-session integrity
 
-Approval for local calibration does not approve a screenshot for public Git history. Public sharing requires a separate explicit review and should prefer a synthetic replacement or minimal redacted crop.
+The private session stores a SHA-256 fingerprint of the exact capture plan. Changing requirements mid-session invalidates the session instead of silently mixing two collection plans. Promotion never overwrites an untracked fixture file.

@@ -15,9 +15,9 @@ Read these files before changing code:
 - A future delete tag requires an Exact identity match and a documented reason.
 - All ADB process execution belongs inside `PogoInventory.Device`.
 - Do not expose an arbitrary shell or arbitrary coordinate API to higher layers.
-- The Device Harness, Screen State Detector and Calibration workflow are read-only. Do not add taps, swipes or text input until a later explicitly approved milestone.
+- The Device Harness, Screen State Detector and Calibration workflow are read-only. Guided capture may read screenshots only after manual navigation. Do not add taps, swipes, text input or app launching until a later explicitly approved milestone.
 - Preserve the fake transport, synthetic screen fixtures and package-free self-tests.
-- Real screenshots must remain in an initialised private calibration workspace or outside the repository.
+- Real screenshots, capture sessions and device serials must remain in an initialised private calibration workspace or outside the repository.
 - Never mark a changed fixture as approved without a new manual review.
 - Every completed milestone must update `CHANGELOG.md`, `PROJECT_STATE.md`, `NEXT_PROMPT.md`, architecture and validation documentation.
 

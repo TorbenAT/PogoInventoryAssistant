@@ -35,6 +35,6 @@ public static class CalibrationPathSafety
         return candidate;
     }
 
-    public static bool IsSha256(string value) =>
-        value.Length == 64 && value.All(Uri.IsHexDigit);
+    public static bool IsSha256(string? value) =>
+        value is { Length: 64 } && value.All(Uri.IsHexDigit);
 }

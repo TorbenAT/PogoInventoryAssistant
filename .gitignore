@@ -25,3 +25,6 @@ data/screen-fixtures-real/
 **/fixture-manifest.local.json
 **/anchor-plan.local.json
 **/screen-profile.local.json
+**/capture-plan.local.json
+**/capture-session.local.json
+**/incoming/**/*.png

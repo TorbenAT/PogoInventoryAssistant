@@ -2,6 +2,7 @@ using System.Globalization;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using PogoInventory.Calibration.Errors;
+using PogoInventory.Calibration.Models;
 using PogoInventory.Calibration.Reporting;
 using PogoInventory.Calibration.Services;
 using PogoInventory.Calibration.Workspace;
@@ -63,6 +64,18 @@ static async Task<int> MainAsync(string[] args)
                 args.Skip(1).ToArray(),
                 cancellationSource.Token),
             "calibration-validate" => await ValidateCalibrationAsync(
+                args.Skip(1).ToArray(),
+                cancellationSource.Token),
+            "calibration-capture" => await CaptureCalibrationScreenAsync(
+                args.Skip(1).ToArray(),
+                cancellationSource.Token),
+            "calibration-capture-session" => await RunCalibrationCaptureSessionAsync(
+                args.Skip(1).ToArray(),
+                cancellationSource.Token),
+            "calibration-capture-status" => await ShowCalibrationCaptureStatusAsync(
+                args.Skip(1).ToArray(),
+                cancellationSource.Token),
+            "calibration-capture-approve" => await ApproveCalibrationCaptureAsync(
                 args.Skip(1).ToArray(),
                 cancellationSource.Token),
             _ => UnknownCommand(args[0])
@@ -395,6 +408,250 @@ static async Task<int> ValidateCalibrationAsync(
     return report.Accepted ? 0 : 4;
 }
 
+
+static async Task<int> CaptureCalibrationScreenAsync(
+    string[] args,
+    CancellationToken cancellationToken)
+{
+    var options = ParseOptions(args);
+    var workspace = await CalibrationWorkspace.InitializeAsync(
+        Require(options, "workspace"),
+        cancellationToken);
+    var plan = await CalibrationCapturePlanLoader.LoadAsync(
+        workspace.CapturePlanPath,
+        cancellationToken);
+    var expectedState = ParseScreenState(Require(options, "state"));
+    var transport = CreateRealAndroidTransport(options);
+    var service = new CalibrationCaptureService(transport, new ConsoleDeviceLog());
+    var result = await service.CaptureAsync(
+        workspace,
+        plan,
+        expectedState,
+        Optional(options, "serial"),
+        Optional(options, "notes"),
+        cancellationToken);
+
+    await CalibrationCaptureReportWriter.WriteAsync(
+        result.Status,
+        Path.Combine(workspace.ReportsPath, "capture"),
+        cancellationToken);
+
+    Console.WriteLine();
+    Console.WriteLine("Private read-only screenshot captured.");
+    Console.WriteLine($"Capture id: {result.Capture.Id}");
+    Console.WriteLine($"Expected state: {result.Capture.ExpectedState}");
+    Console.WriteLine($"Image: {result.AbsoluteImagePath}");
+    Console.WriteLine($"SHA-256: {result.Capture.Sha256}");
+    Console.WriteLine($"Duplicate: {(result.Capture.IsDuplicate ? result.Capture.DuplicateOfCaptureId : "No")}");
+    Console.WriteLine($"Next recommended state: {result.Status.NextRecommendedState?.ToString() ?? "None"}");
+    Console.WriteLine("The image remains unapproved in incoming/ until explicit privacy review.");
+    return 0;
+}
+
+static async Task<int> RunCalibrationCaptureSessionAsync(
+    string[] args,
+    CancellationToken cancellationToken)
+{
+    var options = ParseOptions(args);
+    var workspace = await CalibrationWorkspace.InitializeAsync(
+        Require(options, "workspace"),
+        cancellationToken);
+    var plan = await CalibrationCapturePlanLoader.LoadAsync(
+        workspace.CapturePlanPath,
+        cancellationToken);
+    var transport = CreateRealAndroidTransport(options);
+    var service = new CalibrationCaptureService(transport, new ConsoleDeviceLog());
+
+    Console.WriteLine("Guided private calibration capture session");
+    Console.WriteLine("Navigation remains manual. The program only reads metadata and captures screenshots.");
+    Console.WriteLine("Type q at a prompt to stop safely.");
+    Console.WriteLine();
+
+    while (true)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        var session = await CalibrationCaptureSessionRepository.LoadOrCreateAsync(
+            workspace.CaptureSessionPath,
+            plan,
+            cancellationToken);
+        await CalibrationCaptureService.VerifyExistingCaptureFilesAsync(
+            workspace,
+            session,
+            cancellationToken);
+        var status = CalibrationCaptureStatusBuilder.Build(plan, session);
+        await CalibrationCaptureReportWriter.WriteAsync(
+            status,
+            Path.Combine(workspace.ReportsPath, "capture"),
+            cancellationToken);
+
+        if (status.RequiredCoverageComplete)
+        {
+            Console.WriteLine("Required capture coverage is complete.");
+            Console.WriteLine("Review and approve screenshots before building a real screen profile.");
+            return 0;
+        }
+
+        var state = status.NextRecommendedState ??
+            throw new InvalidOperationException("Capture coverage is incomplete but no next state was selected.");
+        var requirement = plan.Requirements.Single(x => x.State == state);
+        var progress = status.States.Single(x => x.State == state);
+
+        Console.WriteLine($"Next: {state} ({progress.UniqueCaptureCount}/{progress.RequiredUniqueCaptures})");
+        Console.WriteLine(requirement.Instruction);
+        foreach (var hint in requirement.VariationHints)
+        {
+            Console.WriteLine($"  - {hint}");
+        }
+
+        Console.Write("Navigate manually, then press Enter to capture, or q to stop: ");
+        var input = Console.ReadLine();
+        if (string.Equals(input?.Trim(), "q", StringComparison.OrdinalIgnoreCase))
+        {
+            Console.WriteLine("Capture session stopped without changing the phone.");
+            return 0;
+        }
+
+        var result = await service.CaptureAsync(
+            workspace,
+            plan,
+            state,
+            Optional(options, "serial"),
+            notes: null,
+            cancellationToken: cancellationToken);
+        Console.WriteLine($"Captured {result.Capture.Id} ({result.Capture.ImageWidth}x{result.Capture.ImageHeight}).");
+        if (result.Capture.IsDuplicate)
+        {
+            Console.WriteLine($"Pixel-identical duplicate of {result.Capture.DuplicateOfCaptureId}; it does not count toward variation coverage.");
+        }
+        Console.WriteLine();
+    }
+}
+
+static async Task<int> ShowCalibrationCaptureStatusAsync(
+    string[] args,
+    CancellationToken cancellationToken)
+{
+    var options = ParseOptions(args);
+    var workspace = await CalibrationWorkspace.InitializeAsync(
+        Require(options, "workspace"),
+        cancellationToken);
+    var plan = await CalibrationCapturePlanLoader.LoadAsync(
+        workspace.CapturePlanPath,
+        cancellationToken);
+    var session = await CalibrationCaptureSessionRepository.LoadOrCreateAsync(
+        workspace.CaptureSessionPath,
+        plan,
+        cancellationToken);
+    await CalibrationCaptureService.VerifyExistingCaptureFilesAsync(
+        workspace,
+        session,
+        cancellationToken);
+    var status = CalibrationCaptureStatusBuilder.Build(plan, session);
+    var reportDirectory = Path.Combine(workspace.ReportsPath, "capture");
+    await CalibrationCaptureReportWriter.WriteAsync(status, reportDirectory, cancellationToken);
+
+    Console.WriteLine($"Required coverage: {(status.RequiredCoverageComplete ? "COMPLETE" : "INCOMPLETE")}");
+    Console.WriteLine($"Unique captures: {status.UniqueCaptureCount}");
+    Console.WriteLine($"Duplicates: {status.DuplicateCaptureCount}");
+    Console.WriteLine($"Promoted: {status.PromotedCaptureCount}");
+    Console.WriteLine();
+    foreach (var state in status.States)
+    {
+        Console.WriteLine(
+            $"{state.State,-18} {state.UniqueCaptureCount,2}/{state.RequiredUniqueCaptures,-2} " +
+            $"remaining {state.Remaining,2} promoted {state.PromotedCaptureCount,2}" +
+            (state.OptionalWhenUnavailable ? " optional" : string.Empty));
+    }
+
+    if (session.Captures.Count > 0)
+    {
+        Console.WriteLine();
+        Console.WriteLine("Captures:");
+        foreach (var capture in session.Captures.OrderBy(x => x.SequenceNumber))
+        {
+            var flags = new List<string>();
+            if (capture.IsDuplicate)
+            {
+                flags.Add($"duplicate of {capture.DuplicateOfCaptureId}");
+            }
+            if (capture.IsPromoted)
+            {
+                flags.Add($"fixture {capture.PromotedFixtureId}");
+            }
+
+            Console.WriteLine(
+                $"  {capture.Id}  {capture.ExpectedState}" +
+                (flags.Count == 0 ? string.Empty : $"  [{string.Join(", ", flags)}]"));
+        }
+    }
+
+    Console.WriteLine();
+    Console.WriteLine($"Reports: {Path.GetFullPath(reportDirectory)}");
+    return 0;
+}
+
+static async Task<int> ApproveCalibrationCaptureAsync(
+    string[] args,
+    CancellationToken cancellationToken)
+{
+    var options = ParseOptions(args, "confirm-private-review");
+    var workspace = await CalibrationWorkspace.InitializeAsync(
+        Require(options, "workspace"),
+        cancellationToken);
+    var plan = await CalibrationCapturePlanLoader.LoadAsync(
+        workspace.CapturePlanPath,
+        cancellationToken);
+    var result = await CalibrationCapturePromotionService.PromoteAsync(
+        workspace,
+        plan,
+        Require(options, "id"),
+        Require(options, "reviewed-by"),
+        options.ContainsKey("confirm-private-review"),
+        cancellationToken);
+
+    var session = await CalibrationCaptureSessionRepository.LoadOrCreateAsync(
+        workspace.CaptureSessionPath,
+        plan,
+        cancellationToken);
+    var status = CalibrationCaptureStatusBuilder.Build(plan, session);
+    await CalibrationCaptureReportWriter.WriteAsync(
+        status,
+        Path.Combine(workspace.ReportsPath, "capture"),
+        cancellationToken);
+
+    Console.WriteLine(result.AlreadyPromoted
+        ? "Capture was already promoted and remains valid."
+        : "Capture reviewed and promoted to an approved calibration fixture.");
+    Console.WriteLine($"Capture: {result.CaptureId}");
+    Console.WriteLine($"Fixture: {result.FixtureId}");
+    Console.WriteLine($"Path: {result.FixturePath}");
+    Console.WriteLine("The fixture remains local and must not be committed while the repository is public.");
+    return 0;
+}
+
+static IAndroidDeviceTransport CreateRealAndroidTransport(
+    IReadOnlyDictionary<string, string> options)
+{
+    var harnessOptions = new DeviceHarnessOptions
+    {
+        AdbPath = Optional(options, "adb") ?? "adb",
+        CommandTimeout = TimeSpan.FromSeconds(
+            ParsePositiveInt(options, "timeout-seconds", 15)),
+        HarnessVersion = DeviceHarnessOptions.CurrentVersion
+    };
+    harnessOptions.Validate();
+    var log = new ConsoleDeviceLog();
+    var runner = new AdbProcessRunner(harnessOptions.AdbPath, log);
+    return new AdbAndroidDeviceTransport(runner, harnessOptions, log);
+}
+
+static ScreenState ParseScreenState(string value) =>
+    Enum.TryParse<ScreenState>(value, ignoreCase: true, out var state)
+        ? state
+        : throw new ArgumentException(
+            $"Unknown screen state '{value}'. Allowed values: " +
+            string.Join(", ", Enum.GetNames<ScreenState>()));
+
 static Dictionary<string, string> ParseOptions(
     string[] args,
     params string[] flagNames)
@@ -519,6 +776,12 @@ static int CalibrationExitCode(CalibrationErrorCode code) =>
         CalibrationErrorCode.FixtureHashMismatch => 44,
         CalibrationErrorCode.UnsafePath => 45,
         CalibrationErrorCode.FileSystemFailure => 46,
+        CalibrationErrorCode.InvalidCapturePlan => 47,
+        CalibrationErrorCode.InvalidCaptureSession => 48,
+        CalibrationErrorCode.CaptureGeometryMismatch => 49,
+        CalibrationErrorCode.CaptureDeviceMismatch => 50,
+        CalibrationErrorCode.CaptureNotFound => 51,
+        CalibrationErrorCode.CaptureNotReviewable => 52,
         _ => 1
     };
 
@@ -572,6 +835,14 @@ static void PrintHelp()
     Console.WriteLine();
     Console.WriteLine("  calibration-build-profile --synthetic --manifest <file> --anchors <file> --fixtures <dir> --out <file>");
     Console.WriteLine("  calibration-validate --synthetic --manifest <file> --fixtures <dir> --profile <file> --out <dir>");
+    Console.WriteLine();
+    Console.WriteLine("  calibration-capture --workspace <private-local-directory> --state <ScreenState>");
+    Console.WriteLine("                      [--adb <adb.exe>] [--serial <serial>] [--notes <text>]");
+    Console.WriteLine("  calibration-capture-session --workspace <private-local-directory>");
+    Console.WriteLine("                              [--adb <adb.exe>] [--serial <serial>]");
+    Console.WriteLine("  calibration-capture-status --workspace <private-local-directory>");
+    Console.WriteLine("  calibration-capture-approve --workspace <private-local-directory> --id <capture-id>");
+    Console.WriteLine("                              --reviewed-by <name> --confirm-private-review");
     Console.WriteLine();
     Console.WriteLine("Device snapshot, screen analysis and calibration are read-only. They contain no tap, swipe, text input or game-changing action.");
 }

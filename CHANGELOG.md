@@ -1,5 +1,20 @@
 # Changelog
 
+## 0.5.0
+
+- Added a versioned guided real-screen capture plan.
+- Added private `incoming/<ScreenState>/` screenshot staging.
+- Added capture-session plan fingerprint, device serial and exact geometry locks.
+- Added SHA-256 verification for every recorded incoming screenshot.
+- Added pixel-identical duplicate detection and exclusion from variation coverage.
+- Added required-state progress, next-state recommendation and capture reports.
+- Added interactive manual-navigation capture and single-state capture commands.
+- Added explicit privacy-review confirmation before fixture promotion.
+- Added safe, idempotent promotion into the approved local fixture manifest without overwriting untracked files.
+- Added PowerShell scripts for capture, status and approval.
+- Added thirteen capture-workflow self-tests, bringing the expected total to 47.
+- Preserved the read-only boundary with no taps, swipes, text input, app launching, tagging or transfer.
+
 ## 0.4.0
 
 - Added the isolated `PogoInventory.Calibration` project.

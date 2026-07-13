@@ -53,7 +53,20 @@ var tests = new (string Name, Func<Task> Run)[]
     ("Synthetic calibration acceptance passes", SyntheticCalibrationAcceptancePassesAsync),
     ("Calibration false positive fails acceptance", CalibrationFalsePositiveFailsAcceptanceAsync),
     ("Calibration rejects changed approved fixture", CalibrationRejectsChangedApprovedFixtureAsync),
-    ("Calibration report writes all formats", CalibrationReportWritesAllFormatsAsync)
+    ("Calibration report writes all formats", CalibrationReportWritesAllFormatsAsync),
+    ("Capture workspace creates guided private structure", CaptureWorkspaceCreatesGuidedStructureAsync),
+    ("Guided capture writes incoming file and session", GuidedCaptureWritesIncomingFileAndSessionAsync),
+    ("Duplicate guided capture does not add coverage", DuplicateGuidedCaptureDoesNotAddCoverageAsync),
+    ("Capture session rejects device change", CaptureSessionRejectsDeviceChangeAsync),
+    ("Capture session rejects geometry change", CaptureSessionRejectsGeometryChangeAsync),
+    ("Capture session rejects changed plan", CaptureSessionRejectsChangedPlanAsync),
+    ("Changed incoming capture is rejected", ChangedIncomingCaptureIsRejectedAsync),
+    ("Capture promotion requires explicit privacy review", CapturePromotionRequiresPrivacyReviewAsync),
+    ("Reviewed capture promotes to approved fixture", ReviewedCapturePromotesToFixtureAsync),
+    ("Promotion refuses untracked destination file", PromotionRefusesUntrackedDestinationFileAsync),
+    ("Duplicate capture cannot be promoted", DuplicateCaptureCannotBePromotedAsync),
+    ("Capture status prioritises required states", Sync(CaptureStatusPrioritisesRequiredStates)),
+    ("Capture status report writes JSON and Markdown", CaptureStatusReportWritesFilesAsync)
 };
 
 var failed = 0;
@@ -827,6 +840,447 @@ static async Task CalibrationReportWritesAllFormatsAsync()
     {
         DeleteDirectory(directory);
     }
+}
+
+
+static async Task CaptureWorkspaceCreatesGuidedStructureAsync()
+{
+    var directory = CreateTemporaryDirectory();
+    try
+    {
+        var workspace = await CalibrationWorkspace.InitializeAsync(directory);
+        AssertTrue(Directory.Exists(workspace.IncomingPath), "incoming directory should exist");
+        AssertTrue(File.Exists(workspace.CapturePlanPath), "capture plan should exist");
+        AssertTrue(
+            Directory.Exists(Path.Combine(workspace.IncomingPath, ScreenState.InventoryList.ToString())),
+            "incoming state directory should exist");
+
+        var plan = await CalibrationCapturePlanLoader.LoadAsync(workspace.CapturePlanPath);
+        AssertTrue(plan.Requirements.Any(x => x.State == ScreenState.Unknown), "capture plan should include Unknown negatives");
+    }
+    finally
+    {
+        DeleteDirectory(directory);
+    }
+}
+
+static async Task GuidedCaptureWritesIncomingFileAndSessionAsync()
+{
+    var directory = CreateTemporaryDirectory();
+    try
+    {
+        var workspace = await CalibrationWorkspace.InitializeAsync(directory);
+        var plan = TestCapturePlan();
+        await WriteCapturePlanAsync(workspace, plan);
+        var service = new CalibrationCaptureService(
+            CreateCaptureFake("CAPTURE-A", "InventoryList.png"));
+
+        var result = await service.CaptureAsync(
+            workspace,
+            plan,
+            ScreenState.InventoryList);
+
+        AssertTrue(File.Exists(result.AbsoluteImagePath), "incoming capture should exist");
+        AssertTrue(File.Exists(workspace.CaptureSessionPath), "capture session should exist");
+        AssertEqual(1, result.Status.UniqueCaptureCount, "unique capture count");
+        AssertEqual("CAPTURE-A", result.Capture.DeviceSerial, "capture serial");
+        AssertEqual(180, result.Capture.ImageWidth, "capture width");
+        AssertEqual(360, result.Capture.ImageHeight, "capture height");
+        AssertTrue(!result.Capture.IsDuplicate, "first capture should not be duplicate");
+    }
+    finally
+    {
+        DeleteDirectory(directory);
+    }
+}
+
+static async Task DuplicateGuidedCaptureDoesNotAddCoverageAsync()
+{
+    var directory = CreateTemporaryDirectory();
+    try
+    {
+        var workspace = await CalibrationWorkspace.InitializeAsync(directory);
+        var plan = TestCapturePlan();
+        await WriteCapturePlanAsync(workspace, plan);
+        var service = new CalibrationCaptureService(
+            CreateCaptureFake("CAPTURE-A", "InventoryList.png"));
+
+        var first = await service.CaptureAsync(workspace, plan, ScreenState.InventoryList);
+        var second = await service.CaptureAsync(workspace, plan, ScreenState.InventoryList);
+
+        AssertTrue(second.Capture.IsDuplicate, "second identical capture should be duplicate");
+        AssertEqual(first.Capture.Id, second.Capture.DuplicateOfCaptureId, "duplicate source id");
+        AssertEqual(1, second.Status.UniqueCaptureCount, "duplicate should not add unique coverage");
+        AssertEqual(1, second.Status.DuplicateCaptureCount, "duplicate count");
+        AssertEqual((ScreenState?)ScreenState.InventoryList, second.Status.NextRecommendedState, "state should still need variation");
+    }
+    finally
+    {
+        DeleteDirectory(directory);
+    }
+}
+
+static async Task CaptureSessionRejectsDeviceChangeAsync()
+{
+    var directory = CreateTemporaryDirectory();
+    try
+    {
+        var workspace = await CalibrationWorkspace.InitializeAsync(directory);
+        var plan = TestCapturePlan();
+        await WriteCapturePlanAsync(workspace, plan);
+        await new CalibrationCaptureService(CreateCaptureFake("CAPTURE-A", "InventoryList.png"))
+            .CaptureAsync(workspace, plan, ScreenState.InventoryList);
+
+        await ExpectCalibrationErrorAsync(
+            CalibrationErrorCode.CaptureDeviceMismatch,
+            () => new CalibrationCaptureService(CreateCaptureFake("CAPTURE-B", "InventoryListNoisy.png"))
+                .CaptureAsync(workspace, plan, ScreenState.InventoryList));
+    }
+    finally
+    {
+        DeleteDirectory(directory);
+    }
+}
+
+static async Task CaptureSessionRejectsGeometryChangeAsync()
+{
+    var directory = CreateTemporaryDirectory();
+    try
+    {
+        var workspace = await CalibrationWorkspace.InitializeAsync(directory);
+        var plan = TestCapturePlan();
+        await WriteCapturePlanAsync(workspace, plan);
+        await new CalibrationCaptureService(CreateCaptureFake("CAPTURE-A", "InventoryList.png"))
+            .CaptureAsync(workspace, plan, ScreenState.InventoryList);
+
+        await ExpectCalibrationErrorAsync(
+            CalibrationErrorCode.CaptureGeometryMismatch,
+            () => new CalibrationCaptureService(CreateCaptureFake("CAPTURE-A", "Landscape.png"))
+                .CaptureAsync(workspace, plan, ScreenState.InventoryList));
+    }
+    finally
+    {
+        DeleteDirectory(directory);
+    }
+}
+
+static async Task CaptureSessionRejectsChangedPlanAsync()
+{
+    var directory = CreateTemporaryDirectory();
+    try
+    {
+        var workspace = await CalibrationWorkspace.InitializeAsync(directory);
+        var plan = TestCapturePlan();
+        await WriteCapturePlanAsync(workspace, plan);
+        _ = await new CalibrationCaptureService(CreateCaptureFake("CAPTURE-A", "InventoryList.png"))
+            .CaptureAsync(workspace, plan, ScreenState.InventoryList);
+
+        var changedPlan = plan with
+        {
+            Requirements = plan.Requirements
+                .Select(x => x.State == ScreenState.InventoryList
+                    ? x with { RequiredUniqueCaptures = x.RequiredUniqueCaptures + 1 }
+                    : x)
+                .ToArray()
+        };
+
+        await ExpectCalibrationErrorAsync(
+            CalibrationErrorCode.InvalidCaptureSession,
+            () => CalibrationCaptureSessionRepository.LoadOrCreateAsync(
+                workspace.CaptureSessionPath,
+                changedPlan));
+    }
+    finally
+    {
+        DeleteDirectory(directory);
+    }
+}
+
+static async Task ChangedIncomingCaptureIsRejectedAsync()
+{
+    var directory = CreateTemporaryDirectory();
+    try
+    {
+        var workspace = await CalibrationWorkspace.InitializeAsync(directory);
+        var plan = TestCapturePlan();
+        await WriteCapturePlanAsync(workspace, plan);
+        var result = await new CalibrationCaptureService(
+                CreateCaptureFake("CAPTURE-A", "InventoryList.png"))
+            .CaptureAsync(workspace, plan, ScreenState.InventoryList);
+
+        await File.WriteAllBytesAsync(
+            result.AbsoluteImagePath,
+            File.ReadAllBytes(RepositoryPath("data", "screen-fixtures", "PokemonDetails.png")));
+        var session = await CalibrationCaptureSessionRepository.LoadOrCreateAsync(
+            workspace.CaptureSessionPath,
+            plan);
+
+        await ExpectCalibrationErrorAsync(
+            CalibrationErrorCode.FixtureHashMismatch,
+            () => CalibrationCaptureService.VerifyExistingCaptureFilesAsync(workspace, session));
+    }
+    finally
+    {
+        DeleteDirectory(directory);
+    }
+}
+
+static async Task CapturePromotionRequiresPrivacyReviewAsync()
+{
+    var directory = CreateTemporaryDirectory();
+    try
+    {
+        var workspace = await CalibrationWorkspace.InitializeAsync(directory);
+        var plan = TestCapturePlan();
+        await WriteCapturePlanAsync(workspace, plan);
+        var capture = await new CalibrationCaptureService(
+                CreateCaptureFake("CAPTURE-A", "InventoryList.png"))
+            .CaptureAsync(workspace, plan, ScreenState.InventoryList);
+
+        await ExpectCalibrationErrorAsync(
+            CalibrationErrorCode.CaptureNotReviewable,
+            () => CalibrationCapturePromotionService.PromoteAsync(
+                workspace,
+                plan,
+                capture.Capture.Id,
+                "Self-test",
+                confirmedPrivateReview: false));
+    }
+    finally
+    {
+        DeleteDirectory(directory);
+    }
+}
+
+static async Task ReviewedCapturePromotesToFixtureAsync()
+{
+    var directory = CreateTemporaryDirectory();
+    try
+    {
+        var workspace = await CalibrationWorkspace.InitializeAsync(directory);
+        var plan = TestCapturePlan();
+        await WriteCapturePlanAsync(workspace, plan);
+        var capture = await new CalibrationCaptureService(
+                CreateCaptureFake("CAPTURE-A", "InventoryList.png"))
+            .CaptureAsync(workspace, plan, ScreenState.InventoryList);
+
+        var promoted = await CalibrationCapturePromotionService.PromoteAsync(
+            workspace,
+            plan,
+            capture.Capture.Id,
+            "Self-test",
+            confirmedPrivateReview: true);
+        AssertTrue(File.Exists(promoted.FixturePath), "promoted fixture file should exist");
+
+        var manifest = await FixtureManifestLoader.LoadAsync(workspace.ManifestPath);
+        var fixture = manifest.Fixtures.Single(x => x.Id == promoted.FixtureId);
+        AssertTrue(fixture.SafetyReview.IsComplete, "promoted fixture safety review should be complete");
+        AssertEqual(ScreenState.InventoryList, fixture.ExpectedState, "promoted fixture state");
+        AssertEqual(capture.Capture.Sha256, fixture.Sha256, "promoted fixture hash");
+
+        var session = await CalibrationCaptureSessionRepository.LoadOrCreateAsync(
+            workspace.CaptureSessionPath,
+            plan);
+        AssertEqual(
+            promoted.FixtureId,
+            session.Captures.Single().PromotedFixtureId,
+            "session promoted fixture id");
+
+        var second = await CalibrationCapturePromotionService.PromoteAsync(
+            workspace,
+            plan,
+            capture.Capture.Id,
+            "Self-test",
+            confirmedPrivateReview: true);
+        AssertTrue(second.AlreadyPromoted, "second promotion should be idempotent");
+    }
+    finally
+    {
+        DeleteDirectory(directory);
+    }
+}
+
+static async Task PromotionRefusesUntrackedDestinationFileAsync()
+{
+    var directory = CreateTemporaryDirectory();
+    try
+    {
+        var workspace = await CalibrationWorkspace.InitializeAsync(directory);
+        var plan = TestCapturePlan();
+        await WriteCapturePlanAsync(workspace, plan);
+        var capture = await new CalibrationCaptureService(
+                CreateCaptureFake("CAPTURE-A", "InventoryList.png"))
+            .CaptureAsync(workspace, plan, ScreenState.InventoryList);
+
+        var fixtureId = $"guided-{capture.Capture.Id}";
+        var untrackedPath = Path.Combine(
+            workspace.FixturesPath,
+            ScreenState.InventoryList.ToString(),
+            $"{fixtureId}.png");
+        await File.WriteAllBytesAsync(
+            untrackedPath,
+            File.ReadAllBytes(RepositoryPath("data", "screen-fixtures", "PokemonDetails.png")));
+
+        await ExpectCalibrationErrorAsync(
+            CalibrationErrorCode.InvalidManifest,
+            () => CalibrationCapturePromotionService.PromoteAsync(
+                workspace,
+                plan,
+                capture.Capture.Id,
+                "Self-test",
+                confirmedPrivateReview: true));
+    }
+    finally
+    {
+        DeleteDirectory(directory);
+    }
+}
+
+static async Task DuplicateCaptureCannotBePromotedAsync()
+{
+    var directory = CreateTemporaryDirectory();
+    try
+    {
+        var workspace = await CalibrationWorkspace.InitializeAsync(directory);
+        var plan = TestCapturePlan();
+        await WriteCapturePlanAsync(workspace, plan);
+        var service = new CalibrationCaptureService(
+            CreateCaptureFake("CAPTURE-A", "InventoryList.png"));
+        _ = await service.CaptureAsync(workspace, plan, ScreenState.InventoryList);
+        var duplicate = await service.CaptureAsync(workspace, plan, ScreenState.InventoryList);
+
+        await ExpectCalibrationErrorAsync(
+            CalibrationErrorCode.CaptureNotReviewable,
+            () => CalibrationCapturePromotionService.PromoteAsync(
+                workspace,
+                plan,
+                duplicate.Capture.Id,
+                "Self-test",
+                confirmedPrivateReview: true));
+    }
+    finally
+    {
+        DeleteDirectory(directory);
+    }
+}
+
+static void CaptureStatusPrioritisesRequiredStates()
+{
+    var plan = new CalibrationCapturePlan
+    {
+        Name = "Priority test",
+        RequiredOrientation = ScreenOrientation.Portrait,
+        MinimumWidth = 1,
+        MinimumHeight = 1,
+        Requirements = new[]
+        {
+            new CalibrationCaptureRequirement
+            {
+                State = ScreenState.Loading,
+                RequiredUniqueCaptures = 1,
+                Instruction = "Optional loading.",
+                OptionalWhenUnavailable = true
+            },
+            new CalibrationCaptureRequirement
+            {
+                State = ScreenState.Unknown,
+                RequiredUniqueCaptures = 1,
+                Instruction = "Required negative."
+            }
+        }
+    };
+    var now = DateTimeOffset.UtcNow;
+    var session = new CalibrationCaptureSession
+    {
+        Id = "priority",
+        PlanName = plan.Name,
+        PlanSha256 = CalibrationCapturePlanLoader.ComputeFingerprint(plan),
+        CreatedAtUtc = now,
+        UpdatedAtUtc = now
+    };
+
+    var status = CalibrationCaptureStatusBuilder.Build(plan, session);
+    AssertEqual((ScreenState?)ScreenState.Unknown, status.NextRecommendedState, "required state priority");
+    AssertTrue(!status.RequiredCoverageComplete, "required coverage should be incomplete");
+}
+
+static async Task CaptureStatusReportWritesFilesAsync()
+{
+    var directory = CreateTemporaryDirectory();
+    try
+    {
+        var plan = TestCapturePlan();
+        var now = DateTimeOffset.UtcNow;
+        var session = new CalibrationCaptureSession
+        {
+            Id = "report",
+            PlanName = plan.Name,
+            PlanSha256 = CalibrationCapturePlanLoader.ComputeFingerprint(plan),
+            CreatedAtUtc = now,
+            UpdatedAtUtc = now
+        };
+        var status = CalibrationCaptureStatusBuilder.Build(plan, session);
+        await CalibrationCaptureReportWriter.WriteAsync(status, directory);
+
+        AssertTrue(File.Exists(Path.Combine(directory, "capture-status.json")), "capture status JSON should exist");
+        AssertTrue(File.Exists(Path.Combine(directory, "capture-status.md")), "capture status Markdown should exist");
+    }
+    finally
+    {
+        DeleteDirectory(directory);
+    }
+}
+
+static CalibrationCapturePlan TestCapturePlan() =>
+    new()
+    {
+        Name = "Self-test capture plan",
+        RequiredOrientation = ScreenOrientation.Portrait,
+        MinimumWidth = 100,
+        MinimumHeight = 200,
+        LockDeviceSerial = true,
+        LockExactGeometry = true,
+        Requirements = new[]
+        {
+            new CalibrationCaptureRequirement
+            {
+                State = ScreenState.InventoryList,
+                RequiredUniqueCaptures = 2,
+                Instruction = "Open inventory list."
+            },
+            new CalibrationCaptureRequirement
+            {
+                State = ScreenState.Unknown,
+                RequiredUniqueCaptures = 1,
+                Instruction = "Capture a negative screen."
+            }
+        }
+    };
+
+static async Task WriteCapturePlanAsync(
+    CalibrationWorkspace workspace,
+    CalibrationCapturePlan plan)
+{
+    await File.WriteAllTextAsync(
+        workspace.CapturePlanPath,
+        JsonSerializer.Serialize(
+            plan,
+            CalibrationJson.CreateOptions(writeIndented: true)));
+}
+
+static FakeAndroidDeviceTransport CreateCaptureFake(
+    string serial,
+    string fixtureName)
+{
+    var device = FakeAndroidDeviceTransport.CreateDescriptor(serial);
+    var metadata = FakeAndroidDeviceTransport.CreateMetadata(serial);
+    return new FakeAndroidDeviceTransport(
+        new[] { device },
+        new Dictionary<string, AndroidDeviceMetadata>(StringComparer.Ordinal)
+        {
+            [serial] = metadata
+        },
+        File.ReadAllBytes(RepositoryPath("data", "screen-fixtures", fixtureName)));
 }
 
 static FixtureSafetyReview CompleteSafetyReview() =>

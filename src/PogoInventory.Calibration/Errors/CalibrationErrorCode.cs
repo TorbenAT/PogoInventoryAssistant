@@ -8,5 +8,11 @@ public enum CalibrationErrorCode
     FixtureMissing,
     FixtureHashMismatch,
     UnsafePath,
-    FileSystemFailure
+    FileSystemFailure,
+    InvalidCapturePlan,
+    InvalidCaptureSession,
+    CaptureGeometryMismatch,
+    CaptureDeviceMismatch,
+    CaptureNotFound,
+    CaptureNotReviewable
 }

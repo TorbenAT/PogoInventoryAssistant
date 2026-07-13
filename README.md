@@ -1,10 +1,10 @@
 # Pogo Inventory Assistant
 
-Version 0.4.0
+Version 0.5.0
 
 Pogo Inventory Assistant is a conservative, local inventory and decision assistant for Pokémon GO. The final transfer remains manual.
 
-Version 0.4.0 adds a complete read-only workflow for calibrating the Screen State Detector from private screenshots and proving that it fails closed before any later scanner work begins.
+Version 0.5.0 adds a guided, read-only workflow for collecting the private Android screenshots required to calibrate the screen-state detector. Navigation on the phone remains manual. The software captures screenshots only after the user confirms that the requested screen is visible.
 
 ## What works now
 
@@ -51,23 +51,23 @@ NetworkError
 Unknown
 ```
 
-### Real-screen calibration and acceptance
+### Calibration and guided capture
 
 - private local workspace with a mandatory marker
-- state-folder fixture indexing
-- SHA-256 locking of approved PNGs
-- approval reset when a fixture changes
-- explicit privacy and redaction review
-- anchor plans with multiple samples
-- local profile generation
-- false-positive, false-negative and misclassification accounting
-- per-state recall and coverage rules
-- confusion matrix
-- weak-anchor and similarity-separation analysis
-- JSON, Markdown and CSV reports
+- guided capture plan with required variation coverage
+- manual phone navigation and explicit Enter-to-capture workflow
+- capture-plan fingerprint, device-serial and exact-geometry session lock
+- private `incoming` screenshots separated from approved fixtures
+- SHA-256 verification of every recorded capture
+- duplicate screenshot detection
+- status report with missing states and next recommendation
+- explicit privacy-review confirmation before promotion
+- safe promotion into the approved fixture manifest
+- approval reset and hash validation if fixture bytes change
+- anchor-plan profile generation and strict acceptance reports
 - synthetic end-to-end calibration in CI
 
-No real Pokémon GO screenshots or phone-specific profile are committed. The next checkpoint is local capture and real-screen acceptance.
+No real Pokémon GO screenshots, device serials or phone-specific profiles are committed.
 
 ## Requirements
 
@@ -75,6 +75,7 @@ No real Pokémon GO screenshots or phone-specific profile are committed. The nex
 - Visual Studio 2022 or .NET 8 SDK
 - Android Platform Tools for real phone screenshots
 - USB debugging enabled on the Android phone
+- one fixed Android display configuration during a capture session
 
 ## Validate the repository
 
@@ -89,33 +90,60 @@ No real Pokémon GO screenshots or phone-specific profile are committed. The nex
 .\scripts\validate-synthetic-calibration.ps1
 ```
 
-## Initialise private real-screen calibration
+## Start private real-screen capture
+
+Initialise or upgrade the ignored local workspace:
 
 ```powershell
 .\scripts\init-local-calibration.ps1
 ```
 
-Default workspace:
-
-```text
-local-data\screen-calibration
-```
-
-Place PNGs under:
-
-```text
-fixtures\<ExpectedState>\
-```
-
-Then run:
+Start the guided capture session:
 
 ```powershell
-.\scripts\index-local-calibration.ps1
+.\scripts\start-local-calibration-capture.ps1 `
+  -AdbPath "C:\Android\platform-tools\adb.exe"
 ```
 
-Review every entry in `fixture-manifest.local.json`. A fixture is ignored until all privacy fields and `approvedForCalibration` are true.
+The program tells you which screen to open. You navigate manually on the phone and press Enter on the computer when the requested screen is ready.
 
-Edit `anchor-plan.local.json`, then run:
+Loading and NetworkError samples are required before a real profile can be accepted. They are placed last in the default plan so the rest of the fixture set can be completed first.
+
+Show progress and capture ids:
+
+```powershell
+.\scripts\show-local-calibration-capture-status.ps1
+```
+
+Capture one specific state without the guided loop:
+
+```powershell
+.\scripts\capture-local-calibration-state.ps1 `
+  -State PokemonDetails `
+  -AdbPath "C:\Android\platform-tools\adb.exe"
+```
+
+Captured files remain under:
+
+```text
+local-data\screen-calibration\incoming\<ExpectedState>\
+```
+
+They do not become calibration fixtures automatically.
+
+## Review and approve a capture
+
+Open the screenshot locally and complete the privacy checklist. Then promote it:
+
+```powershell
+.\scripts\approve-local-calibration-capture.ps1 `
+  -CaptureId "0001-inventorylist-..." `
+  -ReviewedBy "Torben"
+```
+
+The script requires the exact confirmation text `APPROVE`. Promotion copies the hash-verified screenshot into the correct fixture folder and adds a complete local safety review to the manifest.
+
+Then edit `anchor-plan.local.json` and run:
 
 ```powershell
 .\scripts\build-local-calibration-profile.ps1
@@ -130,17 +158,9 @@ local-data\screen-calibration\reports\acceptance
 
 See:
 
+- `docs/GUIDED_REAL_SCREEN_CAPTURE.md`
 - `docs/REAL_SCREEN_CALIBRATION.md`
 - `docs/FIXTURE_APPROVAL_CHECKLIST.md`
-
-## Capture a real Android screenshot
-
-```powershell
-.\scripts\capture-device.ps1 `
-  -AdbPath "C:\Android\platform-tools\adb.exe"
-```
-
-Do not commit real screenshots, device serials, inventory exports, local profiles or databases while the repository is public.
 
 ## Safety boundary
 
@@ -153,6 +173,8 @@ The repository contains no methods for:
 - purchases, catching, spinning, raids or battles
 - location changes
 - randomised or human-like input
+
+Do not commit real screenshots, device serials, capture sessions, inventory exports, local profiles or databases while the repository is public.
 
 Read next:
 
