@@ -2,127 +2,50 @@
 
 ## Current version
 
-0.8.0
+0.9.0
 
 ## Accepted checkpoint
 
-Torben reported that version 0.7.0 is fully green in GitHub Actions.
+Torben reported that version 0.8.0 is fully green in GitHub Actions.
 
-Version 0.8.0 implements M4 phase 2 infrastructure: real-device Calcy inspection, an automatic one-Pokémon live check and a profile-driven raw-text parser. It does not claim that a production Calcy output mechanism has been proven on the real phone.
+Version 0.9.0 implements the evidence-ingestion and verification gate for M4 phase 3. Real phone evidence is still required before a production Calcy provider can be selected.
 
 ## Completed
 
-### M0 Foundation
+### M0 to M3
 
-- .NET 8 solution
-- conservative KEEP, REVIEW and DELETE engine
-- duplicate and preliminary PvP protection
-- JSON and Markdown reports
+- .NET 8 foundation and conservative KEEP, REVIEW and DELETE engine
+- read-only Android device harness
+- deterministic screen detection and calibration
+- automatic inventory navigation with only four named actions
+- local evidence, checkpoints and safe resume
 
-### M1 Device harness
-
-- authorised-device selection
-- metadata, geometry, battery and PNG screenshots
-- fake device transport
-- atomic evidence writes
-
-### M2 Vision and calibration
-
-- package-free PNG decoder
-- normalised fingerprints
-- deterministic screen-state detector
-- fail-closed Unknown
-- synthetic calibration generation and acceptance
-
-### M3 Automatic inventory navigation
-
-- automatic path from InventoryList to AppraisalOpen
-- automatic swipe-through
-- state and identity checks
-- end detection
-- local evidence
-- atomic checkpoint and resume
-- exact device, geometry and profile-hash locks
-- only four named input actions
-
-### M4 phase 1
+### M4 phase 1 and 2
 
 - automatic core-profile bootstrap
-- nullable structured observation model
-- `ICalcyObservationProvider`
+- structured nullable Calcy observations
 - checkpoint schema 2.0
-- fake observation provider for CI
+- package, process, accessibility, app-ops, service and log probe
+- automatic one-Pokémon live check
+- profile-driven raw-text parser
 
-### M4 phase 2
+### M4 phase 3 verification harness
 
-#### Named Android app inspection
+New `PogoInventory.Verification` project:
 
-New `IAndroidAppInspectionTransport` methods:
-
-```text
-ReadPackageDumpAsync
-ReadPackagePathAsync
-ReadProcessIdAsync
-ReadRecentLogcatAsync
-ReadAccessibilityStateAsync
-ReadAppOpsAsync
-ReadActivityServicesAsync
-```
-
-The real ADB transport implements only fixed command shapes. The project still exposes no arbitrary shell method above the device layer.
-
-#### Calcy probe
-
-New `PogoInventory.CalcyProbe` project:
-
-- defaults to package `tesmath.calcy`
-- selects one authorised device
-- records package metadata and installed version
-- parses declared activities, services, receivers and permissions
-- records current process id
-- records accessibility state, app-ops and running services
-- records recent full and filtered logcat
-- captures the current screen
-- hashes every evidence file
-- writes JSON and Markdown reports
-- keeps all real output local and Git-ignored
-
-Probe decisions:
-
-```text
-PackageMissing
-InstalledNeedsLiveEvidence
-CandidateEvidenceFound
-InspectionFailed
-```
-
-A candidate is evidence for further investigation, not proof of a working production provider.
-
-#### Automatic one-Pokémon live check
-
-`calcy-live-check`:
-
-- starts from InventoryList
-- navigates automatically to AppraisalOpen
-- captures exactly one Pokémon
-- waits for Calcy to settle
-- runs the package and output probe
-- optionally applies a local parser profile
-- refuses to call an incomplete observation Complete
-
-It requires no manual navigation.
-
-#### Profile-driven parser
-
-- JSON regex profile with named capture groups
-- source-specific patterns
-- regex timeout
-- species, dex, form, CP, HP, level and IV fields
-- gender and move fields
-- Complete, Partial, Conflicting and Failed outcomes
-- conflicting values remain null
-- raw output and SHA-256 retained
-- synthetic parser profile and output for CI only
+- local verification workspace with 20 or more cases
+- raw evidence or parsed observation ingestion
+- strict evidence-root path containment
+- SHA-256 hashes for every evidence file
+- expected-versus-observed identity, CP and IV comparison
+- `ExactComplete`, `SafeIncomplete`, `IncorrectIncomplete`, `WrongComplete`, `Conflicting`, `Failed`, `Unavailable` and `InvalidEvidence`
+- separate zero-false-Complete safety gate
+- configurable exact Complete rate, default 95 percent
+- provider selection refused unless the long-scan gate passes
+- provider selection locked to report and parser hashes
+- JSON, Markdown and CSV reports
+- synthetic twenty-case CI verification
+- 78 self-tests
 
 ## Input boundary
 
@@ -133,57 +56,54 @@ TapAppraise
 SwipeNextPokemon
 ```
 
-No new phone input action was added in 0.8.0.
+No new phone input action was added in 0.9.0.
 
 ## Not completed
 
-- real-phone Calcy probe execution
-- proof that current Calcy exposes structured log output
-- proof of clipboard or other text output
-- visual Calcy overlay extraction
+- real-phone Calcy probe and live-check evidence
+- proof of PID-windowed logcat, local text or visual overlay extraction
 - production real `ICalcyObservationProvider`
+- automated twenty-case evidence collection from the real phone
 - move, date, size, nickname and special-status extraction
 - SQLite inventory database
 - exact identity across independent runs
 - PvPoke and Ohbem integration
-- real KEEP, REVIEW and DELETE plan
-- automatic tagging
+- real decision plan and automatic tagging
 - transfer remains manual and is not implemented
 
 ## Required checkpoint after push
 
-1. Build version 0.8.0.
-2. Confirm 68 of 68 self-tests pass.
-3. Confirm the scripted Calcy probe reports package version 4.3.1 and two filtered log lines.
-4. Confirm the scripted live check automatically reaches one appraisal and parses Pikachu as Complete.
-5. Confirm the synthetic parser produces CP 501 and IV 15/14/13.
-6. Confirm the existing three-item inventory scan and core bootstrap remain green.
-7. Confirm no new phone input action exists.
+1. Build version 0.9.0.
+2. Confirm 78 of 78 self-tests pass.
+3. Confirm twenty synthetic cases are `ExactComplete`.
+4. Confirm zero `WrongComplete` observations.
+5. Confirm the synthetic provider is recommended for long scan.
+6. Confirm provider selection contains verification and parser hashes.
+7. Confirm all existing navigation, probe and calibration workflows remain green.
+8. Confirm no new phone input action exists.
 
 ## Next recommended milestone
 
-M4 phase 3: execute the live check on the fixed Android phone and implement exactly one production raw-output source based on evidence.
+M4 phase 4: run the real phone probe and select the actual extraction mechanism.
 
 Required sequence:
 
-1. Run `calcy-probe` locally and capture the installed version.
-2. Run `calcy-live-check` without a parser profile.
-3. Inspect the local report and filtered evidence.
-4. If structured log output exists, implement a PID/time-windowed log source.
-5. If no structured text exists, do not force a logcat adapter. Build visual overlay extraction instead.
-6. Add a local parser profile only for the exact proven output.
-7. Verify at least 20 Pokémon before enabling the provider for a long scan.
-8. Require zero wrong Complete observations.
+1. Run `calcy-probe` and `calcy-live-check` on the fixed Android phone.
+2. Inspect local evidence only.
+3. Choose PID-windowed logcat, another proven local text source or visual overlay extraction.
+4. Implement exactly that mechanism behind the existing provider boundary.
+5. Automate collection of 20 verification cases.
+6. Pass the 0.9.0 verification gate with zero wrong Complete observations.
+7. Only then enable the provider in a long inventory scan.
 
 ## Design decisions preserved
 
-- C# and .NET 8
 - no hidden game API
 - no transfer automation
-- no anti-detection logic
+- no anti-detection or human imitation
 - no random timing or coordinates
-- deterministic state-aware waits
+- deterministic state-aware waiting
 - Unknown means stop
-- unknown observation values remain null
-- all real data stays local and ignored by Git
+- incomplete data stays incomplete
+- real data remains local and ignored by Git
 - every release updates this file and `NEXT_PROMPT.md`

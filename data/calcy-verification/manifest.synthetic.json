@@ -1,0 +1,290 @@
+{
+  "schemaVersion": "1.0",
+  "name": "Synthetic twenty-case provider verification",
+  "mechanism": "PidWindowedLogcat",
+  "providerVersion": "4.3.1",
+  "minimumCases": 20,
+  "minimumExactCompleteRate": 0.95,
+  "cases": [
+    {
+      "id": "001",
+      "sources": {
+        "logcat": "001.txt"
+      },
+      "expected": {
+        "species": "Pikachu",
+        "pokedexNumber": 25,
+        "cp": 501,
+        "attackIv": 15,
+        "defenseIv": 14,
+        "hpIv": 13
+      }
+    },
+    {
+      "id": "002",
+      "sources": {
+        "logcat": "002.txt"
+      },
+      "expected": {
+        "species": "Pikachu",
+        "pokedexNumber": 25,
+        "cp": 502,
+        "attackIv": 15,
+        "defenseIv": 14,
+        "hpIv": 13
+      }
+    },
+    {
+      "id": "003",
+      "sources": {
+        "logcat": "003.txt"
+      },
+      "expected": {
+        "species": "Pikachu",
+        "pokedexNumber": 25,
+        "cp": 503,
+        "attackIv": 15,
+        "defenseIv": 14,
+        "hpIv": 13
+      }
+    },
+    {
+      "id": "004",
+      "sources": {
+        "logcat": "004.txt"
+      },
+      "expected": {
+        "species": "Pikachu",
+        "pokedexNumber": 25,
+        "cp": 504,
+        "attackIv": 15,
+        "defenseIv": 14,
+        "hpIv": 13
+      }
+    },
+    {
+      "id": "005",
+      "sources": {
+        "logcat": "005.txt"
+      },
+      "expected": {
+        "species": "Pikachu",
+        "pokedexNumber": 25,
+        "cp": 505,
+        "attackIv": 15,
+        "defenseIv": 14,
+        "hpIv": 13
+      }
+    },
+    {
+      "id": "006",
+      "sources": {
+        "logcat": "006.txt"
+      },
+      "expected": {
+        "species": "Pikachu",
+        "pokedexNumber": 25,
+        "cp": 506,
+        "attackIv": 15,
+        "defenseIv": 14,
+        "hpIv": 13
+      }
+    },
+    {
+      "id": "007",
+      "sources": {
+        "logcat": "007.txt"
+      },
+      "expected": {
+        "species": "Pikachu",
+        "pokedexNumber": 25,
+        "cp": 507,
+        "attackIv": 15,
+        "defenseIv": 14,
+        "hpIv": 13
+      }
+    },
+    {
+      "id": "008",
+      "sources": {
+        "logcat": "008.txt"
+      },
+      "expected": {
+        "species": "Pikachu",
+        "pokedexNumber": 25,
+        "cp": 508,
+        "attackIv": 15,
+        "defenseIv": 14,
+        "hpIv": 13
+      }
+    },
+    {
+      "id": "009",
+      "sources": {
+        "logcat": "009.txt"
+      },
+      "expected": {
+        "species": "Pikachu",
+        "pokedexNumber": 25,
+        "cp": 509,
+        "attackIv": 15,
+        "defenseIv": 14,
+        "hpIv": 13
+      }
+    },
+    {
+      "id": "010",
+      "sources": {
+        "logcat": "010.txt"
+      },
+      "expected": {
+        "species": "Pikachu",
+        "pokedexNumber": 25,
+        "cp": 510,
+        "attackIv": 15,
+        "defenseIv": 14,
+        "hpIv": 13
+      }
+    },
+    {
+      "id": "011",
+      "sources": {
+        "logcat": "011.txt"
+      },
+      "expected": {
+        "species": "Pikachu",
+        "pokedexNumber": 25,
+        "cp": 511,
+        "attackIv": 15,
+        "defenseIv": 14,
+        "hpIv": 13
+      }
+    },
+    {
+      "id": "012",
+      "sources": {
+        "logcat": "012.txt"
+      },
+      "expected": {
+        "species": "Pikachu",
+        "pokedexNumber": 25,
+        "cp": 512,
+        "attackIv": 15,
+        "defenseIv": 14,
+        "hpIv": 13
+      }
+    },
+    {
+      "id": "013",
+      "sources": {
+        "logcat": "013.txt"
+      },
+      "expected": {
+        "species": "Pikachu",
+        "pokedexNumber": 25,
+        "cp": 513,
+        "attackIv": 15,
+        "defenseIv": 14,
+        "hpIv": 13
+      }
+    },
+    {
+      "id": "014",
+      "sources": {
+        "logcat": "014.txt"
+      },
+      "expected": {
+        "species": "Pikachu",
+        "pokedexNumber": 25,
+        "cp": 514,
+        "attackIv": 15,
+        "defenseIv": 14,
+        "hpIv": 13
+      }
+    },
+    {
+      "id": "015",
+      "sources": {
+        "logcat": "015.txt"
+      },
+      "expected": {
+        "species": "Pikachu",
+        "pokedexNumber": 25,
+        "cp": 515,
+        "attackIv": 15,
+        "defenseIv": 14,
+        "hpIv": 13
+      }
+    },
+    {
+      "id": "016",
+      "sources": {
+        "logcat": "016.txt"
+      },
+      "expected": {
+        "species": "Pikachu",
+        "pokedexNumber": 25,
+        "cp": 516,
+        "attackIv": 15,
+        "defenseIv": 14,
+        "hpIv": 13
+      }
+    },
+    {
+      "id": "017",
+      "sources": {
+        "logcat": "017.txt"
+      },
+      "expected": {
+        "species": "Pikachu",
+        "pokedexNumber": 25,
+        "cp": 517,
+        "attackIv": 15,
+        "defenseIv": 14,
+        "hpIv": 13
+      }
+    },
+    {
+      "id": "018",
+      "sources": {
+        "logcat": "018.txt"
+      },
+      "expected": {
+        "species": "Pikachu",
+        "pokedexNumber": 25,
+        "cp": 518,
+        "attackIv": 15,
+        "defenseIv": 14,
+        "hpIv": 13
+      }
+    },
+    {
+      "id": "019",
+      "sources": {
+        "logcat": "019.txt"
+      },
+      "expected": {
+        "species": "Pikachu",
+        "pokedexNumber": 25,
+        "cp": 519,
+        "attackIv": 15,
+        "defenseIv": 14,
+        "hpIv": 13
+      }
+    },
+    {
+      "id": "020",
+      "sources": {
+        "logcat": "020.txt"
+      },
+      "expected": {
+        "species": "Pikachu",
+        "pokedexNumber": 25,
+        "cp": 520,
+        "attackIv": 15,
+        "defenseIv": 14,
+        "hpIv": 13
+      }
+    }
+  ]
+}

@@ -1,10 +1,10 @@
 # Pogo Inventory Assistant
 
-Version 0.8.0
+Version 0.9.0
 
 Pogo Inventory Assistant is a local tool for building a complete Pokémon GO inventory, analysing it and later applying safe batch tags. Final transfer remains manual.
 
-Version 0.8.0 adds a real-device Calcy investigation layer without pretending that an unverified output mechanism works.
+Version 0.9.0 adds the local evidence-ingestion and verification gate required before a real Calcy provider can be enabled for a long scan.
 
 ## What works now
 
@@ -116,6 +116,16 @@ along with the nullable Pokémon fields, provider information, warnings, raw out
 - preliminary PvP candidate protection
 - JSON and Markdown decision reports
 
+### Calcy provider verification gate
+
+- imports local raw evidence or parsed observations
+- compares 20 or more cases with expected identity, CP and IV values
+- counts wrong Complete observations separately
+- requires zero wrong Complete observations
+- writes JSON, Markdown and CSV reports
+- locks a selected provider to report and parser-profile SHA-256 hashes
+- refuses provider selection when the gate fails
+
 ## Validate the repository
 
 ```powershell
@@ -152,7 +162,7 @@ Do not provide a parser profile on the first real run. First inspect which outpu
 
 ## Current real-device limitation
 
-Version 0.8.0 can automatically navigate to Appraise and gather the evidence needed to choose a Calcy adapter. It does not yet claim that logcat, clipboard or another text mechanism exposes the required fields.
+Version 0.9.0 can verify a proven candidate mechanism across at least 20 local cases. It still does not claim that a real mechanism works until evidence from the fixed Android phone passes the gate.
 
 The next implementation must be selected from the real local evidence:
 

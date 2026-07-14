@@ -92,9 +92,9 @@ Timing is deterministic and correctness-driven:
 
 ## Current data output
 
-Version 0.8.0 records ordered evidence and attaches a structured provider observation to every item. It also provides an automatic one-Pokémon Calcy live check, but no real provider is selected until phone evidence proves one mechanism.
+Version 0.9.0 records ordered evidence and attaches a structured provider observation to every item. It also provides an automatic one-Pokémon Calcy live check, but no real provider is selected until phone evidence proves one mechanism.
 
-## Structured observations in version 0.8.0
+## Structured observations in version 0.9.0
 
 After each appraisal screenshot is saved, the configured `ICalcyObservationProvider` is called. Its result is attached to the same sequence item before the atomic checkpoint is written.
 

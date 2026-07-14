@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Text.Json;
 using PogoInventory.Automation.Models;
 using PogoInventory.Automation.Services;
@@ -26,6 +27,8 @@ using PogoInventory.Vision.Imaging;
 using PogoInventory.Vision.Models;
 using PogoInventory.Vision.Profiles;
 using PogoInventory.Vision.Reporting;
+using PogoInventory.Verification.Models;
+using PogoInventory.Verification.Services;
 using PogoInventory.Vision.Errors;
 
 var tests = new (string Name, Func<Task> Run)[]
@@ -97,7 +100,17 @@ var tests = new (string Name, Func<Task> Run)[]
     ("Calcy raw parser extracts complete observation", CalcyRawParserExtractsCompleteObservationAsync),
     ("Calcy raw parser keeps incomplete output partial", CalcyRawParserKeepsPartialObservationAsync),
     ("Calcy raw parser detects conflicting fields", CalcyRawParserDetectsConflictingFieldsAsync),
-    ("Profile driven provider preserves raw output", ProfileDrivenProviderPreservesRawOutputAsync)
+    ("Profile driven provider preserves raw output", ProfileDrivenProviderPreservesRawOutputAsync),
+    ("Verification template creates twenty cases", VerificationTemplateCreatesTwentyCasesAsync),
+    ("Parsed observation evidence is ingested", ParsedObservationEvidenceIsIngestedAsync),
+    ("Verification rejects evidence path traversal", VerificationRejectsEvidencePathTraversalAsync),
+    ("Twenty exact observations pass provider gate", TwentyExactObservationsPassProviderGateAsync),
+    ("Wrong Complete observation blocks provider gate", WrongCompleteBlocksProviderGateAsync),
+    ("Safe incomplete observation is not false Complete", SafeIncompleteIsNotFalseCompleteAsync),
+    ("Incorrect incomplete observation blocks recommendation", IncorrectIncompleteBlocksRecommendationAsync),
+    ("Missing verification evidence is reported", MissingVerificationEvidenceIsReportedAsync),
+    ("Provider selection locks verification hashes", ProviderSelectionLocksHashesAsync),
+    ("Provider selection refuses rejected report", ProviderSelectionRefusesRejectedReportAsync)
 };
 
 var failed = 0;
@@ -2058,6 +2071,373 @@ static async Task ExpectDeviceErrorAsync(
 
 static InventoryAnalysisResult Analyze(params PokemonObservation[] observations) =>
     new InventoryAnalyzer().Analyze(observations, new RulePolicy());
+
+
+static async Task VerificationTemplateCreatesTwentyCasesAsync()
+{
+    var directory = CreateTemporaryDirectory();
+    try
+    {
+        var path = await CalcyVerificationTemplateWriter.InitializeAsync(directory, 20);
+        var json = await File.ReadAllTextAsync(path);
+        var manifest = JsonSerializer.Deserialize<CalcyVerificationManifest>(
+            json,
+            VerificationJson.CreateOptions()) ?? throw new InvalidOperationException("Missing template manifest.");
+        AssertEqual(20, manifest.Cases.Count, "verification template case count");
+        AssertTrue(File.Exists(Path.Combine(directory, "README.md")), "verification README should exist");
+    }
+    finally
+    {
+        DeleteDirectory(directory);
+    }
+}
+
+
+static async Task ParsedObservationEvidenceIsIngestedAsync()
+{
+    var directory = CreateTemporaryDirectory();
+    try
+    {
+        var observation = CalcyObservation.WithRawOutput(new CalcyObservation
+        {
+            ProviderName = "Self-test",
+            ProviderVersion = "1",
+            Status = CalcyObservationStatus.Complete,
+            Confidence = 1,
+            Species = "Pikachu",
+            PokedexNumber = 25,
+            Cp = 501,
+            AttackIv = 15,
+            DefenseIv = 14,
+            HpIv = 13,
+            RawProviderOutput = "self-test"
+        });
+        var observationPath = Path.Combine(directory, "observation.json");
+        await File.WriteAllTextAsync(
+            observationPath,
+            JsonSerializer.Serialize(
+                observation,
+                VerificationJson.CreateOptions(writeIndented: true)));
+        var manifest = new CalcyVerificationManifest
+        {
+            Name = "Parsed observation test",
+            Mechanism = CalcyProviderMechanism.LocalText,
+            ProviderVersion = "1",
+            MinimumCases = 1,
+            MinimumExactCompleteRate = 1,
+            Cases = new[]
+            {
+                new CalcyVerificationCase
+                {
+                    Id = "001",
+                    ObservationPath = "observation.json",
+                    Expected = new ExpectedPokemonObservation
+                    {
+                        Species = "Pikachu",
+                        PokedexNumber = 25,
+                        Cp = 501,
+                        AttackIv = 15,
+                        DefenseIv = 14,
+                        HpIv = 13
+                    }
+                }
+            }
+        };
+        var manifestPath = Path.Combine(directory, "manifest.json");
+        await File.WriteAllTextAsync(
+            manifestPath,
+            JsonSerializer.Serialize(
+                manifest,
+                VerificationJson.CreateOptions(writeIndented: true)));
+        var report = await new CalcyVerificationRunner().RunAsync(
+            manifestPath,
+            directory,
+            Path.Combine(directory, "out"));
+        AssertEqual(1, report.ExactCompleteCount, "parsed observation exact count");
+        AssertTrue(report.RecommendedForLongScan, "parsed observation should pass one-case test gate");
+    }
+    finally
+    {
+        DeleteDirectory(directory);
+    }
+}
+
+static async Task VerificationRejectsEvidencePathTraversalAsync()
+{
+    var directory = CreateTemporaryDirectory();
+    try
+    {
+        var manifest = VerificationManifest(
+            directory,
+            Enumerable.Range(1, 20).Select(index => VerificationCase(index, "../outside.txt")).ToArray());
+        var profile = await LoadSyntheticCalcyParserProfileAsync();
+        await ExpectInvalidOperationAsync(() => new CalcyVerificationRunner().RunAsync(
+            manifest,
+            directory,
+            Path.Combine(directory, "out"),
+            profile));
+    }
+    finally
+    {
+        DeleteDirectory(directory);
+    }
+}
+
+static async Task TwentyExactObservationsPassProviderGateAsync()
+{
+    var directory = CreateTemporaryDirectory();
+    try
+    {
+        var (manifest, profile) = await CreateVerificationFixtureAsync(directory, wrongCase: null, partialCase: null);
+        var report = await new CalcyVerificationRunner().RunAsync(
+            manifest,
+            directory,
+            Path.Combine(directory, "out"),
+            profile);
+        AssertEqual(20, report.ExactCompleteCount, "exact verification count");
+        AssertEqual(0, report.WrongCompleteCount, "wrong Complete count");
+        AssertTrue(report.RecommendedForLongScan, "provider should pass long-scan gate");
+    }
+    finally
+    {
+        DeleteDirectory(directory);
+    }
+}
+
+static async Task WrongCompleteBlocksProviderGateAsync()
+{
+    var directory = CreateTemporaryDirectory();
+    try
+    {
+        var (manifest, profile) = await CreateVerificationFixtureAsync(directory, wrongCase: 7, partialCase: null);
+        var report = await new CalcyVerificationRunner().RunAsync(
+            manifest,
+            directory,
+            Path.Combine(directory, "out"),
+            profile);
+        AssertEqual(1, report.WrongCompleteCount, "wrong Complete count");
+        AssertTrue(!report.ZeroFalseComplete, "zero false Complete flag");
+        AssertTrue(!report.RecommendedForLongScan, "wrong Complete must block provider");
+    }
+    finally
+    {
+        DeleteDirectory(directory);
+    }
+}
+
+static async Task SafeIncompleteIsNotFalseCompleteAsync()
+{
+    var directory = CreateTemporaryDirectory();
+    try
+    {
+        var (manifest, profile) = await CreateVerificationFixtureAsync(directory, wrongCase: null, partialCase: 5);
+        var report = await new CalcyVerificationRunner().RunAsync(
+            manifest,
+            directory,
+            Path.Combine(directory, "out"),
+            profile);
+        AssertEqual(1, report.SafeIncompleteCount, "safe incomplete count");
+        AssertEqual(0, report.WrongCompleteCount, "wrong Complete count");
+        AssertTrue(report.ZeroFalseComplete, "partial result is not false Complete");
+    }
+    finally
+    {
+        DeleteDirectory(directory);
+    }
+}
+
+static async Task IncorrectIncompleteBlocksRecommendationAsync()
+{
+    var directory = CreateTemporaryDirectory();
+    try
+    {
+        var cases = new List<CalcyVerificationCase>();
+        for (var index = 1; index <= 20; index++)
+        {
+            var id = index.ToString("000", CultureInfo.InvariantCulture);
+            var path = $"cases/{id}.txt";
+            Directory.CreateDirectory(Path.Combine(directory, "cases"));
+            var raw = index == 6
+                ? "species=Pikachu dex=25 cp=999 atk=15"
+                : $"species=Pikachu dex=25 cp={500 + index} atk=15 def=14 sta=13";
+            await File.WriteAllTextAsync(Path.Combine(directory, path.Replace('/', Path.DirectorySeparatorChar)), raw);
+            cases.Add(new CalcyVerificationCase
+            {
+                Id = id,
+                Sources = new Dictionary<string, string> { ["logcat"] = path },
+                Expected = Expected(index)
+            });
+        }
+        var manifest = VerificationManifest(directory, cases.ToArray());
+        var report = await new CalcyVerificationRunner().RunAsync(
+            manifest,
+            directory,
+            Path.Combine(directory, "out"),
+            await LoadSyntheticCalcyParserProfileAsync());
+        AssertEqual(1, report.IncorrectIncompleteCount, "incorrect incomplete count");
+        AssertTrue(!report.RecommendedForLongScan, "incorrect incomplete must block recommendation");
+    }
+    finally
+    {
+        DeleteDirectory(directory);
+    }
+}
+
+static async Task MissingVerificationEvidenceIsReportedAsync()
+{
+    var directory = CreateTemporaryDirectory();
+    try
+    {
+        var cases = Enumerable.Range(1, 20)
+            .Select(index => VerificationCase(index, $"cases/{index:000}.txt"))
+            .ToArray();
+        var manifest = VerificationManifest(directory, cases);
+        var report = await new CalcyVerificationRunner().RunAsync(
+            manifest,
+            directory,
+            Path.Combine(directory, "out"),
+            await LoadSyntheticCalcyParserProfileAsync());
+        AssertEqual(20, report.InvalidEvidenceCount, "invalid evidence count");
+        AssertTrue(!report.SafeForLongScan, "missing evidence must block safe gate");
+    }
+    finally
+    {
+        DeleteDirectory(directory);
+    }
+}
+
+static async Task ProviderSelectionLocksHashesAsync()
+{
+    var directory = CreateTemporaryDirectory();
+    try
+    {
+        var (manifest, profile) = await CreateVerificationFixtureAsync(directory, wrongCase: null, partialCase: null);
+        var output = Path.Combine(directory, "out");
+        _ = await new CalcyVerificationRunner().RunAsync(manifest, directory, output, profile);
+        var reportPath = Path.Combine(output, "verification-report.json");
+        var parserPath = RepositoryPath("data", "calcy-parser-profile.synthetic.json");
+        var selectionPath = Path.Combine(directory, "provider-selection.json");
+        var selection = await CalcyProviderSelectionService.SelectAsync(
+            reportPath,
+            CalcyProviderMechanism.PidWindowedLogcat,
+            "4.3.1",
+            selectionPath,
+            parserPath);
+        AssertTrue(File.Exists(selectionPath), "provider selection should exist");
+        AssertEqual(20, selection.VerifiedCaseCount, "verified selection count");
+        AssertTrue(!string.IsNullOrWhiteSpace(selection.VerificationReportSha256), "report hash");
+        AssertTrue(!string.IsNullOrWhiteSpace(selection.ParserProfileSha256), "parser hash");
+    }
+    finally
+    {
+        DeleteDirectory(directory);
+    }
+}
+
+static async Task ProviderSelectionRefusesRejectedReportAsync()
+{
+    var directory = CreateTemporaryDirectory();
+    try
+    {
+        var (manifest, profile) = await CreateVerificationFixtureAsync(directory, wrongCase: 1, partialCase: null);
+        var output = Path.Combine(directory, "out");
+        _ = await new CalcyVerificationRunner().RunAsync(manifest, directory, output, profile);
+        await ExpectInvalidOperationAsync(() => CalcyProviderSelectionService.SelectAsync(
+            Path.Combine(output, "verification-report.json"),
+            CalcyProviderMechanism.PidWindowedLogcat,
+            "4.3.1",
+            Path.Combine(directory, "selection.json"),
+            RepositoryPath("data", "calcy-parser-profile.synthetic.json")));
+    }
+    finally
+    {
+        DeleteDirectory(directory);
+    }
+}
+
+static async Task<(string ManifestPath, CalcyTextParserProfile Profile)> CreateVerificationFixtureAsync(
+    string directory,
+    int? wrongCase,
+    int? partialCase)
+{
+    Directory.CreateDirectory(Path.Combine(directory, "cases"));
+    var cases = new List<CalcyVerificationCase>();
+    for (var index = 1; index <= 20; index++)
+    {
+        var id = index.ToString("000", CultureInfo.InvariantCulture);
+        var relative = $"cases/{id}.txt";
+        var cp = wrongCase == index ? 9000 : 500 + index;
+        var raw = partialCase == index
+            ? $"species=Pikachu dex=25 cp={cp} atk=15 def=14"
+            : $"species=Pikachu dex=25 cp={cp} atk=15 def=14 sta=13";
+        await File.WriteAllTextAsync(
+            Path.Combine(directory, relative.Replace('/', Path.DirectorySeparatorChar)),
+            raw);
+        cases.Add(new CalcyVerificationCase
+        {
+            Id = id,
+            Sources = new Dictionary<string, string> { ["logcat"] = relative },
+            Expected = Expected(index)
+        });
+    }
+
+    var manifestPath = VerificationManifest(directory, cases.ToArray());
+    return (manifestPath, await LoadSyntheticCalcyParserProfileAsync());
+}
+
+static string VerificationManifest(string directory, IReadOnlyList<CalcyVerificationCase> cases)
+{
+    var manifest = new CalcyVerificationManifest
+    {
+        Name = "Self-test verification",
+        Mechanism = CalcyProviderMechanism.PidWindowedLogcat,
+        ProviderVersion = "4.3.1",
+        MinimumCases = 20,
+        MinimumExactCompleteRate = 0.95,
+        Cases = cases
+    };
+    var path = Path.Combine(directory, "verification-manifest.json");
+    File.WriteAllText(
+        path,
+        JsonSerializer.Serialize(manifest, VerificationJson.CreateOptions(writeIndented: true)));
+    return path;
+}
+
+static CalcyVerificationCase VerificationCase(int index, string path) =>
+    new()
+    {
+        Id = index.ToString("000", CultureInfo.InvariantCulture),
+        Sources = new Dictionary<string, string> { ["logcat"] = path },
+        Expected = Expected(index)
+    };
+
+static ExpectedPokemonObservation Expected(int index) =>
+    new()
+    {
+        Species = "Pikachu",
+        PokedexNumber = 25,
+        Cp = 500 + index,
+        AttackIv = 15,
+        DefenseIv = 14,
+        HpIv = 13
+    };
+
+static Task<CalcyTextParserProfile> LoadSyntheticCalcyParserProfileAsync() =>
+    CalcyTextParserProfileLoader.LoadAsync(
+        RepositoryPath("data", "calcy-parser-profile.synthetic.json"));
+
+static async Task ExpectInvalidOperationAsync(Func<Task> action)
+{
+    try
+    {
+        await action();
+        throw new InvalidOperationException("Expected InvalidOperationException.");
+    }
+    catch (InvalidOperationException exception) when (
+        exception.Message != "Expected InvalidOperationException.")
+    {
+    }
+}
 
 static PokemonObservation P(
     string key,

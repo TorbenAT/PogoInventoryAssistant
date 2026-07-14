@@ -29,6 +29,8 @@ using PogoInventory.Vision.Imaging;
 using PogoInventory.Vision.Models;
 using PogoInventory.Vision.Profiles;
 using PogoInventory.Vision.Reporting;
+using PogoInventory.Verification.Models;
+using PogoInventory.Verification.Services;
 
 return await MainAsync(args);
 
@@ -67,6 +69,15 @@ static async Task<int> MainAsync(string[] args)
                 args.Skip(1).ToArray(),
                 cancellationSource.Token),
             "calcy-parse" => await ParseCalcyOutputAsync(
+                args.Skip(1).ToArray(),
+                cancellationSource.Token),
+            "calcy-verification-init" => await InitializeCalcyVerificationAsync(
+                args.Skip(1).ToArray(),
+                cancellationSource.Token),
+            "calcy-verification-run" => await RunCalcyVerificationAsync(
+                args.Skip(1).ToArray(),
+                cancellationSource.Token),
+            "calcy-provider-select" => await SelectCalcyProviderAsync(
                 args.Skip(1).ToArray(),
                 cancellationSource.Token),
             "device-snapshot" => await CaptureDeviceSnapshotAsync(
@@ -481,6 +492,81 @@ static async Task<int> ParseCalcyOutputAsync(
     return observation.Status is CalcyObservationStatus.Complete or CalcyObservationStatus.Partial
         ? 0
         : 8;
+}
+
+
+static async Task<int> InitializeCalcyVerificationAsync(
+    string[] args,
+    CancellationToken cancellationToken)
+{
+    var options = ParseOptions(args);
+    var path = await CalcyVerificationTemplateWriter.InitializeAsync(
+        Require(options, "out"),
+        ParsePositiveInt(options, "cases", 20),
+        cancellationToken);
+    Console.WriteLine("Local Calcy verification workspace created.");
+    Console.WriteLine($"Manifest: {path}");
+    Console.WriteLine("The workspace is local evidence and should remain outside Git.");
+    return 0;
+}
+
+static async Task<int> RunCalcyVerificationAsync(
+    string[] args,
+    CancellationToken cancellationToken)
+{
+    var options = ParseOptions(args);
+    CalcyTextParserProfile? parserProfile = null;
+    if (Optional(options, "parser-profile") is { } parserPath)
+    {
+        parserProfile = await CalcyTextParserProfileLoader.LoadAsync(
+            parserPath,
+            cancellationToken);
+    }
+
+    var report = await new CalcyVerificationRunner().RunAsync(
+        Require(options, "manifest"),
+        Require(options, "evidence-root"),
+        Require(options, "out"),
+        parserProfile,
+        cancellationToken);
+    Console.WriteLine("Calcy provider verification finished.");
+    Console.WriteLine($"Cases: {report.CaseCount}");
+    Console.WriteLine($"Exact Complete: {report.ExactCompleteCount}");
+    Console.WriteLine($"Wrong Complete: {report.WrongCompleteCount}");
+    Console.WriteLine($"Exact rate: {report.ExactCompleteRate:P1}");
+    Console.WriteLine($"Recommended for long scan: {report.RecommendedForLongScan}");
+    Console.WriteLine($"Gate: {report.GateDetail}");
+    return report.RecommendedForLongScan ? 0 : 10;
+}
+
+static async Task<int> SelectCalcyProviderAsync(
+    string[] args,
+    CancellationToken cancellationToken)
+{
+    var options = ParseOptions(args);
+    var mechanismText = Require(options, "mechanism");
+    if (!Enum.TryParse<CalcyProviderMechanism>(
+            mechanismText,
+            ignoreCase: true,
+            out var mechanism))
+    {
+        throw new ArgumentException(
+            "--mechanism must be PidWindowedLogcat, LocalText or VisualOverlay.");
+    }
+
+    var selection = await CalcyProviderSelectionService.SelectAsync(
+        Require(options, "report"),
+        mechanism,
+        Require(options, "version"),
+        Require(options, "out"),
+        Optional(options, "parser-profile"),
+        cancellationToken);
+    Console.WriteLine("Verified Calcy provider selection written.");
+    Console.WriteLine($"Mechanism: {selection.Mechanism}");
+    Console.WriteLine($"Cases: {selection.VerifiedCaseCount}");
+    Console.WriteLine($"Exact rate: {selection.ExactCompleteRate:P1}");
+    Console.WriteLine($"Output: {Path.GetFullPath(Require(options, "out"))}");
+    return 0;
 }
 
 static async Task<int> CaptureDeviceSnapshotAsync(
@@ -1286,6 +1372,13 @@ static void PrintHelp()
     Console.WriteLine("                   [--parser-profile <parser.json>] [--settle-ms <n>]");
     Console.WriteLine("  calcy-parse --input <raw.txt> --profile <parser.json> --out <observation.json>");
     Console.WriteLine("              [--source-name <name>]");
+    Console.WriteLine("  calcy-verification-init --out <local-directory> [--cases <n>]");
+    Console.WriteLine("  calcy-verification-run --manifest <file> --evidence-root <dir> --out <dir>");
+    Console.WriteLine("                         [--parser-profile <parser.json>]");
+    Console.WriteLine("  calcy-provider-select --report <verification-report.json>");
+    Console.WriteLine("                        --mechanism <PidWindowedLogcat|LocalText|VisualOverlay>");
+    Console.WriteLine("                        --version <version> --out <selection.json>");
+    Console.WriteLine("                        [--parser-profile <parser.json>]");
     Console.WriteLine();
     Console.WriteLine("  device-snapshot --out <directory> [--adb <adb.exe>] [--serial <serial>] [--timeout-seconds <n>]");
     Console.WriteLine("  device-snapshot --fake --out <directory>");

@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.9.0
+
+- Added the local Calcy provider verification workspace and evidence-ingestion runner.
+- Added expected-versus-observed comparison for identity, CP and all three IV values.
+- Added explicit WrongComplete and IncorrectIncomplete outcomes.
+- Added the minimum 20-case, zero-false-Complete long-scan gate.
+- Added provider selection locked to verification-report and parser-profile SHA-256 hashes.
+- Added JSON, Markdown and CSV reports, scripts, CI coverage and ten self-tests.
+- Added no new phone input methods and no production provider claim without real evidence.
+
 ## 0.8.0
 
 - Added `IAndroidAppInspectionTransport` with fixed read-only package, process, logcat, accessibility, app-ops and service operations.

@@ -134,6 +134,34 @@ jobs:
             throw "Unexpected parsed IV values."
           }
 
+      - name: Verify twenty synthetic Calcy observations
+        run: >-
+          dotnet run --project .\src\PogoInventory.Cli --configuration Release --no-build --
+          calcy-verification-run
+          --manifest .\data\calcy-verification\manifest.synthetic.json
+          --evidence-root .\data\calcy-verification
+          --parser-profile .\data\calcy-parser-profile.synthetic.json
+          --out .\out\calcy-verification
+
+      - name: Verify Calcy provider gate
+        shell: pwsh
+        run: |
+          $report = Get-Content .\out\calcy-verification\verification-report.json -Raw | ConvertFrom-Json
+          if ($report.caseCount -ne 20) { throw "Expected twenty verification cases." }
+          if ($report.exactCompleteCount -ne 20) { throw "Expected twenty exact Complete observations." }
+          if ($report.wrongCompleteCount -ne 0) { throw "Expected zero wrong Complete observations." }
+          if (-not $report.recommendedForLongScan) { throw "Synthetic provider did not pass the long-scan gate." }
+
+      - name: Lock verified synthetic provider
+        run: >-
+          dotnet run --project .\src\PogoInventory.Cli --configuration Release --no-build --
+          calcy-provider-select
+          --report .\out\calcy-verification\verification-report.json
+          --mechanism PidWindowedLogcat
+          --version 4.3.1
+          --parser-profile .\data\calcy-parser-profile.synthetic.json
+          --out .\out\calcy-verification\provider-selection.json
+
       - name: Run synthetic screen detection
         run: >-
           dotnet run --project .\src\PogoInventory.Cli --configuration Release --no-build --

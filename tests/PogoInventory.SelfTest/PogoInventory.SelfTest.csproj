@@ -15,5 +15,6 @@
     <ProjectReference Include="..\..\src\PogoInventory.Device\PogoInventory.Device.csproj" />
     <ProjectReference Include="..\..\src\PogoInventory.Observations\PogoInventory.Observations.csproj" />
     <ProjectReference Include="..\..\src\PogoInventory.Vision\PogoInventory.Vision.csproj" />
+    <ProjectReference Include="..\..\src\PogoInventory.Verification\PogoInventory.Verification.csproj" />
   </ItemGroup>
 </Project>

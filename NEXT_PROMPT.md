@@ -1,51 +1,45 @@
 # Continuation prompt
 
-Use this text with the latest repository after version 0.8.0 is green.
+Use this text with the latest repository after version 0.9.0 is green.
 
 ---
 
 I am building Pogo Inventory Assistant in C# and .NET 8.
 
-Open and inspect the repository before changing anything. Treat `PROJECT_STATE.md` as the source of truth. Read `docs/GUARDRAILS.md`, `docs/CALCY_DEVICE_PROBE.md`, `docs/CALCY_LIVE_CHECK.md` and `docs/CALCY_TEXT_PARSER.md`.
+Open and inspect the repository before changing anything. Treat `PROJECT_STATE.md` as the source of truth. Read `docs/GUARDRAILS.md`, `docs/CALCY_DEVICE_PROBE.md`, `docs/CALCY_LIVE_CHECK.md`, `docs/CALCY_TEXT_PARSER.md` and `docs/CALCY_PROVIDER_VERIFICATION.md`.
 
-Current version: 0.8.0.
+Current version: 0.9.0.
 
 Accepted before this task:
 
 - automatic inventory navigation with only four named actions
-- automatic core screen-profile bootstrap
-- checkpoint schema 2.0
-- structured observation contract
-- named read-only Android app-inspection interface
-- Calcy package, process, accessibility, app-ops, service and log probe
-- automatic one-Pokémon live check
-- profile-driven raw text parser
-- synthetic CI evidence only
-- 68 self-tests
+- automatic core profile bootstrap
+- structured observation and checkpoint schema 2.0
+- Calcy device probe and automatic one-Pokémon live check
+- profile-driven parser
+- local evidence-ingestion and twenty-case verification harness
+- explicit wrong Complete detection
+- provider selection locked to report and parser hashes
+- 78 self-tests
 
-First verify that the 0.8.0 GitHub Actions workflow is green.
+First verify that the 0.9.0 GitHub Actions workflow is green.
 
-Next milestone: M4 phase 3, real-device evidence and production Calcy provider selection.
+Next milestone: M4 phase 4, real provider implementation and automated twenty-case collection.
 
-Do not assume that the old Calcy intent, clipboard, logcat or overlay behaviour still works. Use only evidence from the installed `tesmath.calcy` version on the fixed Android phone.
+Do not assume any Calcy output mechanism works. Use only evidence from the installed `tesmath.calcy` version on the fixed Android phone.
 
 Required work:
 
-1. Run the local `calcy-probe` and `calcy-live-check` commands against the fixed phone.
-2. Record the installed Calcy version and the probe decision.
-3. Inspect only the local evidence. Do not commit real screenshots or full logs.
-4. Select one provider mechanism only when it is proven:
-   - PID/time-windowed logcat if it contains structured Pokémon fields
-   - another documented local text mechanism if proven
-   - visual overlay extraction if no structured text mechanism exists
-5. Implement the selected mechanism behind `ICalcyRawOutputSource` or `ICalcyObservationProvider`.
-6. Preserve raw evidence and hashes.
-7. Produce Complete only with species or Pokédex number, CP and all three IV values.
-8. Treat mismatches and ambiguity as Partial, Conflicting or Failed.
-9. Add a 20-Pokémon verification mode with expected-versus-observed reporting.
-10. Require zero false Complete observations before a long scan can select the provider.
-11. Keep all ADB execution in `PogoInventory.Device`.
-12. Do not add transfer, tagging, gameplay, location changes, arbitrary shell access, random timing or anti-detection behaviour.
-13. Update `PROJECT_STATE.md`, `NEXT_PROMPT.md`, `CHANGELOG.md`, README, validation report and release notes.
+1. Run the real `calcy-probe` and `calcy-live-check` commands.
+2. Select one mechanism only from actual local evidence: PID-windowed logcat, proven local text, or visual overlay extraction.
+3. Implement exactly that source behind `ICalcyRawOutputSource` or `ICalcyObservationProvider`.
+4. Add automatic collection of 20 consecutive verification cases without manual phone navigation.
+5. Keep expected ground truth separate from provider output.
+6. Run the 0.9.0 verification gate.
+7. Require zero `WrongComplete` observations and the configured exact Complete rate.
+8. Refuse long-scan provider activation unless the selection hash locks still match.
+9. Preserve all raw evidence and hashes locally.
+10. Add no transfer, tagging, gameplay, location changes, arbitrary shell access, random timing or anti-detection behavior.
+11. Update project state, continuation prompt, changelog, README, validation report and release notes.
 
-If the real evidence is unavailable in the development environment, implement only the evidence ingestion and verification harness. Do not fabricate a working adapter.
+If real phone evidence is unavailable, do not fabricate a production provider. Improve only the local acquisition and evidence-replay harness.
