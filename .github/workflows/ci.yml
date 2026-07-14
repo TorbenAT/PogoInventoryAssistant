@@ -39,6 +39,16 @@ jobs:
           dotnet run --project .\src\PogoInventory.Cli --configuration Release --no-build --
           device-snapshot --fake --out .\out\fake-device
 
+      - name: Run deterministic automatic inventory navigation
+        run: >-
+          dotnet run --project .\src\PogoInventory.Cli --configuration Release --no-build --
+          inventory-scan --fake
+          --profile .\data\automation-profile.synthetic.json
+          --screen-profile .\data\screen-profile.synthetic.json
+          --fixtures .\data\screen-fixtures
+          --max-items 3
+          --out .\out\automatic-inventory-scan
+
       - name: Run synthetic screen detection
         run: >-
           dotnet run --project .\src\PogoInventory.Cli --configuration Release --no-build --

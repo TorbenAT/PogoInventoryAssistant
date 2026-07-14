@@ -1,12 +1,32 @@
 # Pogo Inventory Assistant
 
-Version 0.5.0
+Version 0.6.0
 
-Pogo Inventory Assistant is a conservative, local inventory and decision assistant for Pokémon GO. The final transfer remains manual.
+Pogo Inventory Assistant is a local tool for building a complete Pokémon GO inventory, analysing it and later applying safe batch tags. Final transfer remains manual.
 
-Version 0.5.0 adds a guided, read-only workflow for collecting the private Android screenshots required to calibrate the screen-state detector. Navigation on the phone remains manual. The software captures screenshots only after the user confirms that the requested screen is visible.
+Version 0.6.0 adds the first automatic phone-navigation engine. Once the two local profiles are adjusted to the fixed Android phone, the program can open the first Pokémon, open appraisal, swipe through the inventory, capture every item and stop or resume without user interaction per Pokémon.
 
 ## What works now
+
+### Automatic inventory navigation
+
+- uses a strict, named action whitelist
+- opens the first inventory card
+- opens the Pokémon menu
+- selects Appraise
+- swipes to the next Pokémon while appraisal remains open
+- verifies the screen state after every action
+- verifies that the Pokémon identity region changed after every swipe
+- detects the end of the inventory when repeated verified swipes do not change the identity region
+- writes one local PNG evidence file per Pokémon
+- writes SHA-256 hashes and a persistent checkpoint after every Pokémon
+- can resume only when the current screen matches the last checkpointed Pokémon
+- locks the run to one device serial, one screen geometry and exact hashes of both local profiles
+- checks battery level and temperature
+- stops on Unknown, popup, network error, unexpected state or timeout
+- uses deterministic, adaptive waits rather than random human imitation
+
+There is no image-by-image approval in the automatic scan path. Local evidence is recorded automatically.
 
 ### Inventory analysis
 
@@ -16,24 +36,13 @@ Version 0.5.0 adds a guided, read-only workflow for collecting the private Andro
 - preliminary PvP candidate preservation
 - JSON and Markdown decision reports
 
-### Read-only Android Device Harness
-
-- authorised-device discovery through ADB
-- explicit serial selection
-- device, screen and battery metadata
-- validated PNG screenshot capture
-- SHA-256 capture manifest
-- timeouts, cancellation and fake transport
-
-### Read-only Screen State Detector
+### Screen-state detection
 
 - package-free PNG decoding
 - normalised UI regions
 - Color, Grayscale and Edge fingerprints
 - Required, Optional and Forbidden anchors
-- orientation, resolution and aspect-ratio checks
 - deterministic state scoring and winner margin
-- full JSON evidence
 - fail-closed `Unknown`
 
 Supported states:
@@ -51,31 +60,18 @@ NetworkError
 Unknown
 ```
 
-### Calibration and guided capture
+## Important current limitation
 
-- private local workspace with a mandatory marker
-- guided capture plan with required variation coverage
-- manual phone navigation and explicit Enter-to-capture workflow
-- capture-plan fingerprint, device-serial and exact-geometry session lock
-- private `incoming` screenshots separated from approved fixtures
-- SHA-256 verification of every recorded capture
-- duplicate screenshot detection
-- status report with missing states and next recommendation
-- explicit privacy-review confirmation before promotion
-- safe promotion into the approved fixture manifest
-- approval reset and hash validation if fixture bytes change
-- anchor-plan profile generation and strict acceptance reports
-- synthetic end-to-end calibration in CI
+The automatic engine is implemented and tested with synthetic screens. A real run still requires two local files adjusted once for the fixed Android setup:
 
-No real Pokémon GO screenshots, device serials or phone-specific profiles are committed.
+```text
+automation-profile.local.json
+screen-profile.local.json
+```
 
-## Requirements
+That one-time adjustment is not work on 10,000 Pokémon. After it is accepted, the inventory traversal itself is automatic.
 
-- Windows 10 or 11
-- Visual Studio 2022 or .NET 8 SDK
-- Android Platform Tools for real phone screenshots
-- USB debugging enabled on the Android phone
-- one fixed Android display configuration during a capture session
+Version 0.6.0 captures the inventory evidence and sequence. It does not yet extract species, CP, IVs, moves or special status from every captured Pokémon. Calcy integration and observation extraction are the next milestone.
 
 ## Validate the repository
 
@@ -84,102 +80,73 @@ No real Pokémon GO screenshots, device serials or phone-specific profiles are c
 .\scripts\test.ps1
 .\scripts\run-demo.ps1
 .\scripts\run-fake-device.ps1
+.\scripts\run-fake-inventory-scan.ps1
 .\scripts\detect-synthetic-screen.ps1
-.\scripts\extract-synthetic-fingerprint.ps1
 .\scripts\build-synthetic-calibration-profile.ps1
 .\scripts\validate-synthetic-calibration.ps1
 ```
 
-## Start private real-screen capture
+The fake automatic scan should finish with three captured items and no manual input.
 
-Initialise or upgrade the ignored local workspace:
+## Run on the fixed Android phone
 
-```powershell
-.\scripts\init-local-calibration.ps1
-```
-
-Start the guided capture session:
+Do not use the synthetic profiles on the real phone. Use accepted local profiles.
 
 ```powershell
-.\scripts\start-local-calibration-capture.ps1 `
-  -AdbPath "C:\Android\platform-tools\adb.exe"
+.\scripts\start-local-inventory-scan.ps1 `
+  -AdbPath "C:\Android\platform-tools\adb.exe" `
+  -AutomationProfile "C:\Path\automation-profile.local.json" `
+  -ScreenProfile "C:\Path\screen-profile.local.json"
 ```
 
-The program tells you which screen to open. You navigate manually on the phone and press Enter on the computer when the requested screen is ready.
+The starting screen may be:
 
-Loading and NetworkError samples are required before a real profile can be accepted. They are placed last in the default plan so the rest of the fixture set can be completed first.
+- Pokémon inventory list
+- Pokémon details
+- Pokémon menu
+- appraisal already open
 
-Show progress and capture ids:
+The program navigates to appraisal automatically and then continues through the inventory.
 
-```powershell
-.\scripts\show-local-calibration-capture-status.ps1
-```
-
-Capture one specific state without the guided loop:
-
-```powershell
-.\scripts\capture-local-calibration-state.ps1 `
-  -State PokemonDetails `
-  -AdbPath "C:\Android\platform-tools\adb.exe"
-```
-
-Captured files remain under:
+Outputs remain under an ignored local directory:
 
 ```text
-local-data\screen-calibration\incoming\<ExpectedState>\
+local-data\inventory-scans\<run>\
+  inventory-scan-checkpoint.json
+  captures\000001.png
+  captures\000002.png
+  ...
 ```
 
-They do not become calibration fixtures automatically.
-
-## Review and approve a capture
-
-Open the screenshot locally and complete the privacy checklist. Then promote it:
-
-```powershell
-.\scripts\approve-local-calibration-capture.ps1 `
-  -CaptureId "0001-inventorylist-..." `
-  -ReviewedBy "Torben"
-```
-
-The script requires the exact confirmation text `APPROVE`. Promotion copies the hash-verified screenshot into the correct fixture folder and adds a complete local safety review to the manifest.
-
-Then edit `anchor-plan.local.json` and run:
-
-```powershell
-.\scripts\build-local-calibration-profile.ps1
-.\scripts\validate-local-calibration.ps1
-```
-
-Acceptance reports are written under:
-
-```text
-local-data\screen-calibration\reports\acceptance
-```
-
-See:
-
-- `docs/GUIDED_REAL_SCREEN_CAPTURE.md`
-- `docs/REAL_SCREEN_CALIBRATION.md`
-- `docs/FIXTURE_APPROVAL_CHECKLIST.md`
+Rerunning the same command against a running checkpoint resumes only if the same last Pokémon is still open. A completed or safely stopped checkpoint is not changed.
 
 ## Safety boundary
 
-The repository contains no methods for:
+The input interface exposes only:
 
-- taps or swipes
-- text input or tagging
-- automatic transfer
+- one configured tap for the first inventory card
+- one configured tap for the details menu
+- one configured tap for Appraise
+- one configured swipe to the next Pokémon
+
+The repository contains no functions for:
+
+- transfer
 - evolve, power-up, purify or TM use
-- purchases, catching, spinning, raids or battles
+- purchases
+- catching, spinning, raids or battles
 - location changes
-- randomised or human-like input
+- text input or tags in this version
+- randomised timing or randomised tap positions intended to hide automation
 
-Do not commit real screenshots, device serials, capture sessions, inventory exports, local profiles or databases while the repository is public.
+Do not commit real screenshots, device serials, inventory exports, local profiles, checkpoints or databases while the repository is public.
 
 Read next:
 
 - `PROJECT_STATE.md`
 - `NEXT_PROMPT.md`
+- `docs/AUTOMATIC_NAVIGATION.md`
+- `docs/AUTOMATION_PROFILE.md`
 - `docs/GUARDRAILS.md`
 - `docs/ARCHITECTURE.md`
 - `VALIDATION_REPORT.md`

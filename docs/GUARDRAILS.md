@@ -16,7 +16,22 @@ The software must not include functions for:
 - spinning PokéStops
 - raids or battles
 
-The final transfer remains manual.
+Final transfer remains manual.
+
+## Allowed input in version 0.6.0
+
+Only four named input actions are allowed:
+
+```text
+TapFirstInventoryCard
+TapDetailsMenu
+TapAppraise
+SwipeNextPokemon
+```
+
+Coordinates come from a validated local automation profile and are converted from normalised values to the locked screen geometry.
+
+There is no arbitrary shell command, arbitrary higher-layer coordinate API, text input, tag action or destructive action.
 
 ## No anti-detection behaviour
 
@@ -27,122 +42,65 @@ Do not add:
 - detection avoidance
 - account-behaviour camouflage
 
-Adaptive waiting is allowed only for correctness, such as waiting for a recognised screen state or stopping on timeout.
+Adaptive waiting is allowed only for correctness, such as waiting for a recognised state, image change or timeout.
 
-## Current phone integration is read-only
+## No per-image approval in the automatic path
 
-Version 0.5.0 permits only:
+Automatic inventory evidence is local machine data and is captured without user approval per image. Privacy approval is not a correctness gate for an overnight scan.
 
-- device discovery
-- device metadata reads
-- screen-size reads
-- battery-state reads
-- screenshot capture
-- offline analysis of PNG screenshots
-- private guided screenshot collection after manual navigation
-- local fixture indexing and SHA-256 verification
-- local fingerprint profile generation
-- offline calibration acceptance reports
-
-The public device interface has no taps, swipes, text input, app launches or arbitrary shell commands.
-
-## Calibration capture remains manual-navigation only
-
-The guided session may tell the user which screen to open. It must not navigate there itself.
-
-Each capture requires an explicit user action on the computer after the requested phone screen is visible. This is not permission to add phone input control.
-
-## Incoming is not approved
-
-A captured screenshot remains under `incoming/` until explicit local privacy review.
-
-Promotion requires confirmation that these were reviewed:
-
-- account identity
-- location
-- notifications
-- other personal data
-
-A duplicate capture cannot be promoted. A changed capture fails hash verification.
-
-## Unknown is not false
-
-Special-status fields use nullable booleans.
-
-```text
-true    = positively detected
-false   = positively confirmed absent
-unknown = not reliably determined
-```
-
-Unknown critical values force REVIEW.
+The old guided calibration and manual-promotion commands remain as fallback utilities. They are not the target production workflow.
 
 ## Unknown screen state is a hard stop
 
-A later scanner or executor must not act when:
+The automation must not act when:
 
 - screen state is `Unknown`
 - required anchors are missing
 - forbidden anchors are present
 - orientation or layout is unsupported
-- two states have conflicting evidence
+- two states conflict
 - confidence is below threshold
+- popup or network error is present
 
-False negatives are acceptable during calibration. False positive screen states are not.
+## Identity rules
 
-## Exact identity before delete tagging
+The navigation fingerprint proves that the screen changed. It does not by itself authorise DELETE or tagging.
 
-A future tag executor may only apply a delete tag to an Exact match. High-confidence, ambiguous and mismatched observations must never receive a delete tag.
+A future delete tag requires:
 
-## Action whitelist
-
-When input control is eventually added, all actions must be named and validated. Arbitrary coordinates must not be exposed outside the device module.
-
-Any input milestone requires:
-
-- approved screen state before the action
-- approved named action
-- expected screen state after the action
-- timeout and stop behaviour
+- exact Pokémon identity
+- locked execution plan
+- documented better retained duplicate
+- no protected status
 - before and after evidence
 
 ## Fail closed
 
-The program must stop, return Unknown or return REVIEW when:
+Stop or return REVIEW when:
 
-- screen state is unknown
-- a device is missing, unauthorised or ambiguous
-- a command times out
+- device is missing, unauthorised or ambiguous
+- device serial changes
+- screen geometry changes
+- input command times out
 - capture output is invalid
-- capture device or geometry changes
-- a local capture file changes after recording
-- identity is not exact
-- critical data is unknown
-- sequence or inventory counts do not reconcile
+- resume screen does not match the checkpoint
+- sequence is not contiguous
+- critical observation data is unknown
+- inventory counts do not reconcile
 
 ## Auditability
 
-Every future tag action must record:
+Every input action records:
 
-- expected identity
-- observed identity
-- match result
-- decision and reasons
-- screenshot before and after
-- action performed
-- result
-- timestamp
+- sequence number
+- action kind
+- state before
+- state after
+- start and completion time
+- action detail
+
+Every captured item records screenshot and fingerprint hashes.
 
 ## Public repository data
 
-Do not commit real screenshots, device serials, capture sessions, inventory exports, databases, logs or real screen profiles while the repository is public. Use ignored local folders and review every commit before pushing.
-
-## Calibration fixture integrity
-
-- Real calibration commands require an initialised workspace marker.
-- Every recorded capture and approved fixture is locked by SHA-256.
-- A changed file loses trust and must be reviewed again.
-- Unapproved incoming screenshots cannot become profile samples.
-- Path traversal and rooted paths are rejected.
-- Composite Unknown fixtures still participate in false-positive acceptance even when excluded from individual anchor-separation metrics.
-- A profile is not accepted with false positives, known-state misclassifications or weak anchors under the configured policy.
+Do not commit real screenshots, device serials, checkpoints, inventory exports, databases, logs or real local profiles while the repository is public.

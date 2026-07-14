@@ -1,4 +1,7 @@
 using System.Text.Json;
+using PogoInventory.Automation.Models;
+using PogoInventory.Automation.Services;
+using PogoInventory.Automation.Transport;
 using PogoInventory.Calibration.Errors;
 using PogoInventory.Calibration.Models;
 using PogoInventory.Calibration.Reporting;
@@ -30,6 +33,7 @@ var tests = new (string Name, Func<Task> Run)[]
     ("ADB device list parser recognises states", Sync(AdbDeviceListParserRecognisesStates)),
     ("ADB metadata parsers read screen and battery", Sync(AdbMetadataParsersReadScreenAndBattery)),
     ("ADB transport uses only expected read-only commands", AdbTransportUsesExpectedCommandsAsync),
+    ("ADB automation transport uses only tap and swipe commands", AdbAutomationTransportUsesExpectedCommandsAsync),
     ("Device selection rejects no authorised device", RejectsNoAuthorisedDeviceAsync),
     ("Device selection rejects multiple authorised devices", RejectsMultipleAuthorisedDevicesAsync),
     ("Requested serial selects one authorised device", RequestedSerialSelectsDeviceAsync),
@@ -66,7 +70,11 @@ var tests = new (string Name, Func<Task> Run)[]
     ("Promotion refuses untracked destination file", PromotionRefusesUntrackedDestinationFileAsync),
     ("Duplicate capture cannot be promoted", DuplicateCaptureCannotBePromotedAsync),
     ("Capture status prioritises required states", Sync(CaptureStatusPrioritisesRequiredStates)),
-    ("Capture status report writes JSON and Markdown", CaptureStatusReportWritesFilesAsync)
+    ("Capture status report writes JSON and Markdown", CaptureStatusReportWritesFilesAsync),
+    ("Automation profile loads and validates", AutomationProfileLoadsAndValidatesAsync),
+    ("Automatic scan captures three items and detects end", AutomaticScanCapturesThreeItemsAsync),
+    ("Automatic scan respects maximum item limit", AutomaticScanRespectsMaximumItemLimitAsync),
+    ("Completed automatic checkpoint is idempotent", CompletedAutomaticCheckpointIsIdempotentAsync)
 };
 
 var failed = 0;
@@ -245,6 +253,40 @@ static async Task AdbTransportUsesExpectedCommandsAsync()
     {
         AssertEqual(expected[index], actual[index], $"ADB command {index + 1}");
     }
+}
+
+static async Task AdbAutomationTransportUsesExpectedCommandsAsync()
+{
+    static AdbProcessResult Success() =>
+        new()
+        {
+            ExitCode = 0,
+            StandardOutput = Array.Empty<byte>(),
+            StandardError = string.Empty
+        };
+
+    var runner = new RecordingAdbProcessRunner(new[]
+    {
+        Success(),
+        Success()
+    });
+    var transport = new AdbAndroidDeviceTransport(
+        runner,
+        new DeviceHarnessOptions
+        {
+            CommandTimeout = TimeSpan.FromSeconds(2)
+        });
+
+    await transport.TapAsync("ABC", 100, 200);
+    await transport.SwipeAsync("ABC", 800, 1200, 200, 1200, 320);
+
+    var actual = runner.Commands.Select(x => string.Join(" ", x)).ToArray();
+    AssertEqual(2, actual.Length, "automation ADB command count");
+    AssertEqual("-s ABC shell input tap 100 200", actual[0], "tap command");
+    AssertEqual(
+        "-s ABC shell input swipe 800 1200 200 1200 320",
+        actual[1],
+        "swipe command");
 }
 
 static async Task RejectsNoAuthorisedDeviceAsync()
@@ -1229,6 +1271,139 @@ static async Task CaptureStatusReportWritesFilesAsync()
     {
         DeleteDirectory(directory);
     }
+}
+
+static async Task AutomationProfileLoadsAndValidatesAsync()
+{
+    var profile = await AutomationProfileLoader.LoadAsync(
+        RepositoryPath("data", "automation-profile.synthetic.json"));
+    AssertEqual(
+        "Synthetic deterministic inventory navigation",
+        profile.Name,
+        "automation profile name");
+    AssertEqual(12000, profile.DefaultMaximumItems, "default maximum items");
+}
+
+static async Task AutomaticScanCapturesThreeItemsAsync()
+{
+    var directory = CreateTemporaryDirectory();
+    try
+    {
+        var transport = CreateScriptedAutomationTransport();
+        var profile = await AutomationProfileLoader.LoadAsync(
+            RepositoryPath("data", "automation-profile.synthetic.json"));
+        var screenProfile = await LoadSyntheticProfileAsync();
+        var runner = new InventoryAutomationRunner(transport);
+
+        var result = await runner.RunAsync(
+            directory,
+            profile,
+            screenProfile,
+            maximumItems: 10);
+
+        AssertEqual(AutomationRunStatus.Completed, result.Checkpoint.Status, "scan status");
+        AssertEqual(
+            AutomationStopReason.EndOfInventoryDetected,
+            result.Checkpoint.StopReason,
+            "scan stop reason");
+        AssertEqual(3, result.Checkpoint.Items.Count, "captured item count");
+        AssertEqual(3, Directory.GetFiles(result.CaptureDirectory, "*.png").Length, "capture file count");
+        AssertTrue(
+            transport.Actions.Count(action => action.StartsWith("tap:", StringComparison.Ordinal)) == 3,
+            "automatic setup should use exactly three allow-listed taps");
+        AssertTrue(
+            transport.Actions.All(action =>
+                action.StartsWith("tap:", StringComparison.Ordinal) ||
+                action.StartsWith("swipe:", StringComparison.Ordinal)),
+            "scripted transport should record only tap and swipe actions");
+    }
+    finally
+    {
+        DeleteDirectory(directory);
+    }
+}
+
+static async Task AutomaticScanRespectsMaximumItemLimitAsync()
+{
+    var directory = CreateTemporaryDirectory();
+    try
+    {
+        var transport = CreateScriptedAutomationTransport();
+        var profile = await AutomationProfileLoader.LoadAsync(
+            RepositoryPath("data", "automation-profile.synthetic.json"));
+        var screenProfile = await LoadSyntheticProfileAsync();
+        var runner = new InventoryAutomationRunner(transport);
+
+        var result = await runner.RunAsync(
+            directory,
+            profile,
+            screenProfile,
+            maximumItems: 2);
+
+        AssertEqual(AutomationRunStatus.Completed, result.Checkpoint.Status, "limited scan status");
+        AssertEqual(
+            AutomationStopReason.MaximumItemsReached,
+            result.Checkpoint.StopReason,
+            "limited scan stop reason");
+        AssertEqual(2, result.Checkpoint.Items.Count, "limited scan item count");
+    }
+    finally
+    {
+        DeleteDirectory(directory);
+    }
+}
+
+static async Task CompletedAutomaticCheckpointIsIdempotentAsync()
+{
+    var directory = CreateTemporaryDirectory();
+    try
+    {
+        var profile = await AutomationProfileLoader.LoadAsync(
+            RepositoryPath("data", "automation-profile.synthetic.json"));
+        var screenProfile = await LoadSyntheticProfileAsync();
+        var firstTransport = CreateScriptedAutomationTransport();
+        var first = await new InventoryAutomationRunner(firstTransport).RunAsync(
+            directory,
+            profile,
+            screenProfile,
+            maximumItems: 2);
+
+        var secondTransport = CreateScriptedAutomationTransport();
+        var second = await new InventoryAutomationRunner(secondTransport).RunAsync(
+            directory,
+            profile,
+            screenProfile,
+            maximumItems: 2);
+
+        AssertEqual(first.Checkpoint.RunId, second.Checkpoint.RunId, "idempotent run id");
+        AssertEqual(2, second.Checkpoint.Items.Count, "idempotent item count");
+        AssertEqual(0, secondTransport.Actions.Count, "idempotent input action count");
+    }
+    finally
+    {
+        DeleteDirectory(directory);
+    }
+}
+
+static ScriptedAndroidAutomationTransport CreateScriptedAutomationTransport()
+{
+    var screens = new Dictionary<ScreenState, byte[]>
+    {
+        [ScreenState.InventoryList] = File.ReadAllBytes(
+            RepositoryPath("data", "screen-fixtures", "InventoryList.png")),
+        [ScreenState.PokemonDetails] = File.ReadAllBytes(
+            RepositoryPath("data", "screen-fixtures", "PokemonDetails.png")),
+        [ScreenState.PokemonMenuOpen] = File.ReadAllBytes(
+            RepositoryPath("data", "screen-fixtures", "PokemonMenuOpen.png"))
+    };
+    var appraisal = new[]
+    {
+        "AppraisalOpen.png",
+        "AppraisalOpenItem2.png",
+        "AppraisalOpenItem3.png"
+    }.Select(name => File.ReadAllBytes(
+        RepositoryPath("data", "screen-fixtures", name))).ToArray();
+    return new ScriptedAndroidAutomationTransport(screens, appraisal);
 }
 
 static CalibrationCapturePlan TestCapturePlan() =>

@@ -1,0 +1,44 @@
+{
+  "schemaVersion": "1.0",
+  "name": "Synthetic deterministic inventory navigation",
+  "firstInventoryCard": {
+    "x": 0.18,
+    "y": 0.72
+  },
+  "detailsMenuButton": {
+    "x": 0.92,
+    "y": 0.08
+  },
+  "appraiseMenuItem": {
+    "x": 0.82,
+    "y": 0.58
+  },
+  "nextPokemonSwipe": {
+    "start": {
+      "x": 0.78,
+      "y": 0.48
+    },
+    "end": {
+      "x": 0.22,
+      "y": 0.48
+    },
+    "durationMilliseconds": 250
+  },
+  "identityRegion": {
+    "x": 0.05,
+    "y": 0.35,
+    "width": 0.25,
+    "height": 0.2
+  },
+  "identityFingerprintMode": "Color",
+  "identityFingerprintWidth": 12,
+  "identityFingerprintHeight": 12,
+  "samePokemonSimilarityThreshold": 0.995,
+  "statePollMilliseconds": 100,
+  "stateTimeoutSeconds": 2,
+  "postActionSettleMilliseconds": 0,
+  "maxSwipeAttemptsAtEnd": 2,
+  "defaultMaximumItems": 12000,
+  "maximumBatteryTemperatureCelsius": 45.0,
+  "minimumBatteryPercent": 15
+}

@@ -2,142 +2,137 @@
 
 ## Current version
 
-0.5.0
+0.6.0
 
 ## Accepted checkpoint
 
-Torben reported that the complete 0.4.0 GitHub Actions run was green. The foundation, read-only Android Device Harness, generic Screen State Detector, PNG regression fix and synthetic calibration workflow are accepted at CI level.
+Torben reported that the complete 0.5.0 GitHub Actions run was green. All 47 tests and the existing synthetic calibration workflow are accepted at CI level.
+
+Torben clarified the operational requirement:
+
+- no manual navigation through the inventory
+- no image-by-image approval
+- no user involvement across 10,000+ Pokémon
+- once the phone profile is adjusted, traversal must run unattended
+
+Version 0.6.0 changes the project plan accordingly.
 
 ## Completed
 
-### M0: Foundation
+### M0 Foundation
 
-- .NET 8 solution and repository structure
-- Pokémon observation model
-- configurable decision policy
-- conservative KEEP / REVIEW / DELETE engine
-- duplicate grouping and strictly-better duplicate requirement
-- preliminary PvP preservation
-- decision reports and package-free self-tests
+- .NET 8 solution
+- conservative inventory rule engine
+- KEEP / REVIEW / DELETE reports
+- duplicate and preliminary PvP preservation
 
-### M1: Read-only Device Harness
+### M1 Device Harness
 
-- isolated `PogoInventory.Device` project
-- ADB and fake transports
-- exact-one-authorised-device selection
-- device, screen and battery metadata
-- validated screenshot capture
-- atomic files and SHA-256 manifest
-- timeouts, cancellation and structured errors
-- no input API
+- authorised-device selection
+- metadata, screen and battery reads
+- PNG screenshots
+- fake transport
+- atomic evidence and structured errors
 
-### M2a: Generic Screen State Detector
+### M2 Vision and calibration foundation
 
-- isolated `PogoInventory.Vision` project
 - package-free PNG decoder
-- normalised UI regions
-- Color, Grayscale and Edge fingerprints
-- Required, Optional and Forbidden anchors
-- geometry validation
-- deterministic state score and winner margin
-- fail-closed Unknown
-- detailed evidence reports
-- synthetic fixtures and CI tests
+- normalised fingerprint anchors
+- fail-closed screen states
+- synthetic calibration generation and acceptance
+- local fixture tooling
 
-### M2b: Calibration and acceptance harness
+### M3 Automatic inventory navigation
 
-- isolated `PogoInventory.Calibration` project
-- private workspace marker and local layout
-- fixture indexing by expected-state folder
-- SHA-256 fixture locking
-- approval preservation only for unchanged files
-- automatic approval reset after file changes
-- path traversal protection
-- explicit privacy and redaction review fields
-- versioned fixture manifest and anchor plan
-- multiple sample fixtures per anchor
-- local screen-profile generation
-- acceptance policy with per-state coverage and recall
-- false-positive, false-negative and misclassification classification
-- confusion matrix
-- weak-anchor and positive-negative separation analysis
-- JSON, Markdown and CSV reports
-- synthetic end-to-end profile generation and acceptance in CI
+- new `PogoInventory.Automation` project
+- `IAndroidAutomationTransport`
+- ADB tap and swipe implementations only
+- no arbitrary shell access above the device layer
+- validated normalised control points
+- automatic state path:
+  - InventoryList
+  - PokemonDetails
+  - PokemonMenuOpen
+  - AppraisalOpen
+- screen-state check after every action
+- independent identity fingerprint per Pokémon
+- changed-item verification after every swipe
+- repeated-swipe end detection
+- automatic local evidence capture
+- screenshot and fingerprint SHA-256
+- atomic checkpoint after every item
+- action audit
+- resume only from matching last item
+- device serial, geometry and exact profile-hash lock
+- battery safety checks
+- deterministic scripted phone for tests
+- fake full traversal in CI
+- no manual image approval in the automatic scan path
 
-### M2c-a: Guided private real-screen capture tooling
+## Input boundary now allowed
 
-- versioned capture plan with state-specific instructions and variation targets
-- capture-plan SHA-256 lock preventing mid-session requirement changes
-- private `incoming/<ScreenState>/` staging area
-- read-only ADB screenshot capture after explicit user confirmation
-- fixed-device serial lock for each capture session
-- exact image-geometry lock for each capture session
-- portrait and minimum-resolution enforcement
-- SHA-256 capture-session integrity checks
-- pixel-identical duplicate detection
-- duplicate captures excluded from variation coverage
-- required-state progress and next-state recommendation
-- JSON and Markdown capture-status reports
-- explicit privacy confirmation before fixture promotion
-- reviewed capture promotion into the local fixture manifest
-- protection against overwriting untracked fixture files
-- promoted fixture hash linkage and idempotent retry handling
-- guided and single-state PowerShell scripts
-- no taps, swipes, text input, app launching or game changes
+```text
+TapFirstInventoryCard
+TapDetailsMenu
+TapAppraise
+SwipeNextPokemon
+```
 
-## Important limitation
-
-The software can now collect the required real screenshots safely, but no real screenshots or phone-specific anchors have been supplied. The committed detector profile remains synthetic and must not be used for an inventory scanner.
+No other phone input is allowed.
 
 ## Not completed
 
-- real Android screenshot fixture set
-- real phone-specific anchor plan
-- accepted real screen profile
-- Calcy integration
-- OCR or icon recognition
-- inventory scanning state machine
-- SQLite and checkpoints
+- automatic real-phone bootstrap profile generation
+- accepted real `screen-profile.local.json`
+- accepted real `automation-profile.local.json`
+- Calcy invocation and result adapter
+- species, CP, level, HP and IV extraction
+- move, date, size, nickname and status extraction
+- SQLite inventory database
 - exact Pokémon identity
 - full PvPoke / Ohbem integration
-- any input-control or tagging executor
+- KEEP / REVIEW / DELETE plan based on the real complete inventory
+- automatic tagging
+- transfer remains manual and is not implemented
+
+## Important limitation
+
+Version 0.6.0 can automatically traverse and capture an ordered inventory once real local profiles are adjusted. The committed profiles are synthetic and must not be used against the real phone.
+
+The current evidence items contain ordered screenshots and fingerprints, not yet complete Pokémon observations.
 
 ## Required checkpoint after push
 
-1. Confirm GitHub Actions is green for version 0.5.0.
-2. Confirm all 47 self-tests pass.
-3. On the Windows computer, rerun `init-local-calibration.ps1` to upgrade the private workspace.
-4. Connect the fixed Android phone with USB debugging enabled.
-5. Run `start-local-calibration-capture.ps1`.
-6. Capture the required core, negative, Loading and NetworkError states through manual phone navigation. Loading and NetworkError are ordered last and may be completed later, but profile acceptance remains blocked until both exist.
-7. Review every incoming screenshot locally.
-8. Promote only screenshots that pass the full privacy checklist.
-9. Keep all real screenshots, session files, device serials and generated profiles out of Git.
+1. Confirm GitHub Actions is green for 0.6.0.
+2. Confirm all 52 self-tests pass.
+3. Confirm the deterministic fake inventory scan captures exactly three items.
+4. Confirm the checkpoint contains SHA-256 locks for both automation and screen profiles.
+5. Confirm the fake run records only three taps and configured swipes.
+6. Confirm `out/automatic-inventory-scan/inventory-scan-checkpoint.json` reports `Completed`.
 
 ## Next recommended milestone
 
-M2c-b: Real-screen fixture collection, anchor selection and detector acceptance.
+M4: automatic core-profile bootstrap and Calcy observation extraction.
 
-The next development work is data-driven. Do not begin the Calcy spike until the real fixture report has:
+The next release should:
 
-- zero false positives
-- zero wrong known-state classifications
-- zero weak anchors
-- required state coverage
-- accepted recall thresholds
-- manual review of every promoted fixture
+- capture core screen states automatically from one known starting screen
+- build the local core detector profile without per-image approval
+- introduce a Calcy adapter interface
+- prove current Calcy invocation and output on the fixed Android phone
+- add structured observation fields to each sequence item
+- retain raw evidence and mark incomplete data Unknown rather than guessing
 
 ## Design decisions preserved
 
 - C# and .NET 8
 - no hidden game API
-- no automatic transfer
+- no transfer automation
 - no anti-detection or human imitation
-- phone navigation remains manual during calibration capture
-- unknown data produces REVIEW or stop
-- DELETE requires exact identity and a better documented duplicate
-- all ADB process execution remains isolated in `PogoInventory.Device`
-- vision remains independent of device control
-- calibration may use the read-only device interface only for screenshots
-- real data stays local while the repository is public
-- every release updates project state and continuation prompt
+- deterministic, state-aware waiting
+- unknown state means stop
+- unknown observation means REVIEW later
+- all ADB execution remains inside `PogoInventory.Device`
+- input is limited to named validated actions
+- local real data stays out of the public repository
+- every release updates the continuation prompt

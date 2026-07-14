@@ -1,29 +1,57 @@
-# Read-only Device Harness
+# Android Device Harness
 
 ## Purpose
 
-The Device Harness creates a known, testable boundary between the application and an Android phone. Version 0.2.0 reads information only.
+The Device Harness is the only project allowed to execute ADB commands.
 
-## Supported operations
+Version 0.6.0 has two separate interfaces.
+
+## Read interface
+
+```text
+IAndroidDeviceTransport
+```
+
+Supported operations:
 
 - discover devices with `adb devices -l`
 - select one authorised device
 - read Android properties
 - read screen size
 - read battery information
-- capture one screenshot as PNG
+- capture a screenshot as PNG
 
-The interface has no tap, swipe, keyboard, app-launch or arbitrary shell operation.
+## Automation interface
+
+```text
+IAndroidAutomationTransport
+```
+
+This extends the read interface with only:
+
+- tap at a validated pixel coordinate
+- swipe between validated pixel coordinates with a bounded duration
+
+The device layer does not expose:
+
+- arbitrary shell commands
+- text input
+- key events
+- app launching
+- location commands
+- transfer or any game-specific action
+
+Higher layers use named actions and normalised profile points. They do not access raw ADB execution.
 
 ## Set up Android Platform Tools
 
-Download Android Platform Tools on the Windows computer and extract them to a stable folder, for example:
+Extract Android Platform Tools to a stable folder, for example:
 
 ```text
 C:\Android\platform-tools
 ```
 
-Enable Developer options and USB debugging on the Android phone. Connect it by USB, unlock it and approve the computer's RSA prompt.
+Enable Developer options and USB debugging on the Android phone. Connect by USB, unlock it and approve the computer.
 
 Check the connection:
 
@@ -31,75 +59,51 @@ Check the connection:
 C:\Android\platform-tools\adb.exe devices -l
 ```
 
-A working device line contains the state `device`. `unauthorized` means the prompt has not been approved. `offline` normally requires reconnecting the cable or restarting ADB.
+A working line contains the state `device`.
 
-## Run a fake capture first
+## Fake checks
 
 ```powershell
 .\scripts\run-fake-device.ps1
+.\scripts\run-fake-inventory-scan.ps1
 ```
 
-This proves the CLI, JSON output and file handling without accessing a phone.
+The second command proves automatic taps, swipes, screen-state checks, ordered captures and checkpoint output without a real phone.
 
-## Run a real capture
+## Real snapshot
 
 ```powershell
 .\scripts\capture-device.ps1 `
   -AdbPath "C:\Android\platform-tools\adb.exe"
 ```
 
-Output:
+## Real automatic scan
 
-```text
-out\device\screen.png
-out\device\device-metadata.json
-out\device\device-snapshot.json
-```
-
-## Multiple connected devices
-
-The harness fails if more than one authorised device is connected. This is deliberate.
-
-List serial numbers:
+Use only accepted local profiles:
 
 ```powershell
-C:\Android\platform-tools\adb.exe devices -l
-```
-
-Select one explicitly:
-
-```powershell
-.\scripts\capture-device.ps1 `
+.\scripts\start-local-inventory-scan.ps1 `
   -AdbPath "C:\Android\platform-tools\adb.exe" `
-  -Serial "SERIAL_FROM_ADB"
+  -AutomationProfile "C:\Path\automation-profile.local.json" `
+  -ScreenProfile "C:\Path\screen-profile.local.json"
 ```
 
-## Output validation
+## Multiple devices
 
-`device-snapshot.json` includes:
+The harness fails when more than one authorised device is present unless a serial is selected explicitly.
 
-- harness and schema versions
-- capture time
-- device metadata
-- screenshot filename
-- byte length
-- SHA-256 hash
+## Input validation
 
-A later pipeline should verify the hash before using the screenshot as evidence.
-
-## Error handling
-
-The CLI prints a code such as:
-
-```text
-[NoAuthorizedDevice] Exactly one authorised Android device is required...
-```
-
-It also returns a non-zero process exit code. Scripts must treat any non-zero exit as failure.
+- coordinates cannot be negative
+- profile points must be within 0 to 1
+- profile points are converted against locked screen geometry
+- swipe duration is restricted to 50 to 5000 milliseconds
+- the automation layer checks the screen state before and after actions
 
 ## Known limitations
 
-- Battery temperature is not exposed consistently by every Android vendor.
-- `wm size` may show both physical and override sizes. The override is treated as effective.
-- The harness validates the PNG signature, not the semantic contents of the screenshot.
-- No real phone was available in the assistant build environment.
+- battery information varies by Android vendor
+- `wm size` may report physical and override geometry
+- the screenshot transport validates PNG structure before vision analysis
+- real phone profiles are not committed
+- the assistant build environment did not contain ADB or .NET for real execution

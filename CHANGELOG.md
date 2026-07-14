@@ -1,5 +1,26 @@
 # Changelog
 
+## 0.6.0
+
+- Added the isolated `PogoInventory.Automation` project.
+- Added `IAndroidAutomationTransport` with only validated tap and swipe operations.
+- Added ADB input implementations using fixed `shell input tap` and `shell input swipe` forms.
+- Added normalised, validated control points and swipe configuration.
+- Added automatic navigation from inventory list to appraisal.
+- Added screen-state verification after every input action.
+- Added independent identity-region fingerprinting to verify that each swipe reached a different Pokémon.
+- Added repeated-swipe end-of-inventory detection.
+- Added automatic PNG evidence capture, SHA-256 hashes and atomic checkpointing after every Pokémon.
+- Locked checkpoints to exact automation-profile and screen-profile SHA-256 values.
+- Added strict resume matching against device, geometry, profile and last identity fingerprint.
+- Added battery temperature and unpowered low-battery checks.
+- Added a deterministic scripted Android transport and three distinct appraisal fixtures.
+- Added the `inventory-scan` CLI command and real/fake PowerShell scripts.
+- Added five self-tests, bringing the expected total to 52.
+- Added a CI automatic inventory-navigation run.
+- Removed per-image privacy approval from the target automatic scan workflow.
+- Preserved the prohibition on transfer, tagging, text input, resource use, gameplay, location changes and anti-detection behaviour.
+
 ## 0.5.0
 
 - Added a versioned guided real-screen capture plan.

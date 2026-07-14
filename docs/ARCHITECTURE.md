@@ -1,363 +1,190 @@
 # Architecture
 
-## Target architecture
+## Target flow
 
 ```text
 Android phone
     |
     | USB / ADB
     v
-Device Harness
+PogoInventory.Device
     |
-    +--> device discovery
-    +--> metadata and health
-    +--> screenshot capture
-    +--> later: strictly whitelisted input actions
+    +--> discovery, metadata, battery and screenshots
+    +--> allow-listed tap and swipe primitives
     |
     v
-Screen State Detector
+PogoInventory.Automation
     |
-    +--> Calcy Adapter
-    +--> Visual Scanner / OCR
+    +--> validated normalised control profile
+    +--> screen-state checked navigation
+    +--> identity-change verification
+    +--> ordered evidence and checkpoint
     |
-    v
-Observation Pipeline
-    |
-    v
-Inventory Database
-    |
-    +--> Identity Matcher
-    +--> PvP Analyzer
-    +--> Rule Engine
-    |
-    v
-Execution Plan
-    |
-    v
-Tag Executor
+    +----------------------+
+    |                      |
+    v                      v
+PogoInventory.Vision   Calcy / visual extraction
+    |                      |
+    +----------+-----------+
+               v
+       structured observations
+               |
+               v
+       inventory database
+               |
+       +-------+--------+
+       |                |
+       v                v
+  PvP analysis     collection rules
+       |                |
+       +-------+--------+
+               v
+      KEEP / REVIEW / DELETE plan
+               |
+               v
+        exact-match tag executor
 
-Manual final transfer only
-```
-
-## Implemented in 0.5.0
-
-```text
-PogoInventory.Cli
-    |
-    +--> analyze
-    |      |
-    |      v
-    |   PogoInventory.Core
-    |
-    +--> device-snapshot
-    |      |
-    |      v
-    |   PogoInventory.Device
-    |
-    +--> screen-detect
-    |      |
-    |      v
-    |   PogoInventory.Vision
-    |      +--> PNG decoder
-    |      +--> profile validation
-    |      +--> fingerprint extraction
-    |      +--> anchor evaluation
-    |      +--> state selection
-    |      +--> evidence report
-    |
-    +--> screen-fingerprint
-    |      |
-    |      v
-    |   anchor fingerprint helper
-    |
-    +--> calibration-init / calibration-index
-    |      |
-    |      v
-    |   PogoInventory.Calibration
-    |
-    +--> calibration-build-profile / calibration-validate
-    |      |
-    |      +--> PogoInventory.Calibration
-    |      +--> PogoInventory.Vision
-    |
-    +--> calibration-capture / calibration-capture-session
-    |      |
-    |      +--> PogoInventory.Calibration
-    |      +--> PogoInventory.Device read-only transport
-    |      +--> PogoInventory.Vision PNG geometry validation
-    |
-    +--> calibration-capture-status / calibration-capture-approve
-           |
-           +--> PogoInventory.Calibration
+Final transfer remains manual.
 ```
 
 ## Project boundaries
 
 ### PogoInventory.Core
 
-Contains Pokémon observations, policy, conservative decision logic and reports. It has no dependency on Android, ADB, screen images, Calcy, OCR, databases or UI frameworks.
+Owns Pokémon observations, decision policy, conservative duplicate logic and reports. It has no Android or image dependency.
 
 ### PogoInventory.Device
 
-Owns all Android and ADB interaction.
+Owns all ADB execution.
 
-Current public capabilities:
+Interfaces:
 
-- list devices
-- read metadata
-- capture a screenshot
+```text
+IAndroidDeviceTransport
+  ListDevicesAsync
+  ReadMetadataAsync
+  CaptureScreenshotPngAsync
 
-There is no input-control method or arbitrary shell method.
+IAndroidAutomationTransport
+  extends IAndroidDeviceTransport
+  TapAsync
+  SwipeAsync
+```
+
+The input interface contains no text input, arbitrary shell, app launch, key event, location control or destructive game action.
+
+`AdbAndroidDeviceTransport` converts the two input methods to these fixed ADB command forms:
+
+```text
+adb -s <serial> shell input tap <x> <y>
+adb -s <serial> shell input swipe <x1> <y1> <x2> <y2> <duration>
+```
+
+Higher layers do not receive the ADB runner.
 
 ### PogoInventory.Vision
 
-Owns screen-image parsing and classification. It has no dependency on ADB, Android, file locations or the inventory rule engine.
+Owns PNG decoding, normalised regions, fingerprints and fail-closed screen-state classification.
+
+It has no dependency on ADB or automation.
+
+### PogoInventory.Automation
+
+Owns automatic traversal and evidence sequencing.
 
 Responsibilities:
 
-- decode supported PNG screenshots
-- validate image geometry
-- extract deterministic fingerprints from normalised regions
-- compare screen evidence against a validated profile
-- return `ScreenDetectionResult`
+- validate the automation profile
+- select and lock one authorised device
+- lock screen geometry
+- navigate only through named actions
+- verify the state after every action
+- verify item change independently from screen state
+- write evidence and checkpoint atomically
+- resume only from a matching last item
+- stop on unsafe state or health condition
 
-The detector receives a `PixelImage` and a `ScreenDetectionProfile`. It does not know how the image was captured.
+It does not know Pokémon species, IVs, PvP value or deletion rules.
+
+### PogoInventory.Calibration
+
+Retains fixture indexing, profile generation and acceptance reporting. The earlier manual privacy-promotion route remains available as a fallback, but automatic local bootstrap becomes the target path from the next milestone.
 
 ### PogoInventory.Cli
 
-Provides:
+Commands include:
 
-- `analyze`
-- `device-snapshot`
-- `screen-detect`
-- `screen-fingerprint`
-- `calibration-init`
-- `calibration-index`
-- `calibration-build-profile`
-- `calibration-validate`
-- `calibration-capture`
-- `calibration-capture-session`
-- `calibration-capture-status`
-- `calibration-capture-approve`
+```text
+analyze
+device-snapshot
+screen-detect
+screen-fingerprint
+inventory-scan
+calibration-*
+```
 
 ### PogoInventory.SelfTest
 
-Runs deterministic tests without third-party test frameworks or a connected phone.
+Runs deterministic package-free tests. The scripted Android transport emulates the state path and three distinct appraisal items.
 
-## Screen detection flow
-
-```text
-PNG bytes
-    |
-    v
-Validate PNG structure and safety limits
-    |
-    v
-Decode to RGBA pixels
-    |
-    v
-Validate orientation, dimensions and aspect ratio
-    |
-    +--> invalid: Unknown with geometry reason
-    |
-    v
-For every state definition
-    |
-    +--> extract each named normalised-region fingerprint
-    +--> compare against every reference sample
-    +--> evaluate Required / Optional / Forbidden condition
-    +--> calculate deterministic score
-    |
-    v
-Keep eligible states above minimum score
-    |
-    +--> none: Unknown
-    +--> winner margin too small: Unknown
-    +--> one clear winner: classified state
-    |
-    v
-JSON evidence report
-```
-
-## Fingerprint modes
-
-### Color
-
-Stores average RGB values in a fixed-size grid. Best for stable colored UI controls.
-
-### Grayscale
-
-Stores luminance only. Best where shape and brightness matter more than color.
-
-### Edge
-
-Stores local grayscale changes. Best for stable outlines where backgrounds vary.
-
-A future calibrated profile may combine modes across different anchors.
-
-## Anchor semantics
-
-### Required
-
-Must match its configured threshold. Failure makes the state ineligible.
-
-### Optional
-
-Contributes to the state score but does not independently reject the state.
-
-### Forbidden
-
-Must not match. A match makes the state ineligible. Forbidden anchors do not inflate the positive state score.
-
-## State selection rules
-
-The detector fails closed.
-
-A state is selected only when:
-
-- all required anchors match
-- no forbidden anchor matches
-- the weighted positive score meets `MinimumStateScore`
-- the winner exceeds the second eligible state by `MinimumWinnerMargin`
-
-Otherwise the output is `Unknown` with explicit reasons.
-
-## PNG safety boundary
-
-The internal decoder supports common Android screenshot formats:
-
-- 8-bit grayscale
-- 8-bit RGB
-- 8-bit grayscale with alpha
-- 8-bit RGBA
-- non-interlaced PNG
-- PNG filters 0 through 4
-
-It rejects:
-
-- invalid signatures or chunk lengths
-- unsupported color types or bit depths
-- interlaced images
-- dimensions above the configured hard limit
-- decompressed data beyond the exact expected size
-
-CRC validation is not implemented in 0.3.0. Structural validation, exact decompressed length and the Device Harness SHA-256 manifest provide the current integrity boundary.
-
-## Synthetic versus real profiles
-
-`data/screen-profile.synthetic.json` proves the classification framework. It contains no Pokémon GO or account data.
-
-A real profile must be generated locally from redacted screenshots. Stable anchors must avoid:
-
-- Pokémon artwork
-- Pokémon name
-- CP and HP values
-- trainer name
-- Stardust or Candy counts
-- dynamic background content
-
-Prefer stable buttons, panels, icons and dialog geometry.
-
-## Future module boundaries
-
-### Real-screen calibration
-
-Creates a private local profile and a confusion report from approved fixtures. Real images remain outside Git.
-
-### Calcy Adapter
-
-Must remain behind an interface. Any intent, logcat or clipboard integration is replaceable and may be abandoned if unstable.
-
-### Observation Pipeline
-
-Consumes a verified screen state and scanner results. It must not proceed from `Unknown`.
-
-### Identity Matcher
-
-Must assign Exact, HighConfidence, Ambiguous or Mismatch. Only Exact may later receive a delete tag.
-
-### Tag Executor
-
-Must use named actions, verified pre- and post-states, audit evidence and hard stop conditions. It must not contain transfer or gameplay functions.
-
-
-## PogoInventory.Calibration
-
-This project manages private screenshot collection, approval, profile generation and acceptance. It references `PogoInventory.Vision` and the read-only `PogoInventory.Device` interface.
-
-Responsibilities:
-
-- initialise a deliberate private workspace
-- define required capture coverage
-- capture screenshots through the read-only device transport after manual navigation
-- lock a session to one device serial and exact image geometry
-- detect pixel-identical captures
-- keep incoming screenshots separate from approved fixtures
-- verify every capture and fixture by SHA-256
-- require explicit privacy review before promotion
-- index PNG fixtures by expected state
-- validate safe paths
-- load anchor plans
-- extract multiple reference fingerprints
-- generate a `ScreenDetectionProfile`
-- run all approved fixtures through the detector
-- calculate recall, false positives, misclassifications and confusion
-- report weak anchors and separation
-
-The calibration project has no phone-input capability. It cannot tap, swipe, type, launch an app or modify Pokémon GO.
-
-### Data flow
+## Automatic state machine
 
 ```text
-private PNG fixtures
-        │
-        ▼
-fixture manifest + safety approval + SHA-256
-        │
-        ▼
-anchor plan
-        │
-        ▼
-local screen profile
-        │
-        ▼
-acceptance runner
-        │
-        ├── JSON report
-        ├── Markdown report
-        ├── confusion CSV
-        └── fixture CSV
+Current state       Allowed action               Required next state
+-------------       --------------               -------------------
+InventoryList       TapFirstInventoryCard        PokemonDetails
+PokemonDetails      TapDetailsMenu               PokemonMenuOpen
+PokemonMenuOpen     TapAppraise                   AppraisalOpen
+AppraisalOpen       SwipeNextPokemon             AppraisalOpen + changed identity
 ```
 
-## Guided capture flow
+No further input is sent until the required state is observed.
+
+`Loading` may be tolerated while polling. `Unknown`, `Popup` and `NetworkError` stop the run.
+
+## Item-change verification
+
+The automation profile contains a normalised `IdentityRegion` and fingerprint settings.
+
+The current and previous fingerprints are compared with the same deterministic similarity function used by the vision layer.
 
 ```text
-manual phone navigation
-        │
-        ▼
-explicit Enter on computer
-        │
-        ▼
-read-only ADB screenshot
-        │
-        ├── validate portrait and minimum size
-        ├── enforce locked serial and exact geometry
-        ├── calculate SHA-256
-        └── detect pixel-identical duplicate
-        │
-        ▼
-private incoming/<ExpectedState>/
-        │
-        ▼
-manual privacy and state review
-        │
-        ▼
-explicit promotion
-        │
-        ├── hash re-verification
-        ├── duplicate rejection
-        ├── approved fixture copy
-        └── manifest and session linkage
+similarity < SamePokemonSimilarityThreshold
+    => next item accepted
+
+similarity >= SamePokemonSimilarityThreshold
+    => keep polling or repeat the configured swipe
+
+no change after MaxSwipeAttemptsAtEnd
+    => end of inventory
 ```
 
-Incoming screenshots are not visible to profile generation. Only promoted fixtures with complete safety review can become anchor samples.
+This is a traversal identity only. Exact identity for tagging will later include species, form, CP, IV, date, moves and neighbour context.
+
+## Persistence
+
+```text
+<output>/
+  inventory-scan-checkpoint.json
+  captures/
+    000001.png
+    000002.png
+    ...
+```
+
+The checkpoint records:
+
+- run and profile identity
+- device serial and geometry
+- status and stop reason
+- ordered items
+- screenshot and fingerprint hashes
+- complete input audit
+
+Writes are atomic. Sequence numbers must be contiguous.
+
+## Resume
+
+A running checkpoint can resume only if the phone is still on `AppraisalOpen` for the last captured Pokémon and the identity fingerprint matches. The runner then swipes once and waits for a changed identity before capturing the next sequence item.
+
+Completed and safely stopped checkpoints are immutable. A new output directory starts a new run.

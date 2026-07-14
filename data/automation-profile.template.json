@@ -1,0 +1,44 @@
+{
+  "schemaVersion": "1.0",
+  "name": "REPLACE WITH FIXED PHONE PROFILE NAME",
+  "firstInventoryCard": {
+    "x": -1.0,
+    "y": -1.0
+  },
+  "detailsMenuButton": {
+    "x": -1.0,
+    "y": -1.0
+  },
+  "appraiseMenuItem": {
+    "x": -1.0,
+    "y": -1.0
+  },
+  "nextPokemonSwipe": {
+    "start": {
+      "x": -1.0,
+      "y": -1.0
+    },
+    "end": {
+      "x": -1.0,
+      "y": -1.0
+    },
+    "durationMilliseconds": 320
+  },
+  "identityRegion": {
+    "x": 0.1,
+    "y": 0.25,
+    "width": 0.8,
+    "height": 0.35
+  },
+  "identityFingerprintMode": "Color",
+  "identityFingerprintWidth": 16,
+  "identityFingerprintHeight": 16,
+  "samePokemonSimilarityThreshold": 0.995,
+  "statePollMilliseconds": 350,
+  "stateTimeoutSeconds": 12,
+  "postActionSettleMilliseconds": 250,
+  "maxSwipeAttemptsAtEnd": 2,
+  "defaultMaximumItems": 12000,
+  "maximumBatteryTemperatureCelsius": 45.0,
+  "minimumBatteryPercent": 15
+}

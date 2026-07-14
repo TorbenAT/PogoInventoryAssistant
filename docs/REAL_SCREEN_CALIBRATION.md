@@ -1,5 +1,8 @@
 # Real-screen calibration workflow
 
+> Legacy fallback: This manual capture and approval workflow is retained for diagnostics. Version 0.6.0 and later target automatic local navigation and do not require per-image approval for the inventory scan.
+
+
 ## Purpose
 
 Version 0.5.0 provides a controlled workflow for turning private Pokémon GO screenshots into a local screen-detection profile and proving that the detector fails closed.

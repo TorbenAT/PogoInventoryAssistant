@@ -1,5 +1,8 @@
 # Guided private real-screen capture
 
+> Legacy fallback: This manual capture and approval workflow is retained for diagnostics. Version 0.6.0 and later target automatic local navigation and do not require per-image approval for the inventory scan.
+
+
 ## Purpose
 
 Version 0.5.0 collects the real screenshots needed for calibration without automating navigation in Pokémon GO.

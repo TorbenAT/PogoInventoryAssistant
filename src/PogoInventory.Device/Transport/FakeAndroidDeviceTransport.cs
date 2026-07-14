@@ -3,7 +3,7 @@ using PogoInventory.Device.Models;
 
 namespace PogoInventory.Device.Transport;
 
-public sealed class FakeAndroidDeviceTransport : IAndroidDeviceTransport
+public sealed class FakeAndroidDeviceTransport : IAndroidAutomationTransport
 {
     private const string DefaultScreenshotBase64 =
         "iVBORw0KGgoAAAANSUhEUgAAAAIAAAACCAIAAAD91JpzAAAADklEQVR4nGP4DwYMEAoAU7oL9ZisIGcAAAAASUVORK5CYII=";
@@ -56,7 +56,7 @@ public sealed class FakeAndroidDeviceTransport : IAndroidDeviceTransport
             DeviceName = "fake-device",
             AndroidVersion = "16",
             ApiLevel = 36,
-            BuildFingerprint = "fake/fingerprint/0.2.0",
+            BuildFingerprint = "fake/fingerprint/0.6.0",
             Screen = new AndroidScreenInfo
             {
                 PhysicalWidth = 1080,
@@ -116,4 +116,56 @@ public sealed class FakeAndroidDeviceTransport : IAndroidDeviceTransport
 
         return Task.FromResult(_screenshotPng.ToArray());
     }
+    public Task TapAsync(
+        string serial,
+        int x,
+        int y,
+        CancellationToken cancellationToken = default)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        EnsureKnownDevice(serial);
+        if (x < 0 || y < 0)
+        {
+            throw new ArgumentOutOfRangeException(nameof(x), "Coordinates cannot be negative.");
+        }
+
+        return Task.CompletedTask;
+    }
+
+    public Task SwipeAsync(
+        string serial,
+        int startX,
+        int startY,
+        int endX,
+        int endY,
+        int durationMilliseconds,
+        CancellationToken cancellationToken = default)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        EnsureKnownDevice(serial);
+        if (startX < 0 || startY < 0 || endX < 0 || endY < 0)
+        {
+            throw new ArgumentOutOfRangeException(nameof(startX), "Coordinates cannot be negative.");
+        }
+
+        if (durationMilliseconds <= 0)
+        {
+            throw new ArgumentOutOfRangeException(
+                nameof(durationMilliseconds),
+                "Swipe duration must be positive.");
+        }
+
+        return Task.CompletedTask;
+    }
+
+    private void EnsureKnownDevice(string serial)
+    {
+        if (!_metadataBySerial.ContainsKey(serial))
+        {
+            throw new DeviceHarnessException(
+                DeviceErrorCode.RequestedDeviceNotFound,
+                $"Fake device '{serial}' has no metadata.");
+        }
+    }
+
 }

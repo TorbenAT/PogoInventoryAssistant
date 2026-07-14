@@ -6,7 +6,7 @@ using PogoInventory.Device.Models;
 
 namespace PogoInventory.Device.Transport;
 
-public sealed class AdbAndroidDeviceTransport : IAndroidDeviceTransport
+public sealed class AdbAndroidDeviceTransport : IAndroidAutomationTransport
 {
     private static readonly byte[] PngSignature =
         { 0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A };
@@ -108,6 +108,66 @@ public sealed class AdbAndroidDeviceTransport : IAndroidDeviceTransport
         return result.StandardOutput;
     }
 
+
+    public async Task TapAsync(
+        string serial,
+        int x,
+        int y,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(serial);
+        ValidateCoordinate(x, nameof(x));
+        ValidateCoordinate(y, nameof(y));
+
+        await RunAsync(
+            ForDevice(
+                serial,
+                "shell",
+                "input",
+                "tap",
+                x.ToString(CultureInfo.InvariantCulture),
+                y.ToString(CultureInfo.InvariantCulture)),
+            "tap the Android screen",
+            cancellationToken);
+    }
+
+    public async Task SwipeAsync(
+        string serial,
+        int startX,
+        int startY,
+        int endX,
+        int endY,
+        int durationMilliseconds,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(serial);
+        ValidateCoordinate(startX, nameof(startX));
+        ValidateCoordinate(startY, nameof(startY));
+        ValidateCoordinate(endX, nameof(endX));
+        ValidateCoordinate(endY, nameof(endY));
+
+        if (durationMilliseconds is < 50 or > 5000)
+        {
+            throw new ArgumentOutOfRangeException(
+                nameof(durationMilliseconds),
+                "Swipe duration must be between 50 and 5000 milliseconds.");
+        }
+
+        await RunAsync(
+            ForDevice(
+                serial,
+                "shell",
+                "input",
+                "swipe",
+                startX.ToString(CultureInfo.InvariantCulture),
+                startY.ToString(CultureInfo.InvariantCulture),
+                endX.ToString(CultureInfo.InvariantCulture),
+                endY.ToString(CultureInfo.InvariantCulture),
+                durationMilliseconds.ToString(CultureInfo.InvariantCulture)),
+            "swipe the Android screen",
+            cancellationToken);
+    }
+
     private async Task<AdbProcessResult> RunAsync(
         IReadOnlyList<string> arguments,
         string operation,
@@ -131,6 +191,17 @@ public sealed class AdbAndroidDeviceTransport : IAndroidDeviceTransport
         }
 
         return result;
+    }
+
+
+    private static void ValidateCoordinate(int value, string parameterName)
+    {
+        if (value < 0)
+        {
+            throw new ArgumentOutOfRangeException(
+                parameterName,
+                "Android input coordinates cannot be negative.");
+        }
     }
 
     private static string[] ForDevice(string serial, params string[] command) =>

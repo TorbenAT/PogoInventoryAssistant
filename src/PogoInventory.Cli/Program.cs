@@ -1,6 +1,9 @@
 using System.Globalization;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using PogoInventory.Automation.Errors;
+using PogoInventory.Automation.Services;
+using PogoInventory.Automation.Transport;
 using PogoInventory.Calibration.Errors;
 using PogoInventory.Calibration.Models;
 using PogoInventory.Calibration.Reporting;
@@ -45,6 +48,9 @@ static async Task<int> MainAsync(string[] args)
         return args[0].ToLowerInvariant() switch
         {
             "analyze" => await AnalyzeAsync(args.Skip(1).ToArray(), cancellationSource.Token),
+            "inventory-scan" => await RunInventoryScanAsync(
+                args.Skip(1).ToArray(),
+                cancellationSource.Token),
             "device-snapshot" => await CaptureDeviceSnapshotAsync(
                 args.Skip(1).ToArray(),
                 cancellationSource.Token),
@@ -80,6 +86,11 @@ static async Task<int> MainAsync(string[] args)
                 cancellationSource.Token),
             _ => UnknownCommand(args[0])
         };
+    }
+    catch (AutomationException exception)
+    {
+        Console.Error.WriteLine($"[{exception.Code}] {exception.Message}");
+        return AutomationExitCode(exception.Code);
     }
     catch (CalibrationException exception)
     {
@@ -147,6 +158,86 @@ static async Task<int> AnalyzeAsync(
     Console.WriteLine($"DELETE: {result.DeleteCount}");
     Console.WriteLine($"Reports written to: {Path.GetFullPath(outputDirectory)}");
     return 0;
+}
+
+static async Task<int> RunInventoryScanAsync(
+    string[] args,
+    CancellationToken cancellationToken)
+{
+    var options = ParseOptions(args, "fake");
+    var outputDirectory = Require(options, "out");
+    var automationProfile = await AutomationProfileLoader.LoadAsync(
+        Require(options, "profile"),
+        cancellationToken);
+    var screenProfile = await ScreenProfileLoader.LoadAsync(
+        Require(options, "screen-profile"),
+        cancellationToken);
+    var maximumItems = ParsePositiveInt(
+        options,
+        "max-items",
+        automationProfile.DefaultMaximumItems);
+
+    IAndroidAutomationTransport transport;
+    if (options.ContainsKey("fake"))
+    {
+        var fixtures = Optional(options, "fixtures") ??
+            Path.Combine("data", "screen-fixtures");
+        var screens = new Dictionary<ScreenState, byte[]>
+        {
+            [ScreenState.InventoryList] = await File.ReadAllBytesAsync(
+                Path.Combine(fixtures, "InventoryList.png"),
+                cancellationToken),
+            [ScreenState.PokemonDetails] = await File.ReadAllBytesAsync(
+                Path.Combine(fixtures, "PokemonDetails.png"),
+                cancellationToken),
+            [ScreenState.PokemonMenuOpen] = await File.ReadAllBytesAsync(
+                Path.Combine(fixtures, "PokemonMenuOpen.png"),
+                cancellationToken)
+        };
+        var appraisalScreens = new[]
+        {
+            "AppraisalOpen.png",
+            "AppraisalOpenItem2.png",
+            "AppraisalOpenItem3.png"
+        }.Select(file => File.ReadAllBytes(
+            Path.Combine(fixtures, file))).ToArray();
+        transport = new ScriptedAndroidAutomationTransport(
+            screens,
+            appraisalScreens);
+        Console.WriteLine("Using the deterministic scripted Android transport.");
+    }
+    else
+    {
+        transport = CreateRealAndroidTransport(options);
+    }
+
+    var runner = new InventoryAutomationRunner(
+        transport,
+        new ScreenStateDetector(),
+        new ConsoleDeviceLog());
+    var result = await runner.RunAsync(
+        outputDirectory,
+        automationProfile,
+        screenProfile,
+        Optional(options, "serial"),
+        maximumItems,
+        cancellationToken);
+
+    Console.WriteLine();
+    Console.WriteLine("Automatic inventory navigation finished.");
+    Console.WriteLine($"Status: {result.Checkpoint.Status}");
+    Console.WriteLine($"Stop reason: {result.Checkpoint.StopReason}");
+    Console.WriteLine($"Items captured: {result.Checkpoint.Items.Count}");
+    Console.WriteLine($"Checkpoint: {result.CheckpointPath}");
+    Console.WriteLine($"Captures: {result.CaptureDirectory}");
+    if (!string.IsNullOrWhiteSpace(result.Checkpoint.StopDetail))
+    {
+        Console.WriteLine($"Detail: {result.Checkpoint.StopDetail}");
+    }
+
+    return result.Checkpoint.Status == PogoInventory.Automation.Models.AutomationRunStatus.Completed
+        ? 0
+        : 5;
 }
 
 static async Task<int> CaptureDeviceSnapshotAsync(
@@ -629,7 +720,7 @@ static async Task<int> ApproveCalibrationCaptureAsync(
     return 0;
 }
 
-static IAndroidDeviceTransport CreateRealAndroidTransport(
+static IAndroidAutomationTransport CreateRealAndroidTransport(
     IReadOnlyDictionary<string, string> options)
 {
     var harnessOptions = new DeviceHarnessOptions
@@ -766,6 +857,22 @@ static int UnknownCommand(string command)
     return 2;
 }
 
+static int AutomationExitCode(AutomationErrorCode code) =>
+    code switch
+    {
+        AutomationErrorCode.InvalidProfile => 60,
+        AutomationErrorCode.DeviceMismatch => 61,
+        AutomationErrorCode.GeometryMismatch => 62,
+        AutomationErrorCode.InvalidStartingState => 63,
+        AutomationErrorCode.StateTimeout => 64,
+        AutomationErrorCode.UnsafeScreenState => 65,
+        AutomationErrorCode.ResumeMismatch => 66,
+        AutomationErrorCode.CheckpointCorrupt => 67,
+        AutomationErrorCode.FileSystemFailure => 68,
+        AutomationErrorCode.TransportFailure => 69,
+        _ => 1
+    };
+
 static int CalibrationExitCode(CalibrationErrorCode code) =>
     code switch
     {
@@ -821,6 +928,11 @@ static void PrintHelp()
     Console.WriteLine("Usage:");
     Console.WriteLine("  analyze --inventory <file> --policy <file> --out <directory>");
     Console.WriteLine();
+    Console.WriteLine("  inventory-scan --profile <automation.json> --screen-profile <screen-profile.json> --out <directory>");
+    Console.WriteLine("                 [--adb <adb.exe>] [--serial <serial>] [--max-items <n>]");
+    Console.WriteLine("  inventory-scan --fake --profile <automation.json> --screen-profile <screen-profile.json>");
+    Console.WriteLine("                 --out <directory> [--fixtures <directory>] [--max-items <n>]");
+    Console.WriteLine();
     Console.WriteLine("  device-snapshot --out <directory> [--adb <adb.exe>] [--serial <serial>] [--timeout-seconds <n>]");
     Console.WriteLine("  device-snapshot --fake --out <directory>");
     Console.WriteLine();
@@ -844,5 +956,5 @@ static void PrintHelp()
     Console.WriteLine("  calibration-capture-approve --workspace <private-local-directory> --id <capture-id>");
     Console.WriteLine("                              --reviewed-by <name> --confirm-private-review");
     Console.WriteLine();
-    Console.WriteLine("Device snapshot, screen analysis and calibration are read-only. They contain no tap, swipe, text input or game-changing action.");
+    Console.WriteLine("Inventory scan uses only the allow-listed taps and swipe from the automation profile. It never transfers, powers up, evolves, purifies, catches or changes location.");
 }

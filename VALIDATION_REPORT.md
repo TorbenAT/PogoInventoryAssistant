@@ -2,79 +2,64 @@
 
 ## Version
 
-0.5.0
+0.6.0
 
-## Accepted previous checkpoint
+## Environment limitation
 
-Torben reported that the complete 0.4.0 GitHub Actions workflow was green.
+The build environment used to prepare this handoff does not contain the .NET SDK, MSBuild or ADB. A real C# compile and test run could therefore not be executed here.
 
-## Validation performed in the assistant environment
+GitHub Actions is the authoritative compile and runtime validation for this release.
 
-The assistant environment does not contain the .NET SDK, so the final C# build and test execution must run in GitHub Actions.
+## Static validation completed
 
-The following checks were completed locally for 0.5.0:
+- complete repository copied from accepted 0.5.0 source
+- new project and project references added to the solution
+- all JSON files parsed successfully
+- all seven project XML files parsed successfully and every project reference resolves
+- PowerShell and YAML files inspected
+- all 121 C# files parsed without syntax errors using the tree-sitter C# grammar
+- C# brace counts checked across the source tree
+- all required source and documentation files present across 200 repository files
+- synthetic appraisal variants preserve the existing appraisal and network-state anchor regions
+- ZIP root contains the solution directly
+- no `bin`, `obj`, `.git`, `local-data`, private captures or real inventory data included
 
-- all 101 C# files parsed without syntax errors using the tree-sitter C# grammar
-- all 6 project files parsed as valid XML
-- all 5 committed JSON files parsed successfully
-- solution and project-reference directions were checked for cycles
-- `PogoInventory.Calibration` now references only the read-only device abstraction and vision layer
-- the public Android transport interface was checked and still exposes only device listing, metadata reads and screenshot capture
-- no tap, swipe, text input, app launch, arbitrary shell or transfer method was added
-- all new local paths are contained under the initialised private workspace
-- capture and promoted fixture paths use path-traversal protection
-- capture files and promoted fixtures are linked by SHA-256
-- duplicate screenshots are excluded from coverage and rejected during promotion
-- capture-plan fingerprint, device-serial and exact-geometry locks are enforced before capture persistence
-- capture status prefers incomplete required states before optional states
-- interrupted promotion has a verified idempotent repair path
-- promotion refuses to overwrite a fixture file that exists outside the manifest
-- PowerShell scripts were inspected for explicit workspace, ADB and privacy-confirmation arguments
-- release source tree contains 170 files and no build output, private workspace, capture session or real screenshot directories
-- release ZIP structure, required files and archive integrity are checked during packaging
+## Expected CI validation
 
-## Expected GitHub Actions checks
+GitHub Actions must:
 
-- restore the .NET 8 solution
-- compile all six projects with warnings treated as errors
-- run 45 package-free self-tests
-- run the inventory analysis demo
-- run a fake read-only device snapshot
-- run synthetic screen detection
-- extract a synthetic fingerprint
-- build a profile from the synthetic fixture manifest and anchor plan
-- validate all synthetic fixtures and require an accepted report
-- upload all validation output
+1. restore .NET 8 projects
+2. build the full solution with warnings as errors
+3. run 52 self-tests
+4. run the existing analysis demo
+5. run the fake device snapshot
+6. run the deterministic automatic inventory scan
+7. capture exactly three fake inventory items
+8. run synthetic screen detection
+9. build and validate the synthetic calibration profile
+10. upload validation output
 
-## New self-test coverage
+## New automated checks
 
-Version 0.5.0 adds tests for:
+- ADB tap command is exactly allow-listed
+- ADB swipe command is exactly allow-listed
+- automation profile loads and validates
+- automatic setup performs three named taps
+- three distinct appraisal items are captured
+- repeated unchanged swipes detect the end
+- maximum item count stops cleanly
+- completed checkpoint does not issue new input on rerun
+- checkpoint stores exact SHA-256 locks for both profiles
 
-- guided capture workspace structure
-- incoming screenshot and session persistence
-- duplicate screenshot exclusion from coverage
-- device-change rejection
-- geometry-change rejection
-- changed capture-plan rejection
-- changed incoming screenshot rejection
-- mandatory privacy-review confirmation
-- reviewed capture promotion
-- untracked fixture-file overwrite rejection
-- promotion idempotency
-- duplicate promotion rejection
-- required-state priority over optional states
-- JSON and Markdown capture-status output
+## Manual review performed
 
-The expected total is 47 tests.
+- no text-input method added
+- no arbitrary shell method exposed
+- no transfer or destructive action added
+- no random timing or random coordinates added
+- real data remains excluded by `.gitignore`
+- automatic scan path has no per-image approval requirement
 
-## Remaining validation
+## Release gate
 
-- GitHub Actions compilation and all 47 self-tests
-- real Windows execution with Android Platform Tools
-- real Android device serial and screenshot geometry locking
-- real private screenshot capture
-- visual privacy review and fixture promotion
-- phone-specific anchor selection
-- real screen-profile acceptance with zero false positives and zero wrong known-state classifications
-
-No real phone, account, location or inventory data is included in this release.
+Do not begin the next milestone until GitHub Actions is green and reports all 52 tests passing.

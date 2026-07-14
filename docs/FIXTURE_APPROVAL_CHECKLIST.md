@@ -1,5 +1,8 @@
 # Fixture approval checklist
 
+> Legacy fallback: This manual capture and approval workflow is retained for diagnostics. Version 0.6.0 and later target automatic local navigation and do not require per-image approval for the inventory scan.
+
+
 Use this checklist for every real screenshot before running `approve-local-calibration-capture.ps1` or setting `approvedForCalibration` to true.
 
 ## Privacy

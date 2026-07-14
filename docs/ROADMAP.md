@@ -3,131 +3,90 @@
 ## M0 Foundation, complete in 0.1.0
 
 - solution structure
-- domain model
-- policy model
+- domain and policy models
 - conservative decision engine
-- reports
-- self-tests
-- guardrails and project handoff
+- reports and self-tests
 
 ## M1 Device Harness, complete in 0.2.0
 
-Read-only only:
+- authorised Android discovery
+- metadata, battery and screen geometry
+- screenshots
+- fake transport
+- timeouts and atomic output
 
-- discover exactly one authorised Android device
-- query metadata, screen size, battery and temperature where available
-- capture screenshots
-- fake device implementation
-- timeouts, cancellation and structured errors
-- atomic output and SHA-256 manifest
-- no device input
+## M2 Screen detection and calibration framework, complete in 0.3.0 to 0.5.0
 
-Torben reported a green 0.2.0 GitHub Actions run.
+- PNG decoder
+- fingerprint anchors
+- fail-closed screen states
+- synthetic calibration
+- local capture tools
 
-## M2 Generic Screen State Detector, complete in 0.3.0
+The manual capture-approval route is retained only as a fallback.
 
-- package-free PNG decoder
-- deterministic image fingerprints
-- normalised screen regions
-- named Required, Optional and Forbidden anchors
-- known screen states
-- Unknown and conflicting-state handling
-- orientation, resolution and aspect-ratio validation
-- synthetic and non-personal fixtures
-- JSON evidence report
-- no device input
+## M3 Automatic navigation, complete in 0.6.0
 
-## M2b Calibration workflow, complete in 0.4.0
+- strictly allow-listed ADB tap and swipe transport
+- state-driven setup from inventory to appraisal
+- automatic swipe-through
+- independent identity-change verification
+- automatic end detection
+- local screenshots and hashes
+- checkpoint after every item
+- resume verification
+- device, geometry and battery controls
+- deterministic fake phone and CI test
+- no per-Pokémon user interaction
 
-- private workspace
-- fixture indexing and SHA-256 locking
-- anchor-plan profile generation
-- acceptance policy and confusion report
-- weak-anchor diagnostics
-- synthetic CI validation
-- read-only only
+## M4 Automatic bootstrap and observation extraction, next
 
-## M2c-a Guided real-screen capture, complete in 0.5.0
+- automatically collect the core real screen states from a known start screen
+- automatically build and validate a local core screen profile
+- remove manual fixture promotion from the normal path
+- verify current Calcy invocation and data output
+- add a stable Calcy adapter interface
+- attach structured species, CP, level, HP and IV data to each captured sequence item
+- preserve raw evidence when Calcy returns incomplete data
 
-- private incoming capture staging
-- versioned state coverage plan
-- manual navigation with explicit Enter-to-capture
-- device serial and exact geometry session locks
-- SHA-256 capture integrity
-- duplicate screenshot detection
-- progress and missing-state reports
-- explicit privacy review before fixture promotion
-- no phone input automation
+## M5 Complete inventory database and exact identity
 
-## M2c-b Real-screen acceptance, next
+- SQLite scan runs
+- observations and moves
+- exact item fingerprints
+- catch date, weight, height and status observations
+- neighbour links
+- gap and duplicate detection
+- robust crash recovery
 
-- collect and approve private fixtures on the fixed Android configuration
-- select stable real UI anchors
-- build phone-specific local profile
-- zero false positives
-- zero known-state misclassifications
-- zero weak anchors
-- manual acceptance report review
+## M6 Species, PvP and collection intelligence
 
-## M3 Calcy Spike
-
-- verify whether current Calcy can be invoked and read reliably
-- isolate integration behind an interface
-- compare 20 known Pokémon
-- abandon or replace the adapter if results are unstable
-
-## M4 Read-only Scanner
-
-- state machine
-- observation pipeline
-- JSON or SQLite persistence
-- checkpoints
-- evidence screenshots
-- 200-Pokémon test
-
-## M5 SQLite and identity
-
-- observations
-- scan runs
-- fingerprints
-- neighbour references
-- resume logic
-- duplicate and gap detection
-
-## M6 Full PvP and species intelligence
-
-- Ohbem or equivalent IV-rank engine
-- PvPoke-derived versioned relevance data
 - evolution paths
-- league caps
-- moveset relevance
+- Great and Ultra League IV ranks
+- versioned PvP relevance
 - raid and Master League roles
+- costumes, forms, old Pokémon and special moves
 
-## M7 Full inventory dry-run
+## M7 Full overnight inventory and plan
 
-- 1,000-Pokémon validation
-- complete overnight scan
-- coverage report
-- no phone changes
+- 1,000-item validation
+- complete 10,000+ inventory run
+- KEEP / REVIEW / DELETE plan
+- reason for every result
+- no DELETE on unknown data
 
-## M8 Tag Executor in simulator
+## M8 Automatic batch tagging
 
-- strict action whitelist
-- plan hash
+- exact match only
 - batch-specific tags
-- audit log
-- rollback plan
+- plan hash
+- before and after audit
+- rollback by tag removal
+- no transfer
 
-## M9 Controlled phone tagging
-
-- 20 manually selected test items
-- then 200 controlled decisions
-- zero false delete tags required
-- full tagging only after review
-
-## M10 Manual transfer workflow
+## M9 Manual transfer
 
 - search by batch delete tag
 - count reconciliation
-- targeted review
+- final human spot-check
 - manual transfer only
