@@ -283,6 +283,53 @@ jobs:
             Write-Host "Readiness: $reason"
           }
 
+
+      - name: Build semantic evidence review pack
+        if: ${{ hashFiles('data/iphone-images/*.png') != '' }}
+        run: >-
+          dotnet run --project .\src\PogoInventory.Cli --configuration Release --no-build --
+          image-semantic-evidence
+          --input .\data\iphone-images
+          --region-report .\out\iphone-region-discovery\iphone-region-discovery.json
+          --crop-atlas-report .\out\iphone-crop-atlas\iphone-crop-atlas.json
+          --out .\out\iphone-semantic-evidence
+          --min-cases 20
+          --min-cases-per-cluster 2
+          --max-crop-width 640
+          --max-crop-height 480
+
+      - name: Verify semantic evidence review pack
+        if: ${{ hashFiles('data/iphone-images/*.png') != '' }}
+        shell: pwsh
+        run: |
+          $report = Get-Content .\out\iphone-semantic-evidence\semantic-evidence.json -Raw | ConvertFrom-Json
+          if (-not $report.accepted) { throw "The semantic evidence review pack was rejected." }
+          if ($report.caseCount -lt 20) { throw "Expected at least twenty semantic evidence cases." }
+          if ($report.cropCount -ne ($report.caseCount * $report.selectedRegionCount)) {
+            throw "Every semantic evidence case must contain every selected region."
+          }
+          if (-not $report.readiness.readyForExternalVisualReview) {
+            throw "The semantic evidence pack must be ready for external visual review."
+          }
+          if ($report.readiness.readyForAutomatedExtraction) {
+            throw "Automated extraction must remain disabled before truth verification."
+          }
+          if (-not (Test-Path .\out\iphone-semantic-evidence\semantic-review-pack.zip)) {
+            throw "The semantic review pack ZIP is missing."
+          }
+          $truth = Get-Content .\out\iphone-semantic-evidence\semantic-truth-template.json -Raw | ConvertFrom-Json
+          if ($truth.cases.Count -ne $report.caseCount) {
+            throw "The semantic truth template must contain every evidence case."
+          }
+          if ($truth.cases[0].reviewed) {
+            throw "Semantic truth cases must start unreviewed."
+          }
+          Write-Host "More images indicated: $($report.readiness.needsMoreImages)"
+          if ($report.readiness.underrepresentedClusters.Count -gt 0) {
+            Write-Host "Underrepresented clusters: $($report.readiness.underrepresentedClusters -join ', ')"
+          }
+          Write-Host "Next action: $($report.readiness.recommendedNextAction)"
+
       - name: Upload validation output
         if: always()
         uses: actions/upload-artifact@v4

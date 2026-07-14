@@ -16,6 +16,8 @@ using PogoInventory.Core.Models;
 using PogoInventory.Core.Policy;
 using PogoInventory.CropAtlas.Models;
 using PogoInventory.CropAtlas.Services;
+using PogoInventory.CropAtlas.Semantic.Models;
+using PogoInventory.CropAtlas.Semantic.Services;
 using PogoInventory.Device;
 using PogoInventory.Device.Adb;
 using PogoInventory.Device.Errors;
@@ -135,7 +137,13 @@ var tests = new (string Name, Func<Task> Run)[]
     ("Crop atlas selection is deterministic", CropAtlasSelectionIsDeterministicAsync),
     ("Crop atlas writes all reports", CropAtlasWritesAllReportsAsync),
     ("Crop atlas rejects a missing representative image", CropAtlasRejectsMissingRepresentativeAsync),
-    ("Crop atlas identifies underrepresented clusters", CropAtlasIdentifiesUnderrepresentedClustersAsync)
+    ("Crop atlas identifies underrepresented clusters", CropAtlasIdentifiesUnderrepresentedClustersAsync),
+    ("Semantic evidence creates one case per decoded image", SemanticEvidenceCreatesCasesAsync),
+    ("Semantic truth template keeps fields null", SemanticTruthTemplateKeepsFieldsNullAsync),
+    ("Semantic review pack excludes source screenshots", SemanticReviewPackExcludesSourceScreenshotsAsync),
+    ("Semantic evidence ordering is deterministic", SemanticEvidenceOrderingIsDeterministicAsync),
+    ("Semantic evidence rejects atlas path traversal", SemanticEvidenceRejectsAtlasPathTraversalAsync),
+    ("Semantic evidence identifies cluster coverage gaps", SemanticEvidenceIdentifiesClusterCoverageGapsAsync)
 };
 
 var failed = 0;
@@ -2538,6 +2546,310 @@ static async Task ExpectFileNotFoundAsync(Func<Task> action)
     catch (FileNotFoundException)
     {
     }
+}
+
+
+static async Task SemanticEvidenceCreatesCasesAsync()
+{
+    var directory = CreateTemporaryDirectory();
+    try
+    {
+        var fixture = await CreateSemanticEvidenceFixtureAsync(directory);
+        var report = await SemanticEvidenceRunner.RunAsync(
+            fixture.Input,
+            fixture.RegionReportPath,
+            fixture.CropAtlasReportPath,
+            fixture.SemanticOutput,
+            TestSemanticEvidenceOptions());
+
+        var regionJson = await File.ReadAllTextAsync(
+            fixture.RegionReportPath);
+        var regionReport = JsonSerializer.Deserialize<RegionDiscoveryReport>(
+            regionJson,
+            RegionDiscoveryJson.CreateOptions(writeIndented: false))
+            ?? throw new InvalidOperationException(
+                "Missing test region report.");
+
+        AssertTrue(report.Accepted, "semantic evidence fixture should pass");
+        AssertEqual(
+            regionReport.DecodedCount,
+            report.CaseCount,
+            "semantic evidence case count");
+        AssertEqual(
+            report.CaseCount * report.SelectedRegionCount,
+            report.CropCount,
+            "semantic evidence crop count");
+        AssertTrue(
+            report.Readiness.ReadyForExternalVisualReview,
+            "semantic evidence should be ready for external review");
+        AssertTrue(
+            !report.Readiness.ReadyForAutomatedExtraction,
+            "semantic evidence must not enable automated extraction");
+    }
+    finally
+    {
+        DeleteDirectory(directory);
+    }
+}
+
+static async Task SemanticTruthTemplateKeepsFieldsNullAsync()
+{
+    var directory = CreateTemporaryDirectory();
+    try
+    {
+        var fixture = await CreateSemanticEvidenceFixtureAsync(directory);
+        var report = await SemanticEvidenceRunner.RunAsync(
+            fixture.Input,
+            fixture.RegionReportPath,
+            fixture.CropAtlasReportPath,
+            fixture.SemanticOutput,
+            TestSemanticEvidenceOptions());
+        await SemanticEvidenceReportWriter.WriteAsync(
+            report,
+            fixture.SemanticOutput);
+
+        using var document = JsonDocument.Parse(
+            await File.ReadAllTextAsync(Path.Combine(
+                fixture.SemanticOutput,
+                "semantic-truth-template.json")));
+        var first = document.RootElement
+            .GetProperty("cases")[0];
+
+        AssertEqual(
+            JsonValueKind.Null,
+            first.GetProperty("expectedScreenState").ValueKind,
+            "truth screen state");
+        AssertEqual(
+            JsonValueKind.Null,
+            first.GetProperty("expectedSpecies").ValueKind,
+            "truth species");
+        AssertEqual(
+            JsonValueKind.Null,
+            first.GetProperty("expectedCp").ValueKind,
+            "truth CP");
+        AssertTrue(
+            !first.GetProperty("reviewed").GetBoolean(),
+            "truth case should start unreviewed");
+    }
+    finally
+    {
+        DeleteDirectory(directory);
+    }
+}
+
+static async Task SemanticReviewPackExcludesSourceScreenshotsAsync()
+{
+    var directory = CreateTemporaryDirectory();
+    try
+    {
+        var fixture = await CreateSemanticEvidenceFixtureAsync(directory);
+        var report = await SemanticEvidenceRunner.RunAsync(
+            fixture.Input,
+            fixture.RegionReportPath,
+            fixture.CropAtlasReportPath,
+            fixture.SemanticOutput,
+            TestSemanticEvidenceOptions());
+        await SemanticEvidenceReportWriter.WriteAsync(
+            report,
+            fixture.SemanticOutput);
+
+        using var archive = System.IO.Compression.ZipFile.OpenRead(
+            Path.Combine(
+                fixture.SemanticOutput,
+                report.ReviewPackFile));
+        AssertTrue(
+            archive.Entries.Count > 4,
+            "semantic review pack should contain evidence");
+        AssertTrue(
+            archive.Entries.All(entry =>
+                !entry.FullName.StartsWith(
+                    "data/iphone-images/",
+                    StringComparison.OrdinalIgnoreCase) &&
+                !entry.FullName.StartsWith(
+                    "source/",
+                    StringComparison.OrdinalIgnoreCase)),
+            "semantic review pack must not include source screenshots");
+        AssertTrue(
+            archive.Entries.Any(entry =>
+                entry.FullName.Equals(
+                    "semantic-truth-template.json",
+                    StringComparison.Ordinal)),
+            "semantic review pack should contain the truth template");
+    }
+    finally
+    {
+        DeleteDirectory(directory);
+    }
+}
+
+static async Task SemanticEvidenceOrderingIsDeterministicAsync()
+{
+    var directory = CreateTemporaryDirectory();
+    try
+    {
+        var fixture = await CreateSemanticEvidenceFixtureAsync(directory);
+        var first = await SemanticEvidenceRunner.RunAsync(
+            fixture.Input,
+            fixture.RegionReportPath,
+            fixture.CropAtlasReportPath,
+            Path.Combine(directory, "semantic-first"),
+            TestSemanticEvidenceOptions());
+        var second = await SemanticEvidenceRunner.RunAsync(
+            fixture.Input,
+            fixture.RegionReportPath,
+            fixture.CropAtlasReportPath,
+            Path.Combine(directory, "semantic-second"),
+            TestSemanticEvidenceOptions());
+
+        AssertEqual(
+            string.Join("|", first.Cases.Select(item =>
+                $"{item.SequenceNumber}:{item.CaseId}:{item.ClusterId}")),
+            string.Join("|", second.Cases.Select(item =>
+                $"{item.SequenceNumber}:{item.CaseId}:{item.ClusterId}")),
+            "semantic evidence case order");
+        AssertEqual(
+            string.Join("|", first.Cases.SelectMany(item =>
+                item.Crops.Select(crop =>
+                    $"{item.CaseId}:{crop.Kind}:{crop.CandidateId}"))),
+            string.Join("|", second.Cases.SelectMany(item =>
+                item.Crops.Select(crop =>
+                    $"{item.CaseId}:{crop.Kind}:{crop.CandidateId}"))),
+            "semantic evidence crop order");
+    }
+    finally
+    {
+        DeleteDirectory(directory);
+    }
+}
+
+static async Task SemanticEvidenceRejectsAtlasPathTraversalAsync()
+{
+    var directory = CreateTemporaryDirectory();
+    try
+    {
+        var fixture = await CreateSemanticEvidenceFixtureAsync(directory);
+        var json = await File.ReadAllTextAsync(
+            fixture.CropAtlasReportPath);
+        var atlas = JsonSerializer.Deserialize<CropAtlasReport>(
+            json,
+            CropAtlasJson.CreateOptions(writeIndented: false))
+            ?? throw new InvalidOperationException(
+                "Missing test crop atlas report.");
+        var changed = atlas with
+        {
+            OverviewFile = "../escape.png"
+        };
+        await File.WriteAllTextAsync(
+            fixture.CropAtlasReportPath,
+            JsonSerializer.Serialize(
+                changed,
+                CropAtlasJson.CreateOptions(writeIndented: true)));
+
+        await ExpectInvalidOperationAsync(() =>
+            SemanticEvidenceRunner.RunAsync(
+                fixture.Input,
+                fixture.RegionReportPath,
+                fixture.CropAtlasReportPath,
+                fixture.SemanticOutput,
+                TestSemanticEvidenceOptions()));
+    }
+    finally
+    {
+        DeleteDirectory(directory);
+    }
+}
+
+static async Task SemanticEvidenceIdentifiesClusterCoverageGapsAsync()
+{
+    var directory = CreateTemporaryDirectory();
+    try
+    {
+        var fixture = await CreateSemanticEvidenceFixtureAsync(directory);
+        var regionJson = await File.ReadAllTextAsync(
+            fixture.RegionReportPath);
+        var regionReport = JsonSerializer.Deserialize<RegionDiscoveryReport>(
+            regionJson,
+            RegionDiscoveryJson.CreateOptions(writeIndented: false))
+            ?? throw new InvalidOperationException(
+                "Missing test region report.");
+        var rewrittenImages = regionReport.Images
+            .Select((image, index) => image with
+            {
+                ClusterId = index == regionReport.Images.Count - 1
+                    ? "cluster-singleton"
+                    : "cluster-main"
+            })
+            .ToArray();
+        var rewritten = regionReport with
+        {
+            ClusterCount = 2,
+            Images = rewrittenImages
+        };
+        await File.WriteAllTextAsync(
+            fixture.RegionReportPath,
+            JsonSerializer.Serialize(
+                rewritten,
+                RegionDiscoveryJson.CreateOptions(writeIndented: true)));
+
+        var report = await SemanticEvidenceRunner.RunAsync(
+            fixture.Input,
+            fixture.RegionReportPath,
+            fixture.CropAtlasReportPath,
+            fixture.SemanticOutput,
+            TestSemanticEvidenceOptions() with
+            {
+                MinimumCasesPerCluster = 2
+            });
+
+        AssertTrue(report.Accepted, "coverage warning should not block pack creation");
+        AssertTrue(
+            report.Readiness.NeedsMoreImages,
+            "singleton cluster should request more images");
+        AssertTrue(
+            report.Readiness.UnderrepresentedClusters.Contains(
+                "cluster-singleton",
+                StringComparer.Ordinal),
+            "singleton cluster should be named");
+    }
+    finally
+    {
+        DeleteDirectory(directory);
+    }
+}
+
+static SemanticEvidenceOptions TestSemanticEvidenceOptions() =>
+    new()
+    {
+        MinimumCaseCount = 1,
+        MinimumCasesPerCluster = 1,
+        MaximumCropWidth = 160,
+        MaximumCropHeight = 160
+    };
+
+static async Task<(
+    string Input,
+    string RegionReportPath,
+    string CropAtlasReportPath,
+    string SemanticOutput)> CreateSemanticEvidenceFixtureAsync(
+        string directory)
+{
+    var cropFixture = await CreateCropAtlasFixtureAsync(directory);
+    var atlasReport = await CropAtlasRunner.RunAsync(
+        cropFixture.Input,
+        cropFixture.RegionReportPath,
+        cropFixture.AtlasOutput,
+        TestCropAtlasOptions());
+    await CropAtlasReportWriter.WriteAsync(
+        atlasReport,
+        cropFixture.AtlasOutput);
+
+    return (
+        cropFixture.Input,
+        cropFixture.RegionReportPath,
+        Path.Combine(
+            cropFixture.AtlasOutput,
+            "iphone-crop-atlas.json"),
+        Path.Combine(directory, "semantic"));
 }
 
 static RegionDiscoveryOptions TestRegionDiscoveryOptions() =>

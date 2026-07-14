@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.13.0
+
+- Added a semantic evidence review-pack pipeline inside `PogoInventory.CropAtlas`.
+- Added one derived crop set for every decoded screenshot and every selected candidate region.
+- Added an intentionally empty truth-template for screen state, species, CP and IV values.
+- Added a deterministic review ZIP containing only derived crops, contact sheets and manifests.
+- Added explicit readiness states for external visual review, automated extraction and screenshot coverage.
+- Added exact underrepresented-cluster reporting without blocking review-pack generation.
+- Added GitHub Actions validation and six self-tests, bringing the expected total to 103.
+- Kept automated extraction disabled until a populated truth manifest passes a zero-false-Complete gate.
+- Added no phone input action.
+
 ## 0.12.0
 
 - Added the `PogoInventory.CropAtlas` project.

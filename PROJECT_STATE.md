@@ -2,23 +2,13 @@
 
 ## Current version
 
-0.12.0
-
-## Build correction in 0.12.0
-
-GitHub Actions compiled the new `PogoInventory.RegionDiscovery` project but the
-CLI failed with CS0246/CS0103 because `Program.cs` lacked the explicit
-`PogoInventory.RegionDiscovery.Models` and
-`PogoInventory.RegionDiscovery.Services` imports.
-
-Version 0.12.0 adds those two imports. The project reference was already
-present and no algorithm or phone-action boundary changed.
+0.13.0
 
 ## Accepted checkpoint
 
-Torben reported that version 0.11.1 is fully green in GitHub Actions.
+Torben reported version 0.12.0 fully green in GitHub Actions.
 
-The accepted real iPhone pretest result is:
+Accepted real iPhone evidence:
 
 - 24 committed PNG screenshots
 - 23 successfully decoded screenshots
@@ -28,8 +18,8 @@ The accepted real iPhone pretest result is:
 - zero exact duplicate pairs
 - zero near-duplicate pairs
 - one rejected PNG retained as a decoder diagnostic
-
-This proves the real screenshots can pass through the package-free image pipeline. It does not yet prove semantic Pokémon-data extraction.
+- accepted visual-region discovery
+- accepted crop-atlas generation
 
 ## Completed
 
@@ -53,54 +43,34 @@ This proves the real screenshots can pass through the package-free image pipelin
 - twenty-case zero-wrong-Complete verification gate
 - provider selection locked to report and parser hashes
 
-### M4 phase 4a: real iPhone image pretest
+### M4 iPhone visual evidence
 
-- real PNG decoding
-- geometry and orientation inventory
+- real PNG decoding and geometry inventory
 - SHA-256 evidence
 - grayscale and edge fingerprints
-- all-pairs visual similarity
-- duplicate and near-duplicate checks
-- automatic visual clustering
-- accepted isolated decode-failure policy
+- all-pairs similarity and clustering
+- normalised 12 by 24 visual-region discovery
+- stable, changing and cluster-separating region candidates
+- deterministic crop atlas
+- representative evidence for every visual cluster
+- package-free derived PNG output
+- explicit cluster-coverage readiness
 
-### M4 phase 4b: visual-region discovery
+### M4 phase 4d: semantic evidence review pack
 
-New `PogoInventory.RegionDiscovery` project:
+Version 0.13.0 adds:
 
-- normalised 12 by 24 screen grid
-- mean luminance and edge density per cell
-- global cross-image variation
-- consecutive-image variation
-- within-cluster variation
-- between-cluster separation
-- provisional stable-chrome candidates
-- provisional screen-state discriminator candidates
-- provisional dynamic-content candidates
-- provisional text-dense candidates
-- JSON, Markdown and three CSV reports
-- deterministic candidate grouping
-- CI execution against the committed iPhone screenshots
-- 91 expected self-tests
-
-All candidate meanings are provisional. Version 0.12.0 does not perform OCR and does not claim species, CP or IV extraction.
-
-### M4 phase 4c: crop atlas and evidence sufficiency
-
-New `PogoInventory.CropAtlas` project:
-
-- deterministic selection of strong candidate regions
-- same-kind overlap suppression
-- representative images from every visual cluster
-- read-only crops from the committed screenshots
-- package-free PNG encoding for derived evidence
-- cluster overview contact sheet
-- one contact sheet per candidate region
-- crop, cluster and region manifests
-- explicit `NeedsMoreImages` decision
-- exact underrepresented cluster identifiers
-- no semantic screen label, OCR or IV claim
-- 97 expected self-tests
+- one evidence case per decoded screenshot
+- one derived crop per case and selected candidate region
+- copied cluster overview and candidate contact sheets
+- deterministic JSON, Markdown and CSV manifests
+- `semantic-review-pack.zip`
+- intentionally empty truth values for screen state, species, CP and IV
+- external-review readiness
+- automated-extraction readiness fixed to false
+- exact underrepresented-cluster reporting
+- no source screenshot copied into the review ZIP
+- 103 expected self-tests
 
 ## Input boundary
 
@@ -111,17 +81,18 @@ TapAppraise
 SwipeNextPokemon
 ```
 
-Version 0.12.0 adds no phone input action.
+Version 0.13.0 adds no phone input action.
 
 ## Not completed
 
 - semantic labels for the four real visual clusters
+- populated truth data for the real screenshots
 - OCR of name, CP, HP or other text
 - IV-bar measurement from real screenshots
 - status-marker extraction
 - real Android Calcy evidence
 - production `ICalcyObservationProvider`
-- automatic twenty-case real evidence collection
+- automatic twenty-case real provider verification
 - SQLite inventory database
 - full real-inventory decision plan
 - automatic tagging
@@ -130,27 +101,31 @@ Version 0.12.0 adds no phone input action.
 ## Required checkpoint after push
 
 1. Build all 14 projects.
-2. Confirm 97 of 97 self-tests pass.
-3. Confirm the accepted iPhone pretest remains unchanged.
-4. Confirm region discovery still produces 288 cells and four real visual clusters.
-5. Confirm crop-atlas generation is accepted.
-6. Confirm every selected region contains evidence from every cluster.
-7. Inspect `readiness.needsMoreImages` and the named underrepresented clusters.
-8. Inspect `cluster-overview.png` and the candidate contact sheets in `validation-output`.
-9. Preserve zero new phone actions.
+2. Confirm 103 of 103 self-tests pass.
+3. Confirm the accepted iPhone pretest and region discovery remain unchanged.
+4. Confirm crop-atlas generation remains accepted.
+5. Confirm semantic evidence contains at least twenty cases.
+6. Confirm every case contains every selected candidate region.
+7. Confirm `semantic-review-pack.zip` is created.
+8. Confirm the truth template starts unreviewed with null semantic fields.
+9. Record `needsMoreImages` and any named underrepresented clusters.
+10. Preserve zero new phone actions.
 
 ## Next recommended milestone
 
-Use the real crop atlas to choose the first evidence-backed semantic experiment:
+Inspect the real semantic review pack and select one evidence-backed semantic
+experiment:
 
-- map visual clusters to provisional screen-state names only when the contact sheets make the distinction unambiguous
-- identify whether a consistent name/CP crop exists
-- identify whether appraisal bars occupy a consistent region
-- add measurement only for fields supported by the real crops
-- keep unsupported fields null
-- request more screenshots only for the exact clusters listed by the crop-atlas readiness report
+- name and CP extraction, or
+- appraisal-bar measurement
 
-When the Android phone becomes available, the real Calcy probe remains mandatory before selecting a production provider.
+Do not implement both merely because both are possible. Select the field with
+the clearest and most consistent crop evidence, populate truth for at least
+twenty cases, and require zero false Complete results.
+
+More source screenshots should be requested only when the semantic report
+names an underrepresented cluster or the selected field lacks enough visible
+variation.
 
 ## Design decisions preserved
 
@@ -162,4 +137,4 @@ When the Android phone becomes available, the real Calcy probe remains mandatory
 - Unknown means stop
 - incomplete data remains incomplete
 - screenshots are read only
-- real data remains local or explicitly committed by Torben
+- generated review data contains derived crops, not copied full screenshots

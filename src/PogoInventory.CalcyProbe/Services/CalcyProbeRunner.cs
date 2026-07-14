@@ -10,7 +10,7 @@ namespace PogoInventory.CalcyProbe.Services;
 
 public sealed class CalcyProbeRunner
 {
-    public const string CurrentVersion = "0.12.0";
+    public const string CurrentVersion = "0.13.0";
 
     private readonly IAndroidAppInspectionTransport _transport;
     private readonly IDeviceLog _log;

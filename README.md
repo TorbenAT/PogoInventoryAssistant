@@ -1,6 +1,6 @@
 # Pogo Inventory Assistant
 
-Version 0.12.0
+Version 0.13.0
 
 Pogo Inventory Assistant is a local tool for building a complete Pokémon GO inventory, analysing it and later applying safe batch tags. Final transfer remains manual.
 
@@ -225,6 +225,25 @@ The resulting JSON report states whether more screenshots are needed and names
 the exact underrepresented visual clusters. A green atlas is evidence that the
 current screenshots are suitable for the next semantic experiment; it is not
 itself an OCR or IV result.
+
+## iPhone semantic evidence pack
+
+Version 0.13.0 creates a reviewable semantic evidence ZIP from the accepted
+region and crop-atlas reports.
+
+Run:
+
+```powershell
+.\scripts\run-iphone-semantic-evidence.ps1
+```
+
+The output includes one case per decoded screenshot, all selected candidate
+crops, the cluster overview, candidate contact sheets and an intentionally empty
+truth template.
+
+The pack does not assert screen state, species, CP or IV values. Automated
+extraction remains disabled until the truth template is populated and a
+zero-false-Complete verification gate passes.
 
 ## Current real-device limitation
 

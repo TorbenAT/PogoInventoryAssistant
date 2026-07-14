@@ -304,3 +304,14 @@ It produces derived PNG crops and manifests under `out`. The project does not
 perform device control and does not assign semantic Pokémon fields. Its only
 decision is whether the current visual clusters have enough representative
 evidence for a later semantic experiment.
+
+## Version 0.13.0: semantic evidence review layer
+
+The semantic evidence layer remains inside `PogoInventory.CropAtlas`. It
+combines the accepted region report, crop-atlas report and read-only source
+screenshots into derived per-case crops.
+
+The output is a review package, not a provider. It has no device-control
+dependency and cannot enable automated extraction. A later provider must consume
+a populated truth manifest and pass the existing zero-false-Complete safety
+pattern.

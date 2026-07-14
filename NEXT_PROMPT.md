@@ -1,47 +1,53 @@
 # Continuation prompt
 
-Use this text with the latest repository after version 0.12.0 is green.
+Use this text with the latest repository after version 0.13.0 is green.
 
 ---
 
 I am building Pogo Inventory Assistant in C# and .NET 8.
 
-Open and inspect the repository before changing anything. Treat `PROJECT_STATE.md` as the source of truth. Read `docs/GUARDRAILS.md`, `docs/IPHONE_IMAGE_PRETEST.md`, `docs/IPHONE_VISUAL_REGION_DISCOVERY.md`, `docs/CALCY_PROVIDER_VERIFICATION.md` and `docs/AUTOMATIC_NAVIGATION.md`.
+Open and inspect the repository before changing anything. Treat
+`PROJECT_STATE.md` as the source of truth. Read `docs/GUARDRAILS.md`,
+`docs/IPHONE_IMAGE_PRETEST.md`, `docs/IPHONE_VISUAL_REGION_DISCOVERY.md`,
+`docs/IPHONE_CROP_ATLAS.md`, `docs/IPHONE_SEMANTIC_EVIDENCE.md`,
+`docs/CALCY_PROVIDER_VERIFICATION.md` and `docs/AUTOMATIC_NAVIGATION.md`.
 
-Current version: 0.12.0.12.0.
+Current version: 0.13.0.
 
 Accepted before this task:
 
-- automatic state-aware Android inventory navigation
-- structured nullable observations and checkpoint schema 2.0
-- Calcy probe, text parser and twenty-case zero-wrong-Complete gate
 - 24 committed iPhone screenshots
-- real result of 23 decoded images, one geometry group and four visual clusters
-- visual-region discovery over a 12 by 24 normalised grid
-- provisional stable, state-discriminating, dynamic and text-dense candidate regions
-- 91 self-tests
+- 23 decoded screenshots
+- four visual clusters
+- deterministic visual-region discovery
+- crop atlas with representative cluster evidence
+- semantic evidence pack with one case per decoded screenshot
+- intentionally empty truth template
+- automated extraction disabled
+- 103 self-tests
 
-First verify GitHub Actions is green. Inspect these real reports from `validation-output`:
+First verify that version 0.13.0 builds and all 103 self-tests pass.
 
-```text
-out/iphone-image-pretest/iphone-image-pretest.json
-out/iphone-region-discovery/iphone-region-discovery.json
-out/iphone-region-discovery/iphone-region-candidates.csv
-out/iphone-region-discovery/iphone-region-image-clusters.csv
-```
-
-Next milestone: inspect the real crop-atlas artifact and implement only the first semantic extraction experiment supported by its contact sheets.
+Next milestone: inspect the real
+`out/iphone-semantic-evidence/semantic-review-pack.zip` artifact and choose
+exactly one first semantic extraction experiment supported by the derived
+images.
 
 Required work:
 
-1. Read `out/iphone-crop-atlas/iphone-crop-atlas.json`.
-2. Record `readiness.needsMoreImages` and any named underrepresented clusters.
-3. Inspect the cluster overview and every selected-region contact sheet.
-4. Assign provisional screen-state labels only where the evidence is visually unambiguous.
-5. Select either name/CP extraction or appraisal-bar measurement as the first semantic experiment, not both unless both are strongly supported.
-6. Add a truth manifest and zero-false-Complete acceptance test for that field.
+1. Record `readiness.needsMoreImages` and any named underrepresented clusters.
+2. Inspect the cluster overview, candidate contact sheets and per-case crops.
+3. Assign provisional screen-state labels only where visually unambiguous.
+4. Choose either name/CP extraction or appraisal-bar measurement as the first
+   semantic experiment.
+5. Populate a truth manifest for at least twenty cases for the chosen field.
+6. Implement a zero-false-Complete acceptance gate for that field.
 7. Keep unsupported fields null and do not guess.
-8. Add no phone input action.
-9. Update project state, continuation prompt, release notes and validation report.
+8. Do not enable long inventory scanning from the semantic provider until the
+   verification gate passes.
+9. Add no phone input action.
+10. Update project state, continuation prompt, release notes and validation
+    report.
 
-When the fixed Android phone becomes available, run the real Calcy probe before selecting a production provider.
+When the fixed Android phone becomes available, run the real Calcy probe
+before selecting a production provider.

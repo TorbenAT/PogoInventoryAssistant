@@ -18,6 +18,8 @@ using PogoInventory.Core.Policy;
 using PogoInventory.Core.Reporting;
 using PogoInventory.CropAtlas.Models;
 using PogoInventory.CropAtlas.Services;
+using PogoInventory.CropAtlas.Semantic.Models;
+using PogoInventory.CropAtlas.Semantic.Services;
 using PogoInventory.Device;
 using PogoInventory.Device.Adb;
 using PogoInventory.Device.Errors;
@@ -93,6 +95,9 @@ static async Task<int> MainAsync(string[] args)
                 args.Skip(1).ToArray(),
                 cancellationSource.Token),
             "image-crop-atlas" => await RunImageCropAtlasAsync(
+                args.Skip(1).ToArray(),
+                cancellationSource.Token),
+            "image-semantic-evidence" => await RunImageSemanticEvidenceAsync(
                 args.Skip(1).ToArray(),
                 cancellationSource.Token),
             "device-snapshot" => await CaptureDeviceSnapshotAsync(
@@ -753,6 +758,73 @@ static async Task<int> RunImageCropAtlasAsync(
     }
     Console.WriteLine(report.GateDetail);
     return report.Accepted ? 0 : 12;
+}
+
+
+static async Task<int> RunImageSemanticEvidenceAsync(
+    string[] args,
+    CancellationToken cancellationToken)
+{
+    var options = ParseOptions(args);
+    var inputDirectory = Require(options, "input");
+    var regionReportPath = Require(options, "region-report");
+    var cropAtlasReportPath = Require(options, "crop-atlas-report");
+    var outputDirectory = Require(options, "out");
+    var evidenceOptions = new SemanticEvidenceOptions
+    {
+        MinimumCaseCount = ParsePositiveInt(
+            options,
+            "min-cases",
+            20),
+        MinimumCasesPerCluster = ParsePositiveInt(
+            options,
+            "min-cases-per-cluster",
+            2),
+        MaximumCropWidth = ParsePositiveInt(
+            options,
+            "max-crop-width",
+            640),
+        MaximumCropHeight = ParsePositiveInt(
+            options,
+            "max-crop-height",
+            480)
+    };
+
+    var report = await SemanticEvidenceRunner.RunAsync(
+        inputDirectory,
+        regionReportPath,
+        cropAtlasReportPath,
+        outputDirectory,
+        evidenceOptions,
+        cancellationToken);
+    await SemanticEvidenceReportWriter.WriteAsync(
+        report,
+        outputDirectory,
+        cancellationToken);
+
+    Console.WriteLine(
+        $"Semantic evidence: {report.CaseCount} cases and " +
+        $"{report.CropCount} derived crops.");
+    Console.WriteLine($"Visual clusters: {report.ClusterCount}.");
+    Console.WriteLine(
+        $"Ready for external visual review: " +
+        $"{report.Readiness.ReadyForExternalVisualReview}.");
+    Console.WriteLine(
+        $"Ready for automated extraction: " +
+        $"{report.Readiness.ReadyForAutomatedExtraction}.");
+    Console.WriteLine(
+        $"More images indicated: " +
+        $"{report.Readiness.NeedsMoreImages}.");
+    foreach (var reason in report.Readiness.Reasons)
+    {
+        Console.WriteLine($"Readiness: {reason}");
+    }
+    Console.WriteLine(
+        $"Review pack: {Path.Combine(
+            outputDirectory,
+            report.ReviewPackFile)}");
+    Console.WriteLine(report.GateDetail);
+    return report.Accepted ? 0 : 13;
 }
 
 static async Task<int> CaptureDeviceSnapshotAsync(
@@ -1596,6 +1668,9 @@ static void PrintHelp()
     Console.WriteLine("  image-crop-atlas --input <directory> --region-report <file> --out <directory>");
     Console.WriteLine("                   [--max-candidates <n>] [--representatives-per-cluster <n>]");
     Console.WriteLine("                   [--max-crop-width <n>] [--max-crop-height <n>]");
+    Console.WriteLine("  image-semantic-evidence --input <directory> --region-report <file>");
+    Console.WriteLine("                          --crop-atlas-report <file> --out <directory>");
+    Console.WriteLine("                          [--min-cases <n>] [--min-cases-per-cluster <n>]");
     Console.WriteLine("                [--near-duplicate-threshold <0..1>] [--cluster-threshold <0..1>]");
     Console.WriteLine();
     Console.WriteLine("  device-snapshot --out <directory> [--adb <adb.exe>] [--serial <serial>] [--timeout-seconds <n>]");
