@@ -56,7 +56,7 @@ public sealed class FakeAndroidDeviceTransport : IAndroidAutomationTransport
             DeviceName = "fake-device",
             AndroidVersion = "16",
             ApiLevel = 36,
-            BuildFingerprint = "fake/fingerprint/0.14.2",
+            BuildFingerprint = "fake/fingerprint/0.14.3",
             Screen = new AndroidScreenInfo
             {
                 PhysicalWidth = 1080,

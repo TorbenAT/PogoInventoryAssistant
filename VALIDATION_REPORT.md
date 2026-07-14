@@ -1,3 +1,18 @@
+## Version 0.14.3 compile correction
+
+The five compiler errors were caused by one malformed C# `or` pattern.
+
+Static checks confirm:
+
+- the filter contains exactly one `exception is`
+- all five recoverable exception types remain present
+- the malformed phrase `or exception is` is absent
+- the unsupported-PNG regression test remains declared
+- the expected self-test count remains 113
+- no phone action changed
+
+GitHub Actions remains the authoritative compiler and execution environment.
+
 ## Version 0.14.2 decoder correction
 
 The failing file is `data/iphone-images/IMG_7699.png`.
@@ -40,7 +55,7 @@ remains the authoritative compiler and test runner.
 
 ## Version
 
-0.14.2
+0.14.3
 
 ## Accepted prior checkpoint
 

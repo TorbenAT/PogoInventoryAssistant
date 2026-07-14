@@ -120,7 +120,7 @@ public static class AppraisalPretestRunner
             }
             catch (Exception exception) when (
                 exception is ScreenVisionException or
-                exception is InvalidDataException or
+                InvalidDataException or
                 NotSupportedException or
                 ArgumentException or
                 OverflowException)

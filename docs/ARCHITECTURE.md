@@ -343,3 +343,9 @@ per-file diagnostic when the surrounding acceptance gate still has enough
 decoded evidence. Unsupported files remain traceable and cannot silently
 become valid observations.
 
+## Version 0.14.3: exception-pattern syntax correction
+
+The appraisal pretest's recoverable decoder policy is unchanged. Version
+0.14.3 only corrects the C# syntax used to express the existing list of
+recoverable exception types.
+

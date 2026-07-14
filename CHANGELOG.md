@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.14.3
+
+- Fixed the C# exception-pattern syntax in `AppraisalPretestRunner`.
+- Kept `ScreenVisionException`, `InvalidDataException`, `NotSupportedException`, `ArgumentException` and `OverflowException` as recoverable per-file diagnostics.
+- Kept the SHA-256-guarded removal script for `IMG_7699.png`.
+- Kept the expected self-test total at 113.
+- Added no phone input action.
+
 ## 0.14.2
 
 - Fixed the appraisal pretest so `ScreenVisionException` decoder failures are retained as diagnostics instead of terminating the run.

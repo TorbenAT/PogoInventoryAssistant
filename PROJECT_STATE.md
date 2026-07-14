@@ -2,7 +2,7 @@
 
 ## Current version
 
-0.14.2
+0.14.3
 
 ## Build correction in 0.14.1
 
@@ -35,6 +35,26 @@ The known file can also be removed safely with:
 
 The script deletes only `IMG_7699.png` with the exact known SHA-256 and refuses
 to delete a changed file.
+
+## Build correction in 0.14.3
+
+The 0.14.2 exception filter used `exception is` twice inside one C# `or`
+pattern. After the first type pattern, the remaining alternatives must be type
+names only.
+
+Version 0.14.3 uses this valid pattern:
+
+```csharp
+catch (Exception exception) when (
+    exception is ScreenVisionException or
+    InvalidDataException or
+    NotSupportedException or
+    ArgumentException or
+    OverflowException)
+```
+
+The runtime policy is unchanged: unsupported image files remain diagnostics and
+do not terminate the appraisal pretest.
 
 ## Accepted checkpoint
 
@@ -97,7 +117,7 @@ TapAppraise
 SwipeNextPokemon
 ```
 
-Version 0.14.2 adds no phone input action.
+Version 0.14.3 adds no phone input action.
 
 ## What the iPhone images now provide
 

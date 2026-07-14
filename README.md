@@ -1,6 +1,6 @@
 # Pogo Inventory Assistant
 
-Version 0.14.2
+Version 0.14.3
 
 Pogo Inventory Assistant is a local tool for building a complete Pokémon GO inventory, analysing it and later applying safe batch tags. Final transfer remains manual.
 
