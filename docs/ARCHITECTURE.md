@@ -288,3 +288,9 @@ out/iphone-region-discovery/*
 
 The region layer depends on the image pretest and vision layers only. It does not depend on ADB, automation, Calcy or inventory decisions. Candidate labels describe measured visual behaviour and are not semantic Pokémon field recognition.
 
+## Version 0.11.1: CLI namespace correction
+
+The CLI imports the `PogoInventory.RegionDiscovery.Models` and
+`PogoInventory.RegionDiscovery.Services` namespaces explicitly. This corrects
+the compile failure in the command-line integration without changing the
+region-discovery algorithm, reports, input boundary or safety model.

@@ -26,6 +26,8 @@ using PogoInventory.ImagePretest.Services;
 using PogoInventory.Observations.Models;
 using PogoInventory.Observations.Parsing;
 using PogoInventory.Observations.Providers;
+using PogoInventory.RegionDiscovery.Models;
+using PogoInventory.RegionDiscovery.Services;
 using PogoInventory.Vision.Errors;
 using PogoInventory.Vision.Imaging;
 using PogoInventory.Vision.Models;

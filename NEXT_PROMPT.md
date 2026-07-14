@@ -1,6 +1,6 @@
 # Continuation prompt
 
-Use this text with the latest repository after version 0.11.0 is green.
+Use this text with the latest repository after version 0.11.1 is green.
 
 ---
 
@@ -8,7 +8,7 @@ I am building Pogo Inventory Assistant in C# and .NET 8.
 
 Open and inspect the repository before changing anything. Treat `PROJECT_STATE.md` as the source of truth. Read `docs/GUARDRAILS.md`, `docs/IPHONE_IMAGE_PRETEST.md`, `docs/IPHONE_VISUAL_REGION_DISCOVERY.md`, `docs/CALCY_PROVIDER_VERIFICATION.md` and `docs/AUTOMATIC_NAVIGATION.md`.
 
-Current version: 0.11.0.
+Current version: 0.11.1.
 
 Accepted before this task:
 

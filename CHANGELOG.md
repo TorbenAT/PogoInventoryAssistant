@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.11.1
+
+- Fixed the CLI build by importing the RegionDiscovery Models and Services namespaces.
+- Kept the existing project reference, algorithms, reports and 91-test expectation unchanged.
+- Added static release validation for the required CLI imports and project reference.
+- Added no phone input action and made no change to image-analysis thresholds.
+
 ## 0.11.0
 
 - Added deterministic visual-region discovery over the committed iPhone screenshots.

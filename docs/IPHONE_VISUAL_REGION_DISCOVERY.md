@@ -1,6 +1,6 @@
 # iPhone visual region discovery
 
-Version 0.11.0 turns the accepted iPhone screenshot pretest into a deterministic visual-region analysis.
+Version 0.11.1 turns the accepted iPhone screenshot pretest into a deterministic visual-region analysis.
 
 The command does not perform OCR and does not claim that any area contains a particular Pokémon field. It measures how normalised screen regions behave across the decoded screenshots and their automatically discovered visual clusters.
 

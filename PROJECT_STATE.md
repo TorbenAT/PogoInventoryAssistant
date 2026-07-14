@@ -2,7 +2,17 @@
 
 ## Current version
 
-0.11.0
+0.11.1
+
+## Build correction in 0.11.1
+
+GitHub Actions compiled the new `PogoInventory.RegionDiscovery` project but the
+CLI failed with CS0246/CS0103 because `Program.cs` lacked the explicit
+`PogoInventory.RegionDiscovery.Models` and
+`PogoInventory.RegionDiscovery.Services` imports.
+
+Version 0.11.1 adds those two imports. The project reference was already
+present and no algorithm or phone-action boundary changed.
 
 ## Accepted checkpoint
 
@@ -73,7 +83,7 @@ New `PogoInventory.RegionDiscovery` project:
 - CI execution against the committed iPhone screenshots
 - 91 expected self-tests
 
-All candidate meanings are provisional. Version 0.11.0 does not perform OCR and does not claim species, CP or IV extraction.
+All candidate meanings are provisional. Version 0.11.1 does not perform OCR and does not claim species, CP or IV extraction.
 
 ## Input boundary
 
@@ -84,7 +94,7 @@ TapAppraise
 SwipeNextPokemon
 ```
 
-Version 0.11.0 adds no phone input action.
+Version 0.11.1 adds no phone input action.
 
 ## Not completed
 
@@ -122,7 +132,7 @@ Use the real region report to build an automatic crop atlas and cluster explanat
 - determine whether the current images contain enough detail for name, CP and appraisal-bar experiments
 - add OCR or IV-bar interpretation only after the crop evidence supports it
 
-No additional screenshots are required before the 0.11.0 real report is inspected. More images should be requested only for a specific missing state or weak candidate region.
+No additional screenshots are required before the 0.11.1 real report is inspected. More images should be requested only for a specific missing state or weak candidate region.
 
 ## Design decisions preserved
 

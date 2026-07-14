@@ -2,7 +2,7 @@
 
 ## Version
 
-0.11.0
+0.11.1
 
 ## Accepted prior result
 
@@ -20,7 +20,7 @@ zero near duplicates
 
 ## New implementation
 
-Version 0.11.0 adds a deterministic visual-region discovery layer.
+Version 0.11.1 adds a deterministic visual-region discovery layer.
 
 For each cell in a configurable normalised grid it calculates:
 
@@ -71,4 +71,21 @@ A green result proves deterministic localisation of stable, changing and cluster
 
 It does not prove OCR, IV-bar interpretation, Android coordinates, Calcy overlay extraction or complete Pokémon observations.
 
-No additional images should be requested until the real 0.11.0 region and cluster reports have been inspected.
+No additional images should be requested until the real 0.11.1 region and cluster reports have been inspected.
+
+## 0.11.1 compile correction
+
+The GitHub build proved that the new RegionDiscovery library itself compiled.
+The four failures were isolated to unresolved symbols in the CLI integration.
+
+Static checks for this patch confirm:
+
+- the CLI project references `PogoInventory.RegionDiscovery`
+- `Program.cs` imports `PogoInventory.RegionDiscovery.Models`
+- `Program.cs` imports `PogoInventory.RegionDiscovery.Services`
+- all four previously unresolved types exist and are public
+- the declared self-test count remains 91
+
+The preparation environment does not contain the .NET SDK, so GitHub Actions
+remains the authoritative compilation and execution check.
+
