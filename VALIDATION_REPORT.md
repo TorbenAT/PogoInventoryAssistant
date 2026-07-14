@@ -2,44 +2,53 @@
 
 ## Version
 
-0.9.0
+0.10.0
 
-## Accepted input
+## Accepted prior checkpoint
 
-Torben reported that version 0.8.0 is fully green in GitHub Actions.
+Torben reported version 0.9.0 fully green in GitHub Actions with 78 self-tests and the synthetic provider verification gate passing.
 
-## Environment limitation
+## Real screenshot input
 
-The packaging environment does not contain the .NET SDK or ADB. GitHub Actions remains the authoritative compile and runtime validation.
+The latest repository commit lists 24 PNG files under `data/iphone-images`, from `IMG_7681.png` through `IMG_7705.png` with `IMG_7695.png` absent.
+
+The preparation environment cannot download the binary GitHub files directly into the local build tree. The release therefore adds deterministic processing code and a CI step that runs against the screenshots already committed in Torben's repository.
 
 ## Static validation completed
 
-- complete 0.8.0 repository unpacked
-- new Verification project added to the solution
+- new `PogoInventory.ImagePretest` project created
+- project added to the solution
 - CLI and self-test project references added
-- all JSON files parsed successfully
-- all project XML files parsed successfully
-- all project references resolve
-- all C# files parsed with the tree-sitter C# grammar
-- no syntax-error nodes found
-- 78 self-test declarations counted
-- synthetic twenty-case verification manifest parsed
-- ZIP contains no `bin`, `obj`, `.git` or local real evidence
-- no new Android input interface or action added
+- `image-pretest` command added
+- PowerShell runner added
+- conditional GitHub Actions pretest added
+- output reports contain metadata and hashes, not copied screenshots
+- all 180 C# files parsed without syntax errors using the tree-sitter C# grammar
+- all 11 JSON files parsed successfully
+- all 12 project XML files parsed successfully
+- every project reference resolves and every project is present in the solution
+- GitHub Actions YAML parsed successfully
+- six new self-tests declared
+- expected self-test total is 84
+- no new ADB write operation or phone input action added
+- no screenshot source file is modified
 
-## Expected CI validation
+## Expected GitHub Actions validation
 
 GitHub Actions must:
 
-1. restore and build all eleven projects with warnings as errors
-2. run 78 self-tests
-3. retain all existing analysis, device, navigation, calibration and Calcy probe checks
-4. parse twenty synthetic raw evidence files
-5. report twenty `ExactComplete` results
-6. report zero `WrongComplete` results
-7. recommend the synthetic provider for long scan
-8. create a provider selection with verification and parser SHA-256 hashes
+1. restore and build all 12 projects
+2. run all 84 self-tests
+3. complete all existing synthetic navigation, calibration, Calcy and verification checks
+4. find at least 20 committed iPhone PNG files
+5. decode every committed iPhone PNG
+6. confirm every committed screenshot is portrait
+7. create `iphone-image-pretest.json`
+8. create `iphone-image-pretest.md`
+9. create `iphone-images.csv`
+10. create `iphone-similarity.csv`
+11. upload all reports in the existing validation artifact
 
 ## Release gate
 
-Do not enable a real provider for a long scan until real phone evidence passes the same verification gate.
+Do not treat the iPhone images as proof of Android navigation or Calcy extraction. Use them only as cross-platform visual fixtures until the fixed Android phone is available.

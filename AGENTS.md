@@ -17,11 +17,13 @@ Read these files before changing code:
 - A future delete tag requires Exact identity and a documented reason.
 - All ADB process execution belongs inside `PogoInventory.Device`.
 - Do not expose arbitrary shell execution to any higher layer.
-- Version 0.9.0 permits only the named tap and swipe actions defined in `docs/GUARDRAILS.md`.
+- Version 0.10.0 permits only the named tap and swipe actions defined in `docs/GUARDRAILS.md`.
 - Every input action requires a validated profile, expected state, post-action state check, timeout and audit record.
 - No manual screenshot approval is required in the automatic local scan path.
 - Preserve fake transports, synthetic fixtures and package-free self-tests.
-- Real screenshots, device serials, profiles, checkpoints and inventory data stay under ignored local paths.
+- Treat `data/iphone-images` as non-destructive cross-platform fixtures. Never rewrite or delete source screenshots.
+- iPhone pretest results must not be represented as proof of Android coordinates, ADB timing or Calcy output.
+- Real Android screenshots, device serials, profiles, checkpoints and inventory data stay under ignored local paths. Explicitly committed iPhone pretest fixtures are the only current exception.
 - Every milestone updates `CHANGELOG.md`, `PROJECT_STATE.md`, `NEXT_PROMPT.md`, architecture and validation documentation.
 
 ## Required validation
@@ -37,6 +39,7 @@ Run:
 .\scripts\run-fake-inventory-scan.ps1
 .\scripts\run-fake-calcy-probe.ps1
 .\scripts\run-fake-calcy-live-check.ps1
+.\scripts\run-iphone-image-pretest.ps1
 .\scripts\parse-synthetic-calcy-output.ps1
 .\scripts\detect-synthetic-screen.ps1
 .\scripts\build-synthetic-calibration-profile.ps1

@@ -7,7 +7,7 @@ out/
 *.suo
 *.zip
 
-# Real device and inventory data must stay local, especially while the repository is public.
+# Real Android device and inventory data must stay local. Explicitly committed iPhone pretest fixtures are handled separately.
 captures/
 local-data/
 private/

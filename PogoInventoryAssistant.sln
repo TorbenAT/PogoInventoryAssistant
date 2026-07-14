@@ -14,6 +14,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PogoInventory.Core", "src\P
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PogoInventory.Device", "src\PogoInventory.Device\PogoInventory.Device.csproj", "{C67A1E56-00B2-4D20-9A58-4517070EEA12}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PogoInventory.ImagePretest", "src\PogoInventory.ImagePretest\PogoInventory.ImagePretest.csproj", "{F2E7A83D-52A1-4DB8-9A0F-3DDECC0E1001}"
+EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PogoInventory.Observations", "src\PogoInventory.Observations\PogoInventory.Observations.csproj", "{6C54D35F-34B7-4B19-9A9E-9850E554BC70}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PogoInventory.Verification", "src\PogoInventory.Verification\PogoInventory.Verification.csproj", "{B8C1A4D0-4E3B-43CB-A537-2E80D47E9F11}"
@@ -50,6 +52,10 @@ Global
 		{C67A1E56-00B2-4D20-9A58-4517070EEA12}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{C67A1E56-00B2-4D20-9A58-4517070EEA12}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{C67A1E56-00B2-4D20-9A58-4517070EEA12}.Release|Any CPU.Build.0 = Release|Any CPU
+		{F2E7A83D-52A1-4DB8-9A0F-3DDECC0E1001}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{F2E7A83D-52A1-4DB8-9A0F-3DDECC0E1001}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{F2E7A83D-52A1-4DB8-9A0F-3DDECC0E1001}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{F2E7A83D-52A1-4DB8-9A0F-3DDECC0E1001}.Release|Any CPU.Build.0 = Release|Any CPU
 		{6C54D35F-34B7-4B19-9A9E-9850E554BC70}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{6C54D35F-34B7-4B19-9A9E-9850E554BC70}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{6C54D35F-34B7-4B19-9A9E-9850E554BC70}.Release|Any CPU.ActiveCfg = Release|Any CPU

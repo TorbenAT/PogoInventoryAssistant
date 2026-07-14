@@ -194,6 +194,26 @@ jobs:
           --profile .\out\calibration\screen-profile.generated.json
           --out .\out\calibration\acceptance
 
+
+      - name: Run committed iPhone image pretest
+        if: ${{ hashFiles('data/iphone-images/*.png') != '' }}
+        run: >-
+          dotnet run --project .\src\PogoInventory.Cli --configuration Release --no-build --
+          image-pretest
+          --input .\data\iphone-images
+          --out .\out\iphone-image-pretest
+          --min-images 20
+
+      - name: Verify committed iPhone image pretest
+        if: ${{ hashFiles('data/iphone-images/*.png') != '' }}
+        shell: pwsh
+        run: |
+          $report = Get-Content .\out\iphone-image-pretest\iphone-image-pretest.json -Raw | ConvertFrom-Json
+          if (-not $report.accepted) { throw "The committed iPhone screenshot pretest was rejected." }
+          if ($report.imageCount -lt 20) { throw "Expected at least twenty iPhone screenshots." }
+          if ($report.failedCount -ne 0) { throw "Every committed iPhone screenshot must decode." }
+          if ($report.portraitCount -ne $report.imageCount) { throw "Every committed iPhone screenshot must be portrait." }
+
       - name: Upload validation output
         if: always()
         uses: actions/upload-artifact@v4

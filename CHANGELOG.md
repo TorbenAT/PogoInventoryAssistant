@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.10.0
+
+- Added the `PogoInventory.ImagePretest` project.
+- Added deterministic indexing of committed iPhone PNG screenshots.
+- Added package-free decode, geometry, orientation, file SHA-256 and visual fingerprint checks.
+- Added all-pairs similarity, exact duplicate, near-duplicate and deterministic clustering reports.
+- Added JSON, Markdown and CSV output without copying source screenshots.
+- Added the `image-pretest` CLI command and PowerShell runner.
+- Added a conditional GitHub Actions gate over `data/iphone-images/*.png`.
+- Added six self-tests, bringing the expected total to 84.
+- Added no new phone input action and made no Android or Calcy claim from iPhone data.
+
 ## 0.9.0
 
 - Added the local Calcy provider verification workspace and evidence-ingestion runner.

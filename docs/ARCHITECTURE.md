@@ -237,3 +237,30 @@ PogoInventory.Observations
 The live check composes the existing `InventoryAutomationRunner` with `CalcyProbeRunner`. It does not add a new phone input action.
 
 The parser is deliberately separated from the source mechanism. A real source may later be logcat, another local text surface or visual overlay extraction. Only the mechanism proven on the fixed phone may be enabled.
+
+
+## Version 0.9.0: provider verification gate
+
+`PogoInventory.Verification` owns expected-versus-observed comparison, evidence hashing and the zero-false-Complete gate. A production provider selection is locked to the exact verification report and parser profile hashes.
+
+## Version 0.10.0: cross-platform image pretest
+
+```text
+data/iphone-images/*.png
+        │
+        ▼
+PogoInventory.ImagePretest
+  package-free PNG decode
+  geometry and orientation inventory
+  SHA-256 and normalised fingerprints
+  pairwise similarity and clustering
+        │
+        ▼
+out/iphone-image-pretest/*
+```
+
+The image-pretest layer depends only on `PogoInventory.Vision`. It has no ADB, automation, Calcy or inventory-rule dependency.
+
+The layer never modifies or copies its source screenshots. It produces metadata, hashes, similarities and cluster membership only.
+
+An accepted iPhone pretest proves that real screenshots can pass through the visual plumbing. It does not validate Android coordinates, Android timing or Calcy extraction.

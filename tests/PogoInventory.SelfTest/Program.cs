@@ -19,6 +19,8 @@ using PogoInventory.Device.Adb;
 using PogoInventory.Device.Errors;
 using PogoInventory.Device.Models;
 using PogoInventory.Device.Transport;
+using PogoInventory.ImagePretest.Models;
+using PogoInventory.ImagePretest.Services;
 using PogoInventory.Observations.Models;
 using PogoInventory.Observations.Parsing;
 using PogoInventory.Observations.Providers;
@@ -110,7 +112,13 @@ var tests = new (string Name, Func<Task> Run)[]
     ("Incorrect incomplete observation blocks recommendation", IncorrectIncompleteBlocksRecommendationAsync),
     ("Missing verification evidence is reported", MissingVerificationEvidenceIsReportedAsync),
     ("Provider selection locks verification hashes", ProviderSelectionLocksHashesAsync),
-    ("Provider selection refuses rejected report", ProviderSelectionRefusesRejectedReportAsync)
+    ("Provider selection refuses rejected report", ProviderSelectionRefusesRejectedReportAsync),
+    ("Image pretest accepts diverse portrait PNGs", ImagePretestAcceptsDiversePortraitPngsAsync),
+    ("Image pretest detects exact duplicates", ImagePretestDetectsExactDuplicatesAsync),
+    ("Image pretest rejects insufficient image count", ImagePretestRejectsInsufficientCountAsync),
+    ("Image pretest rejects landscape screenshots", ImagePretestRejectsLandscapeAsync),
+    ("Image pretest writes all reports", ImagePretestWritesReportsAsync),
+    ("Image pretest ignores non-PNG files", ImagePretestIgnoresNonPngFilesAsync)
 };
 
 var failed = 0;
@@ -1887,6 +1895,167 @@ static async Task<CalcyObservation> RunOneItemWithProviderAsync(
     {
         DeleteDirectory(directory);
     }
+}
+
+
+static async Task ImagePretestAcceptsDiversePortraitPngsAsync()
+{
+    var directory = CreateTemporaryDirectory();
+    try
+    {
+        CopyPretestFixture(directory, "InventoryList.png", "IMG_0001.png");
+        CopyPretestFixture(directory, "PokemonDetails.png", "IMG_0002.png");
+        CopyPretestFixture(directory, "AppraisalOpen.png", "IMG_0003.png");
+
+        var report = await ImagePretestRunner.RunAsync(
+            directory,
+            new ImagePretestOptions { MinimumImageCount = 3 });
+
+        AssertTrue(report.Accepted, "diverse portrait screenshot set should pass");
+        AssertEqual(3, report.ImageCount, "pretest image count");
+        AssertEqual(3, report.DecodedCount, "pretest decoded count");
+        AssertEqual(3, report.PortraitCount, "pretest portrait count");
+        AssertTrue(report.ClusterCount >= 1, "pretest should create visual clusters");
+    }
+    finally
+    {
+        DeleteDirectory(directory);
+    }
+}
+
+static async Task ImagePretestDetectsExactDuplicatesAsync()
+{
+    var directory = CreateTemporaryDirectory();
+    try
+    {
+        CopyPretestFixture(directory, "InventoryList.png", "IMG_0001.png");
+        CopyPretestFixture(directory, "InventoryList.png", "IMG_0002.png");
+
+        var report = await ImagePretestRunner.RunAsync(
+            directory,
+            new ImagePretestOptions { MinimumImageCount = 2 });
+
+        AssertEqual(1, report.ExactDuplicatePairCount, "exact duplicate pair count");
+        AssertEqual(1, report.DistinctFileHashCount, "distinct duplicate hash count");
+        AssertTrue(!report.Accepted, "all-identical screenshot set should not pass");
+    }
+    finally
+    {
+        DeleteDirectory(directory);
+    }
+}
+
+static async Task ImagePretestRejectsInsufficientCountAsync()
+{
+    var directory = CreateTemporaryDirectory();
+    try
+    {
+        CopyPretestFixture(directory, "InventoryList.png", "IMG_0001.png");
+        CopyPretestFixture(directory, "PokemonDetails.png", "IMG_0002.png");
+
+        var report = await ImagePretestRunner.RunAsync(
+            directory,
+            new ImagePretestOptions { MinimumImageCount = 3 });
+
+        AssertTrue(!report.Accepted, "insufficient screenshot count should fail gate");
+        AssertTrue(
+            report.GateDetail.Contains("at least 3", StringComparison.Ordinal),
+            "insufficient gate should explain minimum count");
+    }
+    finally
+    {
+        DeleteDirectory(directory);
+    }
+}
+
+static async Task ImagePretestRejectsLandscapeAsync()
+{
+    var directory = CreateTemporaryDirectory();
+    try
+    {
+        CopyPretestFixture(directory, "InventoryList.png", "IMG_0001.png");
+        CopyPretestFixture(directory, "Landscape.png", "IMG_0002.png");
+
+        var report = await ImagePretestRunner.RunAsync(
+            directory,
+            new ImagePretestOptions { MinimumImageCount = 2 });
+
+        AssertTrue(!report.Accepted, "landscape screenshot should fail gate");
+        AssertEqual(1, report.LandscapeCount, "landscape screenshot count");
+    }
+    finally
+    {
+        DeleteDirectory(directory);
+    }
+}
+
+static async Task ImagePretestWritesReportsAsync()
+{
+    var directory = CreateTemporaryDirectory();
+    try
+    {
+        var input = Path.Combine(directory, "input");
+        var output = Path.Combine(directory, "output");
+        Directory.CreateDirectory(input);
+        CopyPretestFixture(input, "InventoryList.png", "IMG_0001.png");
+        CopyPretestFixture(input, "PokemonDetails.png", "IMG_0002.png");
+
+        var report = await ImagePretestRunner.RunAsync(
+            input,
+            new ImagePretestOptions { MinimumImageCount = 2 });
+        await ImagePretestReportWriter.WriteAsync(report, output);
+
+        AssertTrue(
+            File.Exists(Path.Combine(output, "iphone-image-pretest.json")),
+            "pretest JSON report should exist");
+        AssertTrue(
+            File.Exists(Path.Combine(output, "iphone-image-pretest.md")),
+            "pretest Markdown report should exist");
+        AssertTrue(
+            File.Exists(Path.Combine(output, "iphone-images.csv")),
+            "pretest image CSV should exist");
+        AssertTrue(
+            File.Exists(Path.Combine(output, "iphone-similarity.csv")),
+            "pretest similarity CSV should exist");
+    }
+    finally
+    {
+        DeleteDirectory(directory);
+    }
+}
+
+static async Task ImagePretestIgnoresNonPngFilesAsync()
+{
+    var directory = CreateTemporaryDirectory();
+    try
+    {
+        CopyPretestFixture(directory, "InventoryList.png", "IMG_0001.png");
+        CopyPretestFixture(directory, "PokemonDetails.png", "IMG_0002.PNG");
+        await File.WriteAllTextAsync(Path.Combine(directory, "notes.txt"), "not an image");
+
+        var report = await ImagePretestRunner.RunAsync(
+            directory,
+            new ImagePretestOptions { MinimumImageCount = 2 });
+
+        AssertEqual(2, report.ImageCount, "non-PNG files should be ignored");
+        AssertTrue(report.Accepted, "two distinct PNG screenshots should pass");
+    }
+    finally
+    {
+        DeleteDirectory(directory);
+    }
+}
+
+static void CopyPretestFixture(
+    string targetDirectory,
+    string sourceFixture,
+    string targetFileName)
+{
+    Directory.CreateDirectory(targetDirectory);
+    File.Copy(
+        RepositoryPath("data", "screen-fixtures", sourceFixture),
+        Path.Combine(targetDirectory, targetFileName),
+        overwrite: true);
 }
 
 static ScriptedAndroidAutomationTransport CreateScriptedAutomationTransport()

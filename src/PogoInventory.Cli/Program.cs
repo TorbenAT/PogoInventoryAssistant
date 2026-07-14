@@ -21,6 +21,8 @@ using PogoInventory.Device.Adb;
 using PogoInventory.Device.Errors;
 using PogoInventory.Device.Logging;
 using PogoInventory.Device.Transport;
+using PogoInventory.ImagePretest.Models;
+using PogoInventory.ImagePretest.Services;
 using PogoInventory.Observations.Models;
 using PogoInventory.Observations.Parsing;
 using PogoInventory.Observations.Providers;
@@ -78,6 +80,9 @@ static async Task<int> MainAsync(string[] args)
                 args.Skip(1).ToArray(),
                 cancellationSource.Token),
             "calcy-provider-select" => await SelectCalcyProviderAsync(
+                args.Skip(1).ToArray(),
+                cancellationSource.Token),
+            "image-pretest" => await RunImagePretestAsync(
                 args.Skip(1).ToArray(),
                 cancellationSource.Token),
             "device-snapshot" => await CaptureDeviceSnapshotAsync(
@@ -567,6 +572,45 @@ static async Task<int> SelectCalcyProviderAsync(
     Console.WriteLine($"Exact rate: {selection.ExactCompleteRate:P1}");
     Console.WriteLine($"Output: {Path.GetFullPath(Require(options, "out"))}");
     return 0;
+}
+
+
+static async Task<int> RunImagePretestAsync(
+    string[] args,
+    CancellationToken cancellationToken)
+{
+    var options = ParseOptions(args);
+    var inputDirectory = Require(options, "input");
+    var outputDirectory = Require(options, "out");
+    var pretestOptions = new ImagePretestOptions
+    {
+        MinimumImageCount = ParsePositiveInt(options, "min-images", 20),
+        NearDuplicateThreshold = ParseUnitDouble(
+            options,
+            "near-duplicate-threshold",
+            0.995),
+        ClusterThreshold = ParseUnitDouble(
+            options,
+            "cluster-threshold",
+            0.925)
+    };
+
+    var report = await ImagePretestRunner.RunAsync(
+        inputDirectory,
+        pretestOptions,
+        cancellationToken);
+    await ImagePretestReportWriter.WriteAsync(
+        report,
+        outputDirectory,
+        cancellationToken);
+
+    Console.WriteLine($"iPhone image pretest: {report.DecodedCount}/{report.ImageCount} decoded.");
+    Console.WriteLine($"Geometry groups: {report.GeometryGroupCount}.");
+    Console.WriteLine($"Visual clusters: {report.ClusterCount}.");
+    Console.WriteLine($"Exact duplicates: {report.ExactDuplicatePairCount}.");
+    Console.WriteLine($"Near duplicates: {report.NearDuplicatePairCount}.");
+    Console.WriteLine(report.GateDetail);
+    return report.Accepted ? 0 : 1;
 }
 
 static async Task<int> CaptureDeviceSnapshotAsync(
@@ -1222,6 +1266,31 @@ static int ParseNonNegativeInt(
     return value;
 }
 
+
+static double ParseUnitDouble(
+    IReadOnlyDictionary<string, string> options,
+    string key,
+    double defaultValue)
+{
+    if (!options.TryGetValue(key, out var raw))
+    {
+        return defaultValue;
+    }
+
+    if (!double.TryParse(
+            raw,
+            NumberStyles.Float,
+            CultureInfo.InvariantCulture,
+            out var value) ||
+        !double.IsFinite(value) ||
+        value is < 0 or > 1)
+    {
+        throw new ArgumentException($"--{key} must be a number between 0 and 1.");
+    }
+
+    return value;
+}
+
 static NormalizedRegion ParseRegion(string value)
 {
     var parts = value.Split(',', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries);
@@ -1379,6 +1448,9 @@ static void PrintHelp()
     Console.WriteLine("                        --mechanism <PidWindowedLogcat|LocalText|VisualOverlay>");
     Console.WriteLine("                        --version <version> --out <selection.json>");
     Console.WriteLine("                        [--parser-profile <parser.json>]");
+    Console.WriteLine();
+    Console.WriteLine("  image-pretest --input <directory> --out <directory> [--min-images <n>]");
+    Console.WriteLine("                [--near-duplicate-threshold <0..1>] [--cluster-threshold <0..1>]");
     Console.WriteLine();
     Console.WriteLine("  device-snapshot --out <directory> [--adb <adb.exe>] [--serial <serial>] [--timeout-seconds <n>]");
     Console.WriteLine("  device-snapshot --fake --out <directory>");

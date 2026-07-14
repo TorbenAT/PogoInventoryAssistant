@@ -1,10 +1,32 @@
 # Pogo Inventory Assistant
 
-Version 0.9.0
+Version 0.10.0
 
 Pogo Inventory Assistant is a local tool for building a complete Pokémon GO inventory, analysing it and later applying safe batch tags. Final transfer remains manual.
 
-Version 0.9.0 adds the local evidence-ingestion and verification gate required before a real Calcy provider can be enabled for a long scan.
+Version 0.10.0 adds an automatic pretest for the real iPhone Pokémon GO screenshots committed under `data/iphone-images`. The pretest validates decoding, geometry, hashing, visual similarity and clustering before the fixed Android phone is available.
+
+
+## iPhone screenshot pretest
+
+The committed iPhone screenshots can be processed without labels or manual approval:
+
+```powershell
+.\scripts\run-iphone-image-pretest.ps1
+```
+
+The pretest writes:
+
+```text
+out/iphone-image-pretest/iphone-image-pretest.json
+out/iphone-image-pretest/iphone-image-pretest.md
+out/iphone-image-pretest/iphone-images.csv
+out/iphone-image-pretest/iphone-similarity.csv
+```
+
+It checks that at least 20 PNG screenshots decode, remain portrait and contain at least two distinct images. It also reports exact duplicates, near duplicates and visual clusters. It never modifies or copies the source screenshots.
+
+This is a cross-platform image-pipeline test. It does not validate Android ADB navigation or Calcy output.
 
 ## What works now
 
@@ -162,7 +184,7 @@ Do not provide a parser profile on the first real run. First inspect which outpu
 
 ## Current real-device limitation
 
-Version 0.9.0 can verify a proven candidate mechanism across at least 20 local cases. It still does not claim that a real mechanism works until evidence from the fixed Android phone passes the gate.
+Version 0.10.0 can verify a proven candidate mechanism across at least 20 local cases. It still does not claim that a real mechanism works until evidence from the fixed Android phone passes the gate.
 
 The next implementation must be selected from the real local evidence:
 

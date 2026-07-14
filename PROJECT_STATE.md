@@ -2,13 +2,15 @@
 
 ## Current version
 
-0.9.0
+0.10.0
 
 ## Accepted checkpoint
 
-Torben reported that version 0.8.0 is fully green in GitHub Actions.
+Torben reported that version 0.9.0 is fully green in GitHub Actions.
 
-Version 0.9.0 implements the evidence-ingestion and verification gate for M4 phase 3. Real phone evidence is still required before a production Calcy provider can be selected.
+Torben then committed 24 uncropped iPhone screenshots under `data/iphone-images` in commit `d83a3f5f8010a1fc301830176007dbe010a397ce`.
+
+Version 0.10.0 uses those screenshots for an automatic cross-platform image pretest while the fixed Android phone and Windows PC are unavailable.
 
 ## Completed
 
@@ -20,7 +22,7 @@ Version 0.9.0 implements the evidence-ingestion and verification gate for M4 pha
 - automatic inventory navigation with only four named actions
 - local evidence, checkpoints and safe resume
 
-### M4 phase 1 and 2
+### M4 phases 1 to 3
 
 - automatic core-profile bootstrap
 - structured nullable Calcy observations
@@ -28,24 +30,23 @@ Version 0.9.0 implements the evidence-ingestion and verification gate for M4 pha
 - package, process, accessibility, app-ops, service and log probe
 - automatic one-Pokémon live check
 - profile-driven raw-text parser
+- twenty-case Calcy provider verification gate
+- zero-false-Complete gate and provider hash locking
 
-### M4 phase 3 verification harness
+### M4 phase 4a: iPhone image pretest
 
-New `PogoInventory.Verification` project:
+New `PogoInventory.ImagePretest` project:
 
-- local verification workspace with 20 or more cases
-- raw evidence or parsed observation ingestion
-- strict evidence-root path containment
-- SHA-256 hashes for every evidence file
-- expected-versus-observed identity, CP and IV comparison
-- `ExactComplete`, `SafeIncomplete`, `IncorrectIncomplete`, `WrongComplete`, `Conflicting`, `Failed`, `Unavailable` and `InvalidEvidence`
-- separate zero-false-Complete safety gate
-- configurable exact Complete rate, default 95 percent
-- provider selection refused unless the long-scan gate passes
-- provider selection locked to report and parser hashes
+- deterministic PNG enumeration
+- package-free decoding of real iPhone screenshots
+- geometry, orientation, length and SHA-256 inventory
+- combined grayscale and edge fingerprints
+- all-pairs visual similarity
+- exact and near-duplicate detection
+- deterministic visual clustering
 - JSON, Markdown and CSV reports
-- synthetic twenty-case CI verification
-- 78 self-tests
+- CI gate over committed `data/iphone-images/*.png`
+- six new self-tests, bringing the expected total to 84
 
 ## Input boundary
 
@@ -56,45 +57,44 @@ TapAppraise
 SwipeNextPokemon
 ```
 
-No new phone input action was added in 0.9.0.
+Version 0.10.0 adds no phone input action.
 
-## Not completed
+## What the iPhone pretest proves
 
-- real-phone Calcy probe and live-check evidence
-- proof of PID-windowed logcat, local text or visual overlay extraction
-- production real `ICalcyObservationProvider`
-- automated twenty-case evidence collection from the real phone
-- move, date, size, nickname and special-status extraction
-- SQLite inventory database
-- exact identity across independent runs
-- PvPoke and Ohbem integration
-- real decision plan and automatic tagging
-- transfer remains manual and is not implemented
+A green run proves that the real screenshots decode and can be normalised, fingerprinted, compared, clustered and reported by the current image pipeline.
+
+## What it does not prove
+
+- ADB connectivity
+- Android control-point coordinates
+- Android timing and animation waits
+- Calcy package output
+- Calcy overlay extraction
+- Android end-of-inventory detection
 
 ## Required checkpoint after push
 
-1. Build version 0.9.0.
-2. Confirm 78 of 78 self-tests pass.
-3. Confirm twenty synthetic cases are `ExactComplete`.
-4. Confirm zero `WrongComplete` observations.
-5. Confirm the synthetic provider is recommended for long scan.
-6. Confirm provider selection contains verification and parser hashes.
-7. Confirm all existing navigation, probe and calibration workflows remain green.
-8. Confirm no new phone input action exists.
+1. Build all 12 projects.
+2. Confirm 84 of 84 self-tests pass.
+3. Confirm the committed iPhone image pretest runs automatically.
+4. Confirm at least 20 images are found.
+5. Confirm every committed PNG decodes.
+6. Confirm every committed image is portrait.
+7. Download or inspect `iphone-image-pretest.json` from the validation artifact.
+8. Preserve zero new phone input actions.
 
 ## Next recommended milestone
 
-M4 phase 4: run the real phone probe and select the actual extraction mechanism.
+Use the iPhone pretest report to identify the visual groups and stable normalised regions before the Android phone is available.
 
-Required sequence:
+When the Android phone is available:
 
-1. Run `calcy-probe` and `calcy-live-check` on the fixed Android phone.
-2. Inspect local evidence only.
-3. Choose PID-windowed logcat, another proven local text source or visual overlay extraction.
-4. Implement exactly that mechanism behind the existing provider boundary.
-5. Automate collection of 20 verification cases.
-6. Pass the 0.9.0 verification gate with zero wrong Complete observations.
-7. Only then enable the provider in a long inventory scan.
+1. run `calcy-probe`
+2. run `calcy-live-check`
+3. compare Android screenshots with the iPhone clusters
+4. select PID-windowed text or visual overlay extraction only from real evidence
+5. collect 20 real verification cases automatically
+6. pass the existing zero-wrong-Complete verification gate
 
 ## Design decisions preserved
 
@@ -105,5 +105,5 @@ Required sequence:
 - deterministic state-aware waiting
 - Unknown means stop
 - incomplete data stays incomplete
-- real data remains local and ignored by Git
+- source screenshots are never modified
 - every release updates this file and `NEXT_PROMPT.md`
