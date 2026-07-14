@@ -1,6 +1,6 @@
 # Pogo Inventory Assistant
 
-Version 0.14.1
+Version 0.14.2
 
 Pogo Inventory Assistant is a local tool for building a complete Pokémon GO inventory, analysing it and later applying safe batch tags. Final transfer remains manual.
 
@@ -259,6 +259,21 @@ With the phone manually open on an appraisal screen, run:
 This is read only. It captures one screenshot, auto-fits the three bar regions,
 and writes a local Android-adjusted profile. Candidate IV values remain
 unverified and cannot be emitted as Complete.
+
+## Known unsupported iPhone fixture
+
+`IMG_7699.png` uses a PNG bit depth that the package-free decoder does not
+support. Version 0.14.2 retains unsupported PNG files as diagnostics rather
+than terminating appraisal analysis.
+
+The file is not needed because 23 other screenshots decode successfully. To
+remove only the exact known file, run:
+
+```powershell
+.\scripts\remove-known-unsupported-iphone-fixture.ps1
+```
+
+The script verifies SHA-256 before deleting.
 
 ## Current real-device limitation
 

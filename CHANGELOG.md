@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.14.2
+
+- Fixed the appraisal pretest so `ScreenVisionException` decoder failures are retained as diagnostics instead of terminating the run.
+- Added a regression test using a synthetic unsupported 16-bit PNG.
+- Added a SHA-256-guarded script that removes the known unsupported `IMG_7699.png` fixture without risking deletion of a changed file.
+- Kept the accepted minimum based on successfully decoded images.
+- Increased the expected self-test total to 113.
+- Added no phone input action.
+
 ## 0.14.1
 
 - Fixed CS0173 in `AppraisalAnalyzer` by declaring the candidate IV variable as `int?`.

@@ -1,6 +1,6 @@
 # Continuation prompt
 
-Use this after version 0.14.1 is green.
+Use this after version 0.14.2 is green.
 
 I am building Pogo Inventory Assistant in C# and .NET 8.
 
@@ -10,7 +10,7 @@ Open the repository and read `PROJECT_STATE.md`,
 `docs/CALCY_PROVIDER_VERIFICATION.md` and
 `docs/AUTOMATIC_NAVIGATION.md`.
 
-Current version: 0.14.1.
+Current version: 0.14.2.
 
 Accepted:
 
@@ -21,9 +21,9 @@ Accepted:
 - candidate IV estimates only
 - zero Complete results from unverified profiles
 - read-only Android `phone-prepare`
-- 112 self-tests
+- 113 self-tests
 
-First verify that version 0.14.1 is green.
+First verify that version 0.14.2 is green.
 
 Next milestone when the fixed Android phone is available:
 

@@ -3,6 +3,7 @@ using System.Text.Json;
 using PogoInventory.Appraisal.Models;
 using PogoInventory.RegionDiscovery.Models;
 using PogoInventory.RegionDiscovery.Services;
+using PogoInventory.Vision.Errors;
 using PogoInventory.Vision.Imaging;
 
 namespace PogoInventory.Appraisal.Services;
@@ -118,6 +119,7 @@ public static class AppraisalPretestRunner
                 });
             }
             catch (Exception exception) when (
+                exception is ScreenVisionException or
                 exception is InvalidDataException or
                 NotSupportedException or
                 ArgumentException or

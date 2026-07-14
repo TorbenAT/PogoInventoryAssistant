@@ -336,3 +336,10 @@ measured candidate as an integer from 0 through 15. Version 0.14.1 makes that
 nullable contract explicit in the local measurement variable. No architectural
 boundary changed.
 
+## Version 0.14.2: consistent decoder diagnostics
+
+All image-analysis stages now treat `ScreenVisionException` as a recoverable
+per-file diagnostic when the surrounding acceptance gate still has enough
+decoded evidence. Unsupported files remain traceable and cannot silently
+become valid observations.
+

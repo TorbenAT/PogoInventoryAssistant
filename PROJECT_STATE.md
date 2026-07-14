@@ -2,7 +2,7 @@
 
 ## Current version
 
-0.14.1
+0.14.2
 
 ## Build correction in 0.14.1
 
@@ -16,6 +16,25 @@ nullable target type available for the conditional expression.
 Version 0.14.1 explicitly declares the variable as `int?`. The intended
 behavior is unchanged: a measured candidate IV is 0 to 15, while an
 unmeasurable bar remains null.
+
+## Decoder correction in 0.14.2
+
+The appraisal pretest initially terminated on `IMG_7699.png` because
+`PngDecoder` reports unsupported PNG variants through `ScreenVisionException`,
+while the appraisal runner only caught framework decoder exceptions.
+
+Version 0.14.2 catches `ScreenVisionException` and retains the file name,
+SHA-256, error code and error detail in the report. One unsupported image can
+therefore no longer terminate an otherwise valid 23-image fixture set.
+
+The known file can also be removed safely with:
+
+```powershell
+.\scripts\remove-known-unsupported-iphone-fixture.ps1
+```
+
+The script deletes only `IMG_7699.png` with the exact known SHA-256 and refuses
+to delete a changed file.
 
 ## Accepted checkpoint
 
@@ -67,7 +86,7 @@ Version 0.14.0 adds:
 - read-only `phone-prepare`
 - local device-adjusted profile generation
 - Android readiness report
-- 112 expected self-tests
+- 113 expected self-tests
 
 ## Input boundary
 
@@ -78,7 +97,7 @@ TapAppraise
 SwipeNextPokemon
 ```
 
-Version 0.14.1 adds no phone input action.
+Version 0.14.2 adds no phone input action.
 
 ## What the iPhone images now provide
 

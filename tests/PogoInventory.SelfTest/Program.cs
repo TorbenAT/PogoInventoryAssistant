@@ -152,6 +152,7 @@ var tests = new (string Name, Func<Task> Run)[]
     ("Verified appraisal profile can complete", Sync(VerifiedAppraisalProfileCanComplete)),
     ("Appraisal pretest writes review pack", AppraisalPretestWritesReviewPackAsync),
     ("Appraisal pretest keeps candidates in one cluster", AppraisalPretestKeepsCandidatesInOneClusterAsync),
+    ("Appraisal pretest retains unsupported PNG diagnostics", AppraisalPretestRetainsUnsupportedPngAsync),
     ("Phone preparation writes generated profile", PhonePreparationWritesGeneratedProfileAsync),
     ("Phone preparation remains read only on non appraisal screen", PhonePreparationHandlesNonAppraisalScreenAsync),
     ("Appraisal profile rejects incomplete verification metadata", Sync(AppraisalProfileRejectsIncompleteVerificationMetadata))
@@ -3018,6 +3019,72 @@ static async Task AppraisalPretestKeepsCandidatesInOneClusterAsync()
             1d,
             report.DominantCandidateClusterShare,
             "dominant appraisal cluster share");
+    }
+    finally
+    {
+        DeleteDirectory(directory);
+    }
+}
+
+
+static async Task AppraisalPretestRetainsUnsupportedPngAsync()
+{
+    var directory = CreateTemporaryDirectory();
+    try
+    {
+        var fixture = await CreateAppraisalPretestFixtureAsync(directory);
+        var unsupportedPath = Path.Combine(
+            fixture.Input,
+            "IMG_9999.png");
+        var unsupported = PngEncoder.Encode(
+            new PixelImage(
+                1,
+                1,
+                new byte[] { 255, 255, 255, 255 }));
+        unsupported[24] = 16;
+        await File.WriteAllBytesAsync(
+            unsupportedPath,
+            unsupported);
+
+        var report = await AppraisalPretestRunner.RunAsync(
+            fixture.Input,
+            fixture.ProfilePath,
+            fixture.Output,
+            new AppraisalPretestOptions
+            {
+                MinimumDecodedImages = 20,
+                MinimumCandidateImages = 5,
+                MinimumDominantClusterShare = 0.70
+            },
+            fixture.RegionReportPath);
+
+        AssertTrue(
+            report.Accepted,
+            "one unsupported PNG must not reject a strong appraisal set");
+        AssertEqual(
+            21,
+            report.ImageCount,
+            "appraisal pretest total image count");
+        AssertEqual(
+            20,
+            report.DecodedCount,
+            "appraisal pretest decoded image count");
+        var rejected = report.Images.Single(item =>
+            item.FileName.Equals(
+                "IMG_9999.png",
+                StringComparison.Ordinal));
+        AssertTrue(
+            !rejected.Decoded,
+            "unsupported PNG should remain a rejected diagnostic");
+        AssertEqual(
+            "ScreenVisionException",
+            rejected.ErrorCode,
+            "unsupported PNG error type");
+        AssertTrue(
+            rejected.ErrorDetail?.Contains(
+                "Only 8-bit PNG",
+                StringComparison.Ordinal) == true,
+            "unsupported PNG error detail");
     }
     finally
     {
