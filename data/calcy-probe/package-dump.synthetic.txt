@@ -1,0 +1,28 @@
+Activity Resolver Table:
+  Non-Data Actions:
+      android.intent.action.MAIN:
+        123abc tesmath.calcy/.MainActivity filter 123
+Service Resolver Table:
+  Non-Data Actions:
+      tesmath.calcy.SCAN:
+        456def tesmath.calcy/.ScanService filter 456
+Receiver Resolver Table:
+  Non-Data Actions:
+      android.intent.action.BOOT_COMPLETED:
+        789abc tesmath.calcy/.BootReceiver filter 789
+Packages:
+  Package [tesmath.calcy] (abc123):
+    userId=10234
+    pkg=Package{abc123 tesmath.calcy}
+    versionCode=403011 minSdk=23 targetSdk=35
+    versionName=4.3.1
+    firstInstallTime=2026-07-01 10:00:00
+    lastUpdateTime=2026-07-11 11:30:00
+    enabled=true
+    requested permissions:
+      android.permission.SYSTEM_ALERT_WINDOW
+      android.permission.FOREGROUND_SERVICE
+    install permissions:
+      android.permission.FOREGROUND_SERVICE: granted=true
+    User 0: ceDataInode=1 installed=true hidden=false suspended=false stopped=false enabled=0
+      runtime permissions:

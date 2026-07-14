@@ -8,6 +8,8 @@ using PogoInventory.Calibration.Models;
 using PogoInventory.Calibration.Reporting;
 using PogoInventory.Calibration.Services;
 using PogoInventory.Calibration.Workspace;
+using PogoInventory.CalcyProbe.Models;
+using PogoInventory.CalcyProbe.Services;
 using PogoInventory.Core.Analysis;
 using PogoInventory.Core.Models;
 using PogoInventory.Core.Policy;
@@ -17,7 +19,9 @@ using PogoInventory.Device.Errors;
 using PogoInventory.Device.Models;
 using PogoInventory.Device.Transport;
 using PogoInventory.Observations.Models;
+using PogoInventory.Observations.Parsing;
 using PogoInventory.Observations.Providers;
+using PogoInventory.Observations.Sources;
 using PogoInventory.Vision.Imaging;
 using PogoInventory.Vision.Models;
 using PogoInventory.Vision.Profiles;
@@ -37,6 +41,10 @@ var tests = new (string Name, Func<Task> Run)[]
     ("ADB metadata parsers read screen and battery", Sync(AdbMetadataParsersReadScreenAndBattery)),
     ("ADB transport uses only expected read-only commands", AdbTransportUsesExpectedCommandsAsync),
     ("ADB automation transport uses only tap and swipe commands", AdbAutomationTransportUsesExpectedCommandsAsync),
+    ("ADB app inspection uses only named read commands", AdbAppInspectionUsesExpectedCommandsAsync),
+    ("Calcy package dump parser reads metadata", Sync(CalcyPackageDumpParserReadsMetadata)),
+    ("Calcy package dump parser detects missing package", Sync(CalcyPackageDumpParserDetectsMissingPackage)),
+    ("Calcy logcat filter selects related lines", Sync(CalcyLogcatFilterSelectsRelatedLines)),
     ("Device selection rejects no authorised device", RejectsNoAuthorisedDeviceAsync),
     ("Device selection rejects multiple authorised devices", RejectsMultipleAuthorisedDevicesAsync),
     ("Requested serial selects one authorised device", RequestedSerialSelectsDeviceAsync),
@@ -83,7 +91,13 @@ var tests = new (string Name, Func<Task> Run)[]
     ("Conflicting observation stays conflicting", ConflictingObservationStaysConflictingAsync),
     ("Observation provider failure is recorded", ObservationProviderFailureIsRecordedAsync),
     ("Legacy checkpoint migrates to schema 2", Sync(LegacyCheckpointMigratesToSchema2)),
-    ("Automatic core bootstrap builds accepted profile", AutomaticCoreBootstrapBuildsAcceptedProfileAsync)
+    ("Automatic core bootstrap builds accepted profile", AutomaticCoreBootstrapBuildsAcceptedProfileAsync),
+    ("Calcy probe writes local evidence and report", CalcyProbeWritesEvidenceAsync),
+    ("Automatic Calcy live check reaches appraisal and parses output", CalcyLiveCheckNavigatesAndParsesAsync),
+    ("Calcy raw parser extracts complete observation", CalcyRawParserExtractsCompleteObservationAsync),
+    ("Calcy raw parser keeps incomplete output partial", CalcyRawParserKeepsPartialObservationAsync),
+    ("Calcy raw parser detects conflicting fields", CalcyRawParserDetectsConflictingFieldsAsync),
+    ("Profile driven provider preserves raw output", ProfileDrivenProviderPreservesRawOutputAsync)
 };
 
 var failed = 0;
@@ -1283,6 +1297,293 @@ static async Task CaptureStatusReportWritesFilesAsync()
     {
         DeleteDirectory(directory);
     }
+}
+
+static async Task AdbAppInspectionUsesExpectedCommandsAsync()
+{
+    static AdbProcessResult Text(string value) =>
+        new()
+        {
+            ExitCode = 0,
+            StandardOutput = System.Text.Encoding.UTF8.GetBytes(value),
+            StandardError = string.Empty
+        };
+
+    var runner = new RecordingAdbProcessRunner(new[]
+    {
+        Text("package dump"),
+        Text("package:/data/app/tesmath.calcy/base.apk"),
+        Text("4242"),
+        Text("logcat"),
+        Text("accessibility"),
+        Text("appops"),
+        Text("services")
+    });
+    var options = new DeviceHarnessOptions
+    {
+        CommandTimeout = TimeSpan.FromSeconds(2)
+    };
+    var transport = new AdbAndroidDeviceTransport(runner, options);
+
+    _ = await transport.ReadPackageDumpAsync("ABC", "tesmath.calcy");
+    _ = await transport.ReadPackagePathAsync("ABC", "tesmath.calcy");
+    _ = await transport.ReadProcessIdAsync("ABC", "tesmath.calcy");
+    _ = await transport.ReadRecentLogcatAsync("ABC", 250);
+    _ = await transport.ReadAccessibilityStateAsync("ABC");
+    _ = await transport.ReadAppOpsAsync("ABC", "tesmath.calcy");
+    _ = await transport.ReadActivityServicesAsync("ABC", "tesmath.calcy");
+
+    var expected = new[]
+    {
+        "-s ABC shell dumpsys package tesmath.calcy",
+        "-s ABC shell pm path tesmath.calcy",
+        "-s ABC shell pidof tesmath.calcy",
+        "-s ABC logcat -d -v threadtime -t 250",
+        "-s ABC shell dumpsys accessibility",
+        "-s ABC shell appops get tesmath.calcy",
+        "-s ABC shell dumpsys activity services tesmath.calcy"
+    };
+    var actual = runner.Commands.Select(command => string.Join(" ", command)).ToArray();
+    AssertEqual(expected.Length, actual.Length, "app inspection command count");
+    for (var index = 0; index < expected.Length; index++)
+    {
+        AssertEqual(expected[index], actual[index], $"app inspection command {index + 1}");
+    }
+}
+
+static void CalcyPackageDumpParserReadsMetadata()
+{
+    var dump = File.ReadAllText(
+        RepositoryPath("data", "calcy-probe", "package-dump.synthetic.txt"));
+    var metadata = CalcyPackageDumpParser.Parse(
+        "tesmath.calcy",
+        dump,
+        "package:/data/app/tesmath.calcy/base.apk");
+
+    AssertTrue(metadata.IsInstalled, "Calcy package should be installed");
+    AssertEqual("4.3.1", metadata.VersionName, "Calcy version name");
+    AssertEqual((long?)403011, metadata.VersionCode, "Calcy version code");
+    AssertEqual((int?)35, metadata.TargetSdk, "Calcy target SDK");
+    AssertTrue(
+        metadata.Activities.Contains("tesmath.calcy/.MainActivity", StringComparer.Ordinal),
+        "main activity should be parsed");
+    AssertTrue(
+        metadata.Services.Contains("tesmath.calcy/.ScanService", StringComparer.Ordinal),
+        "scan service should be parsed");
+    AssertTrue(
+        metadata.RequestedPermissions.Contains(
+            "android.permission.SYSTEM_ALERT_WINDOW",
+            StringComparer.Ordinal),
+        "overlay permission should be parsed");
+}
+
+static void CalcyPackageDumpParserDetectsMissingPackage()
+{
+    var metadata = CalcyPackageDumpParser.Parse(
+        "tesmath.calcy",
+        "Unable to find package: tesmath.calcy",
+        string.Empty);
+    AssertTrue(!metadata.IsInstalled, "missing package should not be marked installed");
+    AssertEqual((string?)null, metadata.VersionName, "missing package version");
+}
+
+static void CalcyLogcatFilterSelectsRelatedLines()
+{
+    var logcat = File.ReadAllText(
+        RepositoryPath("data", "calcy-probe", "logcat.synthetic.txt"));
+    var lines = CalcyLogcatFilter.Filter(logcat, "tesmath.calcy", "4242");
+    AssertEqual(2, lines.Count, "filtered Calcy log line count");
+    AssertTrue(
+        lines.Any(line => line.Contains("species=Pikachu", StringComparison.Ordinal)),
+        "filtered log should contain result line");
+}
+
+static async Task CalcyProbeWritesEvidenceAsync()
+{
+    var directory = CreateTemporaryDirectory();
+    try
+    {
+        var transport = CreateScriptedCalcyInspectionTransport();
+        var result = await new CalcyProbeRunner(transport).RunAsync(
+            directory,
+            new CalcyProbeOptions());
+
+        AssertEqual(CalcyProbeDecision.CandidateEvidenceFound, result.Report.Decision, "probe decision");
+        AssertEqual("4.3.1", result.Report.Package.VersionName, "probe version");
+        AssertEqual(2, result.Report.FilteredLogLineCount, "probe filtered lines");
+        AssertTrue(File.Exists(result.JsonReportPath), "probe JSON report should exist");
+        AssertTrue(File.Exists(result.MarkdownReportPath), "probe Markdown report should exist");
+        AssertTrue(
+            File.Exists(result.EvidenceFiles["package-dump.txt"]),
+            "package dump evidence should exist");
+        AssertTrue(
+            File.Exists(result.EvidenceFiles["screen.png"]),
+            "screenshot evidence should exist");
+    }
+    finally
+    {
+        DeleteDirectory(directory);
+    }
+}
+
+static async Task CalcyLiveCheckNavigatesAndParsesAsync()
+{
+    var directory = CreateTemporaryDirectory();
+    try
+    {
+        var automationProfile = await AutomationProfileLoader.LoadAsync(
+            RepositoryPath("data", "automation-profile.synthetic.json"));
+        var screenProfile = await LoadSyntheticProfileAsync();
+        var parserProfile = await CalcyTextParserProfileLoader.LoadAsync(
+            RepositoryPath("data", "calcy-parser-profile.synthetic.json"));
+        var automationTransport = CreateScriptedAutomationTransport();
+        var inspectionTransport = CreateScriptedCalcyInspectionTransport("FAKE-AUTO-001");
+
+        var result = await new CalcyLiveCheckRunner(
+            automationTransport,
+            inspectionTransport).RunAsync(
+                directory,
+                automationProfile,
+                screenProfile,
+                new CalcyProbeOptions(),
+                parserProfile,
+                settleTime: TimeSpan.Zero);
+
+        AssertEqual(1, result.Navigation.Checkpoint.Items.Count, "live-check navigation item count");
+        AssertEqual(CalcyObservationStatus.Complete, result.ParsedObservation?.Status, "live-check parsed status");
+        AssertEqual("Pikachu", result.ParsedObservation?.Species, "live-check parsed species");
+        AssertTrue(
+            result.ParsedObservationPath is not null && File.Exists(result.ParsedObservationPath),
+            "live-check parsed observation file should exist");
+    }
+    finally
+    {
+        DeleteDirectory(directory);
+    }
+}
+
+static async Task CalcyRawParserExtractsCompleteObservationAsync()
+{
+    var profile = await CalcyTextParserProfileLoader.LoadAsync(
+        RepositoryPath("data", "calcy-parser-profile.synthetic.json"));
+    var raw = File.ReadAllText(
+        RepositoryPath("data", "calcy-output.synthetic.txt"));
+    var observation = new CalcyRawTextParser().Parse(
+        profile,
+        Bundle(raw),
+        "SelfTestParser");
+
+    AssertEqual(CalcyObservationStatus.Complete, observation.Status, "complete parser status");
+    AssertEqual("Pikachu", observation.Species, "parsed species");
+    AssertEqual((int?)501, observation.Cp, "parsed CP");
+    AssertEqual((int?)15, observation.AttackIv, "parsed attack IV");
+    AssertEqual((int?)14, observation.DefenseIv, "parsed defense IV");
+    AssertEqual((int?)13, observation.HpIv, "parsed HP IV");
+    AssertTrue(observation.RawProviderOutputSha256 is not null, "raw output hash should exist");
+}
+
+static async Task CalcyRawParserKeepsPartialObservationAsync()
+{
+    var profile = await CalcyTextParserProfileLoader.LoadAsync(
+        RepositoryPath("data", "calcy-parser-profile.synthetic.json"));
+    var observation = new CalcyRawTextParser().Parse(
+        profile,
+        Bundle("CalcyScan: species=Wooper cp=413"),
+        "SelfTestParser");
+
+    AssertEqual(CalcyObservationStatus.Partial, observation.Status, "partial parser status");
+    AssertEqual("Wooper", observation.Species, "partial species");
+    AssertEqual((int?)null, observation.AttackIv, "partial attack IV");
+}
+
+static async Task CalcyRawParserDetectsConflictingFieldsAsync()
+{
+    var profile = await CalcyTextParserProfileLoader.LoadAsync(
+        RepositoryPath("data", "calcy-parser-profile.synthetic.json"));
+    var raw = "CalcyScan: species=Pikachu cp=501 atk=15 def=14 sta=13\n" +
+              "CalcyScan: species=Pikachu cp=502 atk=15 def=14 sta=13";
+    var observation = new CalcyRawTextParser().Parse(
+        profile,
+        Bundle(raw),
+        "SelfTestParser");
+
+    AssertEqual(CalcyObservationStatus.Conflicting, observation.Status, "conflicting parser status");
+    AssertEqual((int?)null, observation.Cp, "conflicting CP should remain unknown");
+    AssertTrue(
+        observation.Warnings.Any(warning => warning.Contains("Cp", StringComparison.Ordinal)),
+        "conflict warning should name CP");
+}
+
+static async Task ProfileDrivenProviderPreservesRawOutputAsync()
+{
+    var profile = await CalcyTextParserProfileLoader.LoadAsync(
+        RepositoryPath("data", "calcy-parser-profile.synthetic.json"));
+    var raw = File.ReadAllText(
+        RepositoryPath("data", "calcy-output.synthetic.txt"));
+    var source = new ScriptedCalcyRawOutputSource(
+        new Dictionary<int, CalcyRawOutputBundle>
+        {
+            [1] = Bundle(raw)
+        });
+    var provider = new ProfileDrivenCalcyObservationProvider(source, profile);
+    var request = new CalcyObservationRequest
+    {
+        SequenceNumber = 1,
+        DeviceSerial = "TEST",
+        CapturedAtUtc = DateTimeOffset.UtcNow,
+        ScreenshotPng = FakeAndroidDeviceTransport.CreateDefaultScreenshotPng(),
+        ScreenshotSha256 = "test"
+    };
+
+    var observation = await provider.ObserveAsync(request);
+    AssertEqual(CalcyObservationStatus.Complete, observation.Status, "profile provider status");
+    AssertTrue(
+        observation.RawProviderOutput?.Contains("species=Pikachu", StringComparison.Ordinal) == true,
+        "profile provider should preserve raw output");
+    AssertTrue(observation.RawProviderOutputSha256 is not null, "profile provider raw hash");
+}
+
+static CalcyRawOutputBundle Bundle(string raw) =>
+    new()
+    {
+        Sources = new Dictionary<string, string>(StringComparer.Ordinal)
+        {
+            ["logcat"] = raw
+        }
+    };
+
+static ScriptedAndroidAppInspectionTransport CreateScriptedCalcyInspectionTransport(
+    string serial = "CALCY-TEST")
+{
+    var packageName = CalcyProbeOptions.DefaultPackageName;
+    return new ScriptedAndroidAppInspectionTransport(
+        new[] { FakeAndroidDeviceTransport.CreateDescriptor(serial) },
+        FakeAndroidDeviceTransport.CreateMetadata(serial),
+        File.ReadAllBytes(RepositoryPath("data", "screen-fixtures", "AppraisalOpen.png")),
+        packageDumps: new Dictionary<string, string>(StringComparer.Ordinal)
+        {
+            [packageName] = File.ReadAllText(
+                RepositoryPath("data", "calcy-probe", "package-dump.synthetic.txt"))
+        },
+        packagePaths: new Dictionary<string, string>(StringComparer.Ordinal)
+        {
+            [packageName] = "package:/data/app/tesmath.calcy/base.apk"
+        },
+        processIds: new Dictionary<string, string>(StringComparer.Ordinal)
+        {
+            [packageName] = "4242"
+        },
+        appOps: new Dictionary<string, string>(StringComparer.Ordinal)
+        {
+            [packageName] = "SYSTEM_ALERT_WINDOW: allow"
+        },
+        activityServices: new Dictionary<string, string>(StringComparer.Ordinal)
+        {
+            [packageName] = "ServiceRecord{ tesmath.calcy/.ScanService }"
+        },
+        logcat: File.ReadAllText(
+            RepositoryPath("data", "calcy-probe", "logcat.synthetic.txt")),
+        accessibilityState: "Enabled services: tesmath.calcy/.ScanService");
 }
 
 static async Task AutomationProfileLoadsAndValidatesAsync()

@@ -10,6 +10,7 @@
     <ProjectReference Include="..\PogoInventory.Automation\PogoInventory.Automation.csproj" />
     <ProjectReference Include="..\PogoInventory.Bootstrap\PogoInventory.Bootstrap.csproj" />
     <ProjectReference Include="..\PogoInventory.Calibration\PogoInventory.Calibration.csproj" />
+    <ProjectReference Include="..\PogoInventory.CalcyProbe\PogoInventory.CalcyProbe.csproj" />
     <ProjectReference Include="..\PogoInventory.Core\PogoInventory.Core.csproj" />
     <ProjectReference Include="..\PogoInventory.Device\PogoInventory.Device.csproj" />
     <ProjectReference Include="..\PogoInventory.Observations\PogoInventory.Observations.csproj" />

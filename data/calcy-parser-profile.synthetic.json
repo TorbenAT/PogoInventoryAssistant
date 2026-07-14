@@ -1,0 +1,20 @@
+{
+  "schemaVersion": "1.0",
+  "name": "Synthetic Calcy key-value output",
+  "providerVersion": "synthetic-1",
+  "patterns": [
+    { "field": "Species", "pattern": "(?:^|\\s)species=(?<value>[^;\\r\\n]+?)(?=\\s+[a-zA-Z0-9_]+=|;|$)", "sourceName": "logcat" },
+    { "field": "PokedexNumber", "pattern": "(?:^|\\s)dex=(?<value>\\d+)", "sourceName": "logcat" },
+    { "field": "Form", "pattern": "(?:^|\\s)form=(?<value>[^;\\r\\n]+?)(?=\\s+[a-zA-Z0-9_]+=|;|$)", "sourceName": "logcat" },
+    { "field": "Cp", "pattern": "(?:^|\\s)cp=(?<value>\\d+)", "sourceName": "logcat" },
+    { "field": "Hp", "pattern": "(?:^|\\s)hp=(?<value>\\d+)", "sourceName": "logcat" },
+    { "field": "Level", "pattern": "(?:^|\\s)level=(?<value>\\d+(?:[.,]\\d+)?)", "sourceName": "logcat" },
+    { "field": "AttackIv", "pattern": "(?:^|\\s)atk=(?<value>\\d+)", "sourceName": "logcat" },
+    { "field": "DefenseIv", "pattern": "(?:^|\\s)def=(?<value>\\d+)", "sourceName": "logcat" },
+    { "field": "HpIv", "pattern": "(?:^|\\s)sta=(?<value>\\d+)", "sourceName": "logcat" },
+    { "field": "Gender", "pattern": "(?:^|\\s)gender=(?<value>[^;\\r\\n]+?)(?=\\s+[a-zA-Z0-9_]+=|;|$)", "sourceName": "logcat" },
+    { "field": "FastMove", "pattern": "(?:^|\\s)fast=(?<value>[^;\\r\\n]+?)(?=\\s+[a-zA-Z0-9_]+=|;|$)", "sourceName": "logcat" },
+    { "field": "ChargedMove1", "pattern": "(?:^|\\s)charge1=(?<value>[^;\\r\\n]+?)(?=\\s+[a-zA-Z0-9_]+=|;|$)", "sourceName": "logcat" },
+    { "field": "ChargedMove2", "pattern": "(?:^|\\s)charge2=(?<value>[^;\\r\\n]+?)(?=\\s+[a-zA-Z0-9_]+=|;|$)", "sourceName": "logcat" }
+  ]
+}

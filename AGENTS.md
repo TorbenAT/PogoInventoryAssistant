@@ -5,7 +5,9 @@ Read these files before changing code:
 1. `PROJECT_STATE.md`
 2. `docs/GUARDRAILS.md`
 3. `docs/ARCHITECTURE.md`
-4. `NEXT_PROMPT.md`
+4. `docs/CALCY_DEVICE_PROBE.md`
+5. `docs/CALCY_LIVE_CHECK.md`
+6. `NEXT_PROMPT.md`
 
 ## Non-negotiable rules
 
@@ -15,7 +17,7 @@ Read these files before changing code:
 - A future delete tag requires Exact identity and a documented reason.
 - All ADB process execution belongs inside `PogoInventory.Device`.
 - Do not expose arbitrary shell execution to any higher layer.
-- Version 0.7.0 permits only the named tap and swipe actions defined in `docs/GUARDRAILS.md`.
+- Version 0.8.0 permits only the named tap and swipe actions defined in `docs/GUARDRAILS.md`.
 - Every input action requires a validated profile, expected state, post-action state check, timeout and audit record.
 - No manual screenshot approval is required in the automatic local scan path.
 - Preserve fake transports, synthetic fixtures and package-free self-tests.
@@ -33,6 +35,9 @@ Run:
 .\scripts\run-fake-device.ps1
 .\scripts\run-fake-core-profile-bootstrap.ps1
 .\scripts\run-fake-inventory-scan.ps1
+.\scripts\run-fake-calcy-probe.ps1
+.\scripts\run-fake-calcy-live-check.ps1
+.\scripts\parse-synthetic-calcy-output.ps1
 .\scripts\detect-synthetic-screen.ps1
 .\scripts\build-synthetic-calibration-profile.ps1
 .\scripts\validate-synthetic-calibration.ps1
@@ -46,8 +51,17 @@ Use semantic versions. Every handoff ZIP contains the complete repository direct
 
 ## Observation rules
 
-- Real Calcy access must remain behind `ICalcyObservationProvider`.
+- Real Calcy access must remain behind `ICalcyObservationProvider` or `ICalcyRawOutputSource`.
 - Never mark an observation Complete without species, CP and all three IV values.
 - Unknown values remain null.
 - Provider failures are recorded and must not be guessed away.
 - The fake provider is test-only and must never be selected silently for a real phone.
+
+
+## Calcy evidence rules
+
+- The default package name is `tesmath.calcy`, but the installed version is always read from the device.
+- Do not claim logcat, clipboard, intent or overlay extraction works until real local evidence proves it.
+- Full logcat and screenshots stay under ignored local paths.
+- A synthetic parser profile is never a real provider configuration.
+- A production provider requires a 20-Pokémon verification report with zero false Complete observations.

@@ -1,68 +1,51 @@
 # Continuation prompt
 
-Use this text with the latest repository after version 0.7.0 is green.
+Use this text with the latest repository after version 0.8.0 is green.
 
 ---
 
 I am building Pogo Inventory Assistant in C# and .NET 8.
 
-Open and inspect the repository before changing anything. Treat `PROJECT_STATE.md` as the source of truth. Read `docs/GUARDRAILS.md`, `docs/AUTOMATIC_CORE_BOOTSTRAP.md` and `docs/CALCY_OBSERVATION_PIPELINE.md`.
+Open and inspect the repository before changing anything. Treat `PROJECT_STATE.md` as the source of truth. Read `docs/GUARDRAILS.md`, `docs/CALCY_DEVICE_PROBE.md`, `docs/CALCY_LIVE_CHECK.md` and `docs/CALCY_TEXT_PARSER.md`.
 
-Current version: 0.7.0.
+Current version: 0.8.0.
 
 Accepted before this task:
 
-- automatic core profile bootstrap from a known InventoryList screen
-- no per-image approval
-- four-action input whitelist
-- automatic inventory traversal and resume
+- automatic inventory navigation with only four named actions
+- automatic core screen-profile bootstrap
 - checkpoint schema 2.0
-- `ICalcyObservationProvider`
-- nullable structured observation fields
-- fake, scripted and unavailable providers
-- raw provider output hashing
-- 58 self-tests
+- structured observation contract
+- named read-only Android app-inspection interface
+- Calcy package, process, accessibility, app-ops, service and log probe
+- automatic one-Pokémon live check
+- profile-driven raw text parser
+- synthetic CI evidence only
+- 68 self-tests
 
-First verify that GitHub Actions is green, all 58 tests pass, the fake bootstrap is accepted, and the fake inventory scan contains three Complete observations in order: Pikachu, Machop, Eevee.
+First verify that the 0.8.0 GitHub Actions workflow is green.
 
-Next milestone: M4 phase 2, real Calcy IV integration.
+Next milestone: M4 phase 3, real-device evidence and production Calcy provider selection.
+
+Do not assume that the old Calcy intent, clipboard, logcat or overlay behaviour still works. Use only evidence from the installed `tesmath.calcy` version on the fixed Android phone.
 
 Required work:
 
-1. Add a diagnostic command that reports Android package presence and version for Calcy IV without changing Pokémon GO data.
-2. Keep all ADB execution inside `PogoInventory.Device`.
-3. Test the current installed Calcy version on the fixed phone.
-4. Do not assume the old PGo-CalcaBotaBotaCalca logcat, clipboard or intent method still works.
-5. Determine which output method is actually available.
-6. Implement the verified method behind `ICalcyObservationProvider`.
-7. Store the exact raw output and parser version.
-8. Add a one-Pokémon verification command.
-9. The verification must compare screenshot hash, provider output and parsed values.
-10. Mark missing fields null.
-11. Mark inconsistent results Conflicting.
-12. Convert adapter exceptions to Failed without aborting the full evidence capture.
-13. Add parser fixtures that contain no personal inventory data.
-14. Add tests for supported output, malformed output, stale output, wrong-Pokémon output and provider timeout.
-15. Add a provider freshness check so output from the previous Pokémon cannot be attached to the next one.
-16. Update all handoff and validation documents.
+1. Run the local `calcy-probe` and `calcy-live-check` commands against the fixed phone.
+2. Record the installed Calcy version and the probe decision.
+3. Inspect only the local evidence. Do not commit real screenshots or full logs.
+4. Select one provider mechanism only when it is proven:
+   - PID/time-windowed logcat if it contains structured Pokémon fields
+   - another documented local text mechanism if proven
+   - visual overlay extraction if no structured text mechanism exists
+5. Implement the selected mechanism behind `ICalcyRawOutputSource` or `ICalcyObservationProvider`.
+6. Preserve raw evidence and hashes.
+7. Produce Complete only with species or Pokédex number, CP and all three IV values.
+8. Treat mismatches and ambiguity as Partial, Conflicting or Failed.
+9. Add a 20-Pokémon verification mode with expected-versus-observed reporting.
+10. Require zero false Complete observations before a long scan can select the provider.
+11. Keep all ADB execution in `PogoInventory.Device`.
+12. Do not add transfer, tagging, gameplay, location changes, arbitrary shell access, random timing or anti-detection behaviour.
+13. Update `PROJECT_STATE.md`, `NEXT_PROMPT.md`, `CHANGELOG.md`, README, validation report and release notes.
 
-Hard boundaries:
-
-- no transfer
-- no evolve, power-up, purify, TM or resource use
-- no catch, spin, battle, raid or location change
-- no tagging or text input yet
-- no arbitrary ADB shell exposed above the device layer
-- no random human imitation or detection avoidance
-- screen Unknown, popup, network error or profile mismatch means stop
-
-Acceptance criteria:
-
-- the real provider is proven on the fixed phone
-- a single Pokémon can be observed repeatedly without stale data
-- complete results require species, CP and all three IV values
-- partial and conflicting results remain explicit
-- fake CI path remains deterministic
-- all tests are green
-
----
+If the real evidence is unavailable in the development environment, implement only the evidence ingestion and verification harness. Do not fabricate a working adapter.

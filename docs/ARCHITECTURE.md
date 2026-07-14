@@ -212,3 +212,28 @@ Checkpoint schema 2.0
 ```
 
 The real adapter will be added only after the current phone and Calcy version are verified.
+
+## Version 0.8.0: Calcy evidence boundary
+
+```text
+PogoInventory.Device
+  IAndroidAppInspectionTransport
+        │
+        ▼
+PogoInventory.CalcyProbe
+  package/version parser
+  evidence collection
+  automatic one-item live check
+        │
+        ▼
+PogoInventory.Observations
+  ICalcyRawOutputSource
+  profile-driven parser
+  CalcyObservation
+```
+
+`PogoInventory.Device` is still the only assembly that executes ADB commands. The probe layer receives named text outputs and cannot issue arbitrary commands.
+
+The live check composes the existing `InventoryAutomationRunner` with `CalcyProbeRunner`. It does not add a new phone input action.
+
+The parser is deliberately separated from the source mechanism. A real source may later be logcat, another local text surface or visual overlay extraction. Only the mechanism proven on the fixed phone may be enabled.

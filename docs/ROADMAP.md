@@ -104,3 +104,20 @@ The manual capture-approval route is retained only as a fallback.
 - implement the proven provider mechanism
 - add freshness and stale-output protection
 - run a one-Pokémon real verification before a long inventory scan
+
+## M4 phase 2: Calcy evidence and parser foundation, version 0.8.0
+
+Completed:
+
+- named read-only app inspection
+- package and installed-version discovery
+- local process, accessibility, app-ops, service and log evidence
+- automatic one-Pokémon live check
+- profile-driven text parser
+- synthetic CI verification
+
+Next gate:
+
+- run on the fixed Android phone
+- select the provider mechanism from evidence
+- verify 20 Pokémon with zero false Complete observations

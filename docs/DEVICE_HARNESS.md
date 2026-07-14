@@ -4,7 +4,7 @@
 
 The Device Harness is the only project allowed to execute ADB commands.
 
-Version 0.7.0 has two separate interfaces.
+Version 0.8.0 has three separate interfaces.
 
 ## Read interface
 
@@ -20,6 +20,24 @@ Supported operations:
 - read screen size
 - read battery information
 - capture a screenshot as PNG
+
+## App-inspection interface
+
+```text
+IAndroidAppInspectionTransport
+```
+
+This extends the read interface with a fixed set of named, read-only inspection operations for one package:
+
+- package metadata and components
+- installed APK path
+- current process id
+- bounded recent logcat output
+- accessibility service state
+- app-ops state
+- running services
+
+The interface does not expose arbitrary shell commands. Version 0.8.0 uses it only for the local Calcy evidence probe.
 
 ## Automation interface
 

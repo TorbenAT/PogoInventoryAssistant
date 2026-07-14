@@ -10,6 +10,8 @@ using PogoInventory.Calibration.Models;
 using PogoInventory.Calibration.Reporting;
 using PogoInventory.Calibration.Services;
 using PogoInventory.Calibration.Workspace;
+using PogoInventory.CalcyProbe.Models;
+using PogoInventory.CalcyProbe.Services;
 using PogoInventory.Core.Analysis;
 using PogoInventory.Core.Models;
 using PogoInventory.Core.Policy;
@@ -20,6 +22,7 @@ using PogoInventory.Device.Errors;
 using PogoInventory.Device.Logging;
 using PogoInventory.Device.Transport;
 using PogoInventory.Observations.Models;
+using PogoInventory.Observations.Parsing;
 using PogoInventory.Observations.Providers;
 using PogoInventory.Vision.Errors;
 using PogoInventory.Vision.Imaging;
@@ -55,6 +58,15 @@ static async Task<int> MainAsync(string[] args)
                 args.Skip(1).ToArray(),
                 cancellationSource.Token),
             "profile-bootstrap" => await RunProfileBootstrapAsync(
+                args.Skip(1).ToArray(),
+                cancellationSource.Token),
+            "calcy-probe" => await RunCalcyProbeAsync(
+                args.Skip(1).ToArray(),
+                cancellationSource.Token),
+            "calcy-live-check" => await RunCalcyLiveCheckAsync(
+                args.Skip(1).ToArray(),
+                cancellationSource.Token),
+            "calcy-parse" => await ParseCalcyOutputAsync(
                 args.Skip(1).ToArray(),
                 cancellationSource.Token),
             "device-snapshot" => await CaptureDeviceSnapshotAsync(
@@ -292,6 +304,183 @@ static async Task<int> RunProfileBootstrapAsync(
     Console.WriteLine($"Profile: {result.ProfilePath}");
     Console.WriteLine($"Acceptance report: {result.AcceptanceDirectory}");
     return result.Acceptance.Accepted ? 0 : 6;
+}
+
+static async Task<int> RunCalcyProbeAsync(
+    string[] args,
+    CancellationToken cancellationToken)
+{
+    var options = ParseOptions(args, "fake");
+    var outputDirectory = Require(options, "out");
+    var packageName = Optional(options, "package") ?? CalcyProbeOptions.DefaultPackageName;
+    var maximumLogcatLines = ParsePositiveInt(options, "max-log-lines", 4000);
+
+    IAndroidAppInspectionTransport transport;
+    if (options.ContainsKey("fake"))
+    {
+        var fixtures = Optional(options, "fixtures") ?? Path.Combine("data", "calcy-probe");
+        transport = CreateScriptedCalcyProbeTransport(fixtures);
+        Console.WriteLine("Using scripted Calcy inspection evidence. No phone is accessed.");
+    }
+    else
+    {
+        transport = CreateRealAndroidAppInspectionTransport(options);
+    }
+
+    var result = await new CalcyProbeRunner(transport, new ConsoleDeviceLog()).RunAsync(
+        outputDirectory,
+        new CalcyProbeOptions
+        {
+            PackageName = packageName,
+            MaximumLogcatLines = maximumLogcatLines
+        },
+        Optional(options, "serial"),
+        cancellationToken);
+
+    Console.WriteLine();
+    Console.WriteLine("Calcy inspection probe finished.");
+    Console.WriteLine($"Decision: {result.Report.Decision}");
+    Console.WriteLine($"Installed: {result.Report.Package.IsInstalled}");
+    Console.WriteLine($"Version: {result.Report.Package.VersionName ?? "Unknown"}");
+    Console.WriteLine($"Process id: {result.Report.ProcessId ?? "Not running"}");
+    Console.WriteLine($"Filtered log lines: {result.Report.FilteredLogLineCount}");
+    Console.WriteLine($"Report: {result.JsonReportPath}");
+    Console.WriteLine($"Evidence: {Path.Combine(result.OutputDirectory, "evidence")}");
+    return result.Report.Decision == CalcyProbeDecision.PackageMissing ? 7 : 0;
+}
+
+static async Task<int> RunCalcyLiveCheckAsync(
+    string[] args,
+    CancellationToken cancellationToken)
+{
+    var options = ParseOptions(args, "fake");
+    var outputDirectory = Require(options, "out");
+    var automationProfile = await AutomationProfileLoader.LoadAsync(
+        Require(options, "profile"),
+        cancellationToken);
+    var screenProfile = await ScreenProfileLoader.LoadAsync(
+        Require(options, "screen-profile"),
+        cancellationToken);
+    var probeOptions = new CalcyProbeOptions
+    {
+        PackageName = Optional(options, "package") ?? CalcyProbeOptions.DefaultPackageName,
+        MaximumLogcatLines = ParsePositiveInt(options, "max-log-lines", 4000)
+    };
+    var settleMilliseconds = ParseNonNegativeInt(options, "settle-ms", 2000);
+    CalcyTextParserProfile? parserProfile = null;
+    if (Optional(options, "parser-profile") is { } parserProfilePath)
+    {
+        parserProfile = await CalcyTextParserProfileLoader.LoadAsync(
+            parserProfilePath,
+            cancellationToken);
+    }
+
+    IAndroidAutomationTransport automationTransport;
+    IAndroidAppInspectionTransport inspectionTransport;
+    if (options.ContainsKey("fake"))
+    {
+        var screenFixtures = Optional(options, "screen-fixtures") ??
+            Path.Combine("data", "screen-fixtures");
+        var probeFixtures = Optional(options, "probe-fixtures") ??
+            Path.Combine("data", "calcy-probe");
+        automationTransport = await CreateScriptedTransportAsync(
+            screenFixtures,
+            cancellationToken);
+        inspectionTransport = CreateScriptedCalcyProbeTransport(
+            probeFixtures,
+            "FAKE-AUTO-001");
+        Console.WriteLine("Using scripted navigation and Calcy inspection evidence.");
+    }
+    else
+    {
+        var realTransport = CreateRealAndroidTransport(options);
+        automationTransport = realTransport;
+        inspectionTransport = realTransport as IAndroidAppInspectionTransport ??
+            throw new InvalidOperationException(
+                "The configured Android transport does not support app inspection.");
+    }
+
+    var result = await new CalcyLiveCheckRunner(
+        automationTransport,
+        inspectionTransport,
+        new ConsoleDeviceLog()).RunAsync(
+            outputDirectory,
+            automationProfile,
+            screenProfile,
+            probeOptions,
+            parserProfile,
+            Optional(options, "serial"),
+            TimeSpan.FromMilliseconds(settleMilliseconds),
+            cancellationToken);
+
+    Console.WriteLine();
+    Console.WriteLine("Automatic Calcy live check finished.");
+    Console.WriteLine($"Navigation items: {result.Navigation.Checkpoint.Items.Count}");
+    Console.WriteLine($"Probe decision: {result.Probe.Report.Decision}");
+    Console.WriteLine($"Calcy version: {result.Probe.Report.Package.VersionName ?? "Unknown"}");
+    Console.WriteLine($"Filtered log lines: {result.Probe.Report.FilteredLogLineCount}");
+    if (result.ParsedObservation is not null)
+    {
+        Console.WriteLine($"Parsed observation: {result.ParsedObservation.Status}");
+        Console.WriteLine($"Species: {result.ParsedObservation.Species ?? "Unknown"}");
+        Console.WriteLine($"Parsed file: {result.ParsedObservationPath}");
+    }
+
+    return result.ParsedObservation?.Status == CalcyObservationStatus.Complete ||
+           (parserProfile is null && result.Probe.Report.Package.IsInstalled)
+        ? 0
+        : 9;
+}
+
+static async Task<int> ParseCalcyOutputAsync(
+    string[] args,
+    CancellationToken cancellationToken)
+{
+    var options = ParseOptions(args);
+    var inputPath = Require(options, "input");
+    var profilePath = Require(options, "profile");
+    var outputPath = Require(options, "out");
+    var sourceName = Optional(options, "source-name") ?? "logcat";
+
+    var profile = await CalcyTextParserProfileLoader.LoadAsync(
+        profilePath,
+        cancellationToken);
+    var raw = await File.ReadAllTextAsync(inputPath, cancellationToken);
+    var observation = new CalcyRawTextParser().Parse(
+        profile,
+        new CalcyRawOutputBundle
+        {
+            Sources = new Dictionary<string, string>(StringComparer.Ordinal)
+            {
+                [sourceName] = raw
+            }
+        },
+        $"ProfileParser:{sourceName}");
+
+    var fullPath = Path.GetFullPath(outputPath);
+    var directory = Path.GetDirectoryName(fullPath);
+    if (!string.IsNullOrWhiteSpace(directory))
+    {
+        Directory.CreateDirectory(directory);
+    }
+
+    await File.WriteAllTextAsync(
+        fullPath,
+        JsonSerializer.Serialize(
+            observation,
+            CalcyTextParserProfileLoader.CreateJsonOptions(writeIndented: true)),
+        cancellationToken);
+
+    Console.WriteLine($"Observation status: {observation.Status}");
+    Console.WriteLine($"Species: {observation.Species ?? "Unknown"}");
+    Console.WriteLine($"CP: {observation.Cp?.ToString(CultureInfo.InvariantCulture) ?? "Unknown"}");
+    Console.WriteLine($"IV: {observation.AttackIv?.ToString(CultureInfo.InvariantCulture) ?? "?"}/" +
+                      $"{observation.DefenseIv?.ToString(CultureInfo.InvariantCulture) ?? "?"}/" +
+                      $"{observation.HpIv?.ToString(CultureInfo.InvariantCulture) ?? "?"}");
+    Console.WriteLine($"Output: {fullPath}");
+    return observation.Status is CalcyObservationStatus.Complete or CalcyObservationStatus.Partial
+        ? 0
+        : 8;
 }
 
 static async Task<int> CaptureDeviceSnapshotAsync(
@@ -816,6 +1005,53 @@ static IAndroidAutomationTransport CreateRealAndroidTransport(
     return new AdbAndroidDeviceTransport(runner, harnessOptions, log);
 }
 
+static IAndroidAppInspectionTransport CreateRealAndroidAppInspectionTransport(
+    IReadOnlyDictionary<string, string> options)
+{
+    var transport = CreateRealAndroidTransport(options);
+    return transport as IAndroidAppInspectionTransport ??
+        throw new InvalidOperationException(
+            "The configured Android transport does not support app inspection.");
+}
+
+static ScriptedAndroidAppInspectionTransport CreateScriptedCalcyProbeTransport(
+    string fixtures,
+    string serial = "CALCY-FAKE")
+{
+    var packageDump = File.ReadAllText(
+        Path.Combine(fixtures, "package-dump.synthetic.txt"));
+    var logcat = File.ReadAllText(
+        Path.Combine(fixtures, "logcat.synthetic.txt"));
+    var screenshotPath = Path.Combine("data", "screen-fixtures", "AppraisalOpen.png");
+
+    return new ScriptedAndroidAppInspectionTransport(
+        new[] { FakeAndroidDeviceTransport.CreateDescriptor(serial) },
+        FakeAndroidDeviceTransport.CreateMetadata(serial),
+        File.ReadAllBytes(screenshotPath),
+        packageDumps: new Dictionary<string, string>(StringComparer.Ordinal)
+        {
+            [CalcyProbeOptions.DefaultPackageName] = packageDump
+        },
+        packagePaths: new Dictionary<string, string>(StringComparer.Ordinal)
+        {
+            [CalcyProbeOptions.DefaultPackageName] = "package:/data/app/tesmath.calcy/base.apk"
+        },
+        processIds: new Dictionary<string, string>(StringComparer.Ordinal)
+        {
+            [CalcyProbeOptions.DefaultPackageName] = "4242"
+        },
+        appOps: new Dictionary<string, string>(StringComparer.Ordinal)
+        {
+            [CalcyProbeOptions.DefaultPackageName] = "SYSTEM_ALERT_WINDOW: allow"
+        },
+        activityServices: new Dictionary<string, string>(StringComparer.Ordinal)
+        {
+            [CalcyProbeOptions.DefaultPackageName] = "ServiceRecord{ tesmath.calcy/.ScanService }"
+        },
+        logcat: logcat,
+        accessibilityState: "Enabled services: tesmath.calcy/.ScanService");
+}
+
 static ScreenState ParseScreenState(string value) =>
     Enum.TryParse<ScreenState>(value, ignoreCase: true, out var state)
         ? state
@@ -876,6 +1112,25 @@ static int ParsePositiveInt(
         value <= 0)
     {
         throw new ArgumentException($"--{key} must be a positive integer.");
+    }
+
+    return value;
+}
+
+static int ParseNonNegativeInt(
+    IReadOnlyDictionary<string, string> options,
+    string key,
+    int defaultValue)
+{
+    if (!options.TryGetValue(key, out var raw))
+    {
+        return defaultValue;
+    }
+
+    if (!int.TryParse(raw, NumberStyles.Integer, CultureInfo.InvariantCulture, out var value) ||
+        value < 0)
+    {
+        throw new ArgumentException($"--{key} must be a non-negative integer.");
     }
 
     return value;
@@ -1019,6 +1274,18 @@ static void PrintHelp()
     Console.WriteLine("                    [--adb <adb.exe>] [--serial <serial>]");
     Console.WriteLine("  profile-bootstrap --fake --profile <automation.json> --anchors <anchor-plan.json>");
     Console.WriteLine("                    --out <directory> [--fixtures <directory>]");
+    Console.WriteLine();
+    Console.WriteLine("  calcy-probe --out <directory> [--adb <adb.exe>] [--serial <serial>]");
+    Console.WriteLine("              [--package <package-name>] [--max-log-lines <n>]");
+    Console.WriteLine("  calcy-probe --fake --out <directory> [--fixtures <directory>]");
+    Console.WriteLine("  calcy-live-check --profile <automation.json> --screen-profile <screen-profile.json>");
+    Console.WriteLine("                   --out <directory> [--adb <adb.exe>] [--serial <serial>]");
+    Console.WriteLine("                   [--parser-profile <parser.json>] [--settle-ms <n>]");
+    Console.WriteLine("  calcy-live-check --fake --profile <automation.json> --screen-profile <screen-profile.json>");
+    Console.WriteLine("                   --out <directory> [--screen-fixtures <dir>] [--probe-fixtures <dir>]");
+    Console.WriteLine("                   [--parser-profile <parser.json>] [--settle-ms <n>]");
+    Console.WriteLine("  calcy-parse --input <raw.txt> --profile <parser.json> --out <observation.json>");
+    Console.WriteLine("              [--source-name <name>]");
     Console.WriteLine();
     Console.WriteLine("  device-snapshot --out <directory> [--adb <adb.exe>] [--serial <serial>] [--timeout-seconds <n>]");
     Console.WriteLine("  device-snapshot --fake --out <directory>");

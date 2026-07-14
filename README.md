@@ -1,19 +1,30 @@
 # Pogo Inventory Assistant
 
-Version 0.7.0
+Version 0.8.0
 
 Pogo Inventory Assistant is a local tool for building a complete Pokémon GO inventory, analysing it and later applying safe batch tags. Final transfer remains manual.
 
-Version 0.7.0 adds two major pieces:
-
-- automatic generation of the four core screen states from one known InventoryList start
-- a structured Calcy observation pipeline attached to every scanned Pokémon
+Version 0.8.0 adds a real-device Calcy investigation layer without pretending that an unverified output mechanism works.
 
 ## What works now
 
-### Automatic core profile bootstrap
+### Automatic phone navigation
 
-The program can now start from the Pokémon inventory list and automatically capture:
+The program can:
+
+- start from the Pokémon inventory list
+- open the first Pokémon
+- open the menu and Appraise
+- swipe through the inventory automatically
+- verify the screen state and identity region after every action
+- stop at the end, on an unsafe state or on a mismatch
+- checkpoint every Pokémon and resume safely
+
+There is no image-by-image approval and no manual navigation during the long scan.
+
+### Automatic core screen profile
+
+From one known inventory-list screen, the bootstrap command automatically captures and validates:
 
 ```text
 InventoryList
@@ -22,40 +33,71 @@ PokemonMenuOpen
 AppraisalOpen, three different Pokémon
 ```
 
-It uses only the existing allow-listed taps and swipe. It then builds and validates a local `screen-profile.local.json` without per-image approval.
+The generated local profile is rejected on false positives or misclassification.
 
-The generated profile is rejected if the captured core states produce a false positive or a misclassification.
+### Calcy installation and capability probe
 
-### Automatic inventory navigation
+The new `calcy-probe` command inspects the fixed Android phone through named read-only ADB operations. It records:
 
-- opens the first inventory card
-- opens the Pokémon menu
-- selects Appraise
-- swipes through the inventory automatically
-- verifies the state and Pokémon identity after each action
-- detects the end of the inventory
-- saves one PNG and one structured item record per Pokémon
-- writes an atomic checkpoint after every Pokémon
-- can resume only from the matching last Pokémon
-- stops on Unknown, popup, network error, profile mismatch or timeout
+- installed package and package path
+- installed version name and version code
+- target and minimum Android SDK where available
+- declared activities, services, receivers and permissions
+- current process id
+- accessibility state
+- app-ops, including overlay evidence
+- currently running services
+- recent logcat and a locally filtered Calcy subset
+- a current screenshot
+- SHA-256 for every evidence file
 
-There is no image-by-image approval and no manual navigation during the long scan.
+The configured package is `tesmath.calcy`, matching the official Google Play listing.
 
-### Structured observations
+All output stays under `local-data/` and is ignored by Git.
 
-Each scanned item now contains a nullable observation with:
+### Automatic one-Pokémon live check
+
+`calcy-live-check` performs the complete one-time verification path automatically:
+
+```text
+InventoryList
+→ first Pokémon
+→ menu
+→ Appraise
+→ wait for Calcy
+→ inspect package, process, services and logs
+→ optionally parse a structured observation
+```
+
+It uses only the existing allow-listed taps. It does not require manual navigation.
+
+### Profile-driven raw-output parser
+
+A new parser can convert proven text output into the existing observation model. The parser is configured by JSON regular expressions rather than hard-coded assumptions.
+
+Supported fields include:
 
 - species and Pokédex number
 - form
 - CP, HP and level
 - Attack, Defense and HP IV
 - gender
-- fast move and charged moves
-- provider status and confidence
-- raw provider output and SHA-256
-- warnings and error details
+- fast and charged moves
 
-Observation states are:
+The parser:
+
+- preserves the complete raw source and SHA-256
+- returns `Complete` only when species or Pokédex number, CP and all three IV values exist
+- returns `Partial` when only some fields are proven
+- returns `Conflicting` when sources disagree
+- returns `Failed` when no configured fields are recognized
+- never guesses missing values
+
+The committed parser profile and raw output are synthetic test data. They are not claimed to match the installed Calcy version.
+
+### Structured inventory observations
+
+Every scanned item can store:
 
 ```text
 Complete
@@ -65,21 +107,13 @@ Failed
 Unavailable
 ```
 
-Unknown or conflicting values remain empty. The system does not guess.
-
-The committed fake provider supplies deterministic observations for CI. The real Calcy adapter is the next step and is deliberately not faked as complete.
-
-### Checkpoint migration
-
-The inventory checkpoint schema is now `2.0`.
-
-Old schema `1.0` checkpoints are migrated in memory. Their previous items are marked `Unavailable`, because no Calcy observation existed when those items were captured.
+along with the nullable Pokémon fields, provider information, warnings, raw output and hash.
 
 ### Inventory analysis
 
 - configurable KEEP, REVIEW and DELETE policy
 - duplicate grouping and strictly-better duplicate requirement
-- preliminary PvP candidate preservation
+- preliminary PvP candidate protection
 - JSON and Markdown decision reports
 
 ## Validate the repository
@@ -89,67 +123,62 @@ Old schema `1.0` checkpoints are migrated in memory. Their previous items are ma
 .\scripts\test.ps1
 .\scripts\run-fake-core-profile-bootstrap.ps1
 .\scripts\run-fake-inventory-scan.ps1
+.\scripts\run-fake-calcy-probe.ps1
+.\scripts\run-fake-calcy-live-check.ps1
+.\scripts\parse-synthetic-calcy-output.ps1
 ```
 
-The expected test count is 58.
+The expected test count is 68.
 
-The fake scan should contain exactly:
-
-```text
-Pikachu
-Machop
-Eevee
-```
-
-All three fake observations must have status `Complete`.
-
-## One-time setup on the Android phone
-
-The fixed phone still needs an adjusted automation profile with the correct control points.
-
-From a known Pokémon inventory list screen:
+## Real-device Calcy probe
 
 ```powershell
-.\scripts\bootstrap-local-core-profile.ps1 `
-  -AdbPath "C:\Android\platform-tools\adb.exe" `
-  -AutomationProfile "C:\Path\automation-profile.local.json"
+.\scripts\run-local-calcy-probe.ps1 `
+  -AdbPath "C:\Android\platform-tools\adb.exe"
 ```
 
-This creates the local screen profile automatically. It is not work repeated for 10,000 Pokémon.
+The automatic live check is run with the local profiles:
+
+```powershell
+dotnet run --project .\src\PogoInventory.Cli --configuration Release -- `
+  calcy-live-check `
+  --adb "C:\Android\platform-tools\adb.exe" `
+  --profile .\local-data\automation-profile.local.json `
+  --screen-profile .\local-data\screen-profile.local.json `
+  --out .\local-data\calcy-live-check
+```
+
+Do not provide a parser profile on the first real run. First inspect which output mechanism actually exists on the phone.
 
 ## Current real-device limitation
 
-The real Calcy integration is not finished yet.
+Version 0.8.0 can automatically navigate to Appraise and gather the evidence needed to choose a Calcy adapter. It does not yet claim that logcat, clipboard or another text mechanism exposes the required fields.
 
-A real scan can still capture the ordered evidence, but its observations remain `Unavailable` until a verified Calcy provider is configured. The next release must test the current Calcy IV version on the actual Android phone and implement the working adapter behind `ICalcyObservationProvider`.
+The next implementation must be selected from the real local evidence:
+
+1. structured log output, if proven
+2. another documented text surface, if proven
+3. visual reading of the Calcy overlay, if text output is not available
+
+Until then, a long real scan keeps observations `Unavailable` rather than inventing data.
 
 ## Safety boundary
 
-The phone input interface exposes only:
+Phone input remains limited to:
 
 - tap first inventory card
 - tap details menu
 - tap Appraise
 - swipe to next Pokémon
 
-The repository contains no functions for:
-
-- transfer
-- evolve, power-up, purify or TM use
-- purchases
-- catching, spinning, raids or battles
-- location changes
-- tagging or text input in this version
-- random timing or random positions intended to hide automation
-
-Real screenshots, checkpoints, device details and local profiles stay outside Git through `.gitignore`.
+The repository contains no functions for transfer, evolve, power-up, purify, TM use, purchases, catching, spinning, battles, location changes or anti-detection behaviour.
 
 Read next:
 
 - `PROJECT_STATE.md`
 - `NEXT_PROMPT.md`
-- `docs/AUTOMATIC_CORE_BOOTSTRAP.md`
-- `docs/CALCY_OBSERVATION_PIPELINE.md`
+- `docs/CALCY_DEVICE_PROBE.md`
+- `docs/CALCY_LIVE_CHECK.md`
+- `docs/CALCY_TEXT_PARSER.md`
 - `docs/GUARDRAILS.md`
-- `docs/ARCHITECTURE.md`
 - `VALIDATION_REPORT.md`

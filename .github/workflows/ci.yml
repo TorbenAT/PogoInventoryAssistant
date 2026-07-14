@@ -77,6 +77,63 @@ jobs:
           if ($report.falsePositiveCount -ne 0) { throw "Core profile has false positives." }
           if ($report.misclassificationCount -ne 0) { throw "Core profile has misclassifications." }
 
+      - name: Run scripted Calcy inspection probe
+        run: >-
+          dotnet run --project .\src\PogoInventory.Cli --configuration Release --no-build --
+          calcy-probe --fake
+          --fixtures .\data\calcy-probe
+          --out .\out\calcy-probe
+
+      - name: Verify scripted Calcy inspection probe
+        shell: pwsh
+        run: |
+          $report = Get-Content .\out\calcy-probe\calcy-probe-report.json -Raw | ConvertFrom-Json
+          if (-not $report.package.isInstalled) { throw "Expected the scripted Calcy package to be installed." }
+          if ($report.package.versionName -ne "4.3.1") { throw "Unexpected scripted Calcy version." }
+          if ($report.filteredLogLineCount -ne 2) { throw "Expected exactly two filtered Calcy log lines." }
+          if ($report.decision -ne "CandidateEvidenceFound") { throw "Unexpected Calcy probe decision." }
+
+      - name: Run automatic scripted Calcy live check
+        run: >-
+          dotnet run --project .\src\PogoInventory.Cli --configuration Release --no-build --
+          calcy-live-check --fake
+          --profile .\data\automation-profile.synthetic.json
+          --screen-profile .\data\screen-profile.synthetic.json
+          --parser-profile .\data\calcy-parser-profile.synthetic.json
+          --screen-fixtures .\data\screen-fixtures
+          --probe-fixtures .\data\calcy-probe
+          --settle-ms 0
+          --out .\out\calcy-live-check
+
+      - name: Verify automatic scripted Calcy live check
+        shell: pwsh
+        run: |
+          $checkpoint = Get-Content .\out\calcy-live-check\navigation\inventory-scan-checkpoint.json -Raw | ConvertFrom-Json
+          if ($checkpoint.items.Count -ne 1) { throw "Calcy live check must navigate to exactly one item." }
+          $observation = Get-Content .\out\calcy-live-check\parsed-observation.json -Raw | ConvertFrom-Json
+          if ($observation.status -ne "Complete") { throw "Calcy live check did not produce a Complete observation." }
+          if ($observation.species -ne "Pikachu") { throw "Unexpected live-check species." }
+
+      - name: Parse synthetic Calcy output
+        run: >-
+          dotnet run --project .\src\PogoInventory.Cli --configuration Release --no-build --
+          calcy-parse
+          --input .\data\calcy-output.synthetic.txt
+          --profile .\data\calcy-parser-profile.synthetic.json
+          --source-name logcat
+          --out .\out\calcy-parser\observation.json
+
+      - name: Verify synthetic Calcy observation
+        shell: pwsh
+        run: |
+          $observation = Get-Content .\out\calcy-parser\observation.json -Raw | ConvertFrom-Json
+          if ($observation.status -ne "Complete") { throw "Expected a Complete parsed Calcy observation." }
+          if ($observation.species -ne "Pikachu") { throw "Unexpected parsed Calcy species." }
+          if ($observation.cp -ne 501) { throw "Unexpected parsed CP." }
+          if ($observation.attackIv -ne 15 -or $observation.defenseIv -ne 14 -or $observation.hpIv -ne 13) {
+            throw "Unexpected parsed IV values."
+          }
+
       - name: Run synthetic screen detection
         run: >-
           dotnet run --project .\src\PogoInventory.Cli --configuration Release --no-build --

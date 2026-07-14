@@ -1,5 +1,20 @@
 # Changelog
 
+## 0.8.0
+
+- Added `IAndroidAppInspectionTransport` with fixed read-only package, process, logcat, accessibility, app-ops and service operations.
+- Added the `PogoInventory.CalcyProbe` project.
+- Added Calcy package metadata parsing, installed-version discovery and capability reporting.
+- Added local raw evidence files and SHA-256 locking.
+- Added `calcy-probe` and `calcy-live-check` CLI commands.
+- Added automatic one-Pokémon navigation before live Calcy inspection.
+- Added a profile-driven regex parser for proven raw text output.
+- Added Complete, Partial, Conflicting and Failed parser outcomes without guessed values.
+- Added synthetic Calcy package, log and parser fixtures.
+- Added ten self-tests, bringing the expected total to 68.
+- Added CI probe, live-check and parser verification.
+- Preserved the four-action input boundary and all destructive-operation prohibitions.
+
 ## 0.7.0
 
 - Added automatic core screen-profile bootstrap from a known InventoryList start.

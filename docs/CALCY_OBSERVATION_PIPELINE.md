@@ -1,6 +1,6 @@
 # Calcy observation pipeline
 
-Version 0.7.0 introduces a separate adapter boundary:
+Version 0.8.0 keeps the separate adapter boundary introduced in 0.7.0:
 
 ```text
 ICalcyObservationProvider
@@ -51,6 +51,16 @@ Used when no real provider has been configured. It records the missing adapter h
 ### ScriptedCalcyObservationProvider
 
 Used for deterministic tests of complete, partial, conflicting and failed results.
+
+### ProfileDrivenCalcyObservationProvider
+
+Consumes named raw text sources through `ICalcyRawOutputSource` and a versioned regex profile. It preserves raw output and produces Complete, Partial, Conflicting or Failed without guessing.
+
+The provider is a parsing component, not proof that the installed Calcy build exposes usable text.
+
+## Current evidence workflow
+
+Version 0.8.0 adds a read-only device probe and an automatic one-Pokémon live check. These gather package metadata, bounded logs, accessibility state, app-ops and service evidence before any production provider is selected.
 
 ## Next real-device work
 

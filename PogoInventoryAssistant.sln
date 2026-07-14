@@ -6,6 +6,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PogoInventory.Automation", 
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PogoInventory.Bootstrap", "src\PogoInventory.Bootstrap\PogoInventory.Bootstrap.csproj", "{A4E3D57D-193C-4FF0-90A8-6846BC9EC3FD}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PogoInventory.CalcyProbe", "src\PogoInventory.CalcyProbe\PogoInventory.CalcyProbe.csproj", "{D7C79C50-7813-4B1D-8A66-9B67358A4F02}"
+EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PogoInventory.Calibration", "src\PogoInventory.Calibration\PogoInventory.Calibration.csproj", "{E2A481BB-6B14-49AB-9BF4-0E8845A77B69}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PogoInventory.Core", "src\PogoInventory.Core\PogoInventory.Core.csproj", "{A9D8628E-419A-4EFA-A14D-DF6D442C1A0A}"
@@ -62,6 +64,11 @@ Global
 		{7D7B82BA-EC72-44C4-B5C4-9E88644543A5}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{7D7B82BA-EC72-44C4-B5C4-9E88644543A5}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{7D7B82BA-EC72-44C4-B5C4-9E88644543A5}.Release|Any CPU.Build.0 = Release|Any CPU
+
+		{D7C79C50-7813-4B1D-8A66-9B67358A4F02}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{D7C79C50-7813-4B1D-8A66-9B67358A4F02}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{D7C79C50-7813-4B1D-8A66-9B67358A4F02}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{D7C79C50-7813-4B1D-8A66-9B67358A4F02}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

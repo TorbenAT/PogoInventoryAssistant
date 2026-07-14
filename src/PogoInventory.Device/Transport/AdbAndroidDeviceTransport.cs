@@ -6,7 +6,7 @@ using PogoInventory.Device.Models;
 
 namespace PogoInventory.Device.Transport;
 
-public sealed class AdbAndroidDeviceTransport : IAndroidAutomationTransport
+public sealed class AdbAndroidDeviceTransport : IAndroidAutomationTransport, IAndroidAppInspectionTransport
 {
     private static readonly byte[] PngSignature =
         { 0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A };
@@ -109,6 +109,111 @@ public sealed class AdbAndroidDeviceTransport : IAndroidAutomationTransport
     }
 
 
+    public async Task<string> ReadPackageDumpAsync(
+        string serial,
+        string packageName,
+        CancellationToken cancellationToken = default)
+    {
+        ValidatePackageName(packageName);
+        var result = await RunAsync(
+            ForDevice(serial, "shell", "dumpsys", "package", packageName),
+            "read Android package metadata",
+            cancellationToken);
+        return result.StandardOutputText;
+    }
+
+    public async Task<string> ReadPackagePathAsync(
+        string serial,
+        string packageName,
+        CancellationToken cancellationToken = default)
+    {
+        ValidatePackageName(packageName);
+        var result = await RunAsync(
+            ForDevice(serial, "shell", "pm", "path", packageName),
+            "read Android package path",
+            cancellationToken);
+        return result.StandardOutputText;
+    }
+
+    public async Task<string> ReadProcessIdAsync(
+        string serial,
+        string packageName,
+        CancellationToken cancellationToken = default)
+    {
+        ValidatePackageName(packageName);
+        var result = await RunAllowingMissingAsync(
+            ForDevice(serial, "shell", "pidof", packageName),
+            "read Android process id",
+            cancellationToken);
+        return result?.StandardOutputText.Trim() ?? string.Empty;
+    }
+
+    public async Task<string> ReadRecentLogcatAsync(
+        string serial,
+        int maximumLines,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(serial);
+        if (maximumLines is < 1 or > 20000)
+        {
+            throw new ArgumentOutOfRangeException(
+                nameof(maximumLines),
+                "Maximum logcat lines must be between 1 and 20000.");
+        }
+
+        var result = await RunAsync(
+            ForDevice(
+                serial,
+                "logcat",
+                "-d",
+                "-v",
+                "threadtime",
+                "-t",
+                maximumLines.ToString(CultureInfo.InvariantCulture)),
+            "read recent Android logcat output",
+            cancellationToken);
+        return result.StandardOutputText;
+    }
+
+    public async Task<string> ReadAccessibilityStateAsync(
+        string serial,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(serial);
+        var result = await RunAsync(
+            ForDevice(serial, "shell", "dumpsys", "accessibility"),
+            "read Android accessibility state",
+            cancellationToken);
+        return result.StandardOutputText;
+    }
+
+    public async Task<string> ReadAppOpsAsync(
+        string serial,
+        string packageName,
+        CancellationToken cancellationToken = default)
+    {
+        ValidatePackageName(packageName);
+        var result = await RunAsync(
+            ForDevice(serial, "shell", "appops", "get", packageName),
+            "read Android app operations",
+            cancellationToken);
+        return result.StandardOutputText;
+    }
+
+    public async Task<string> ReadActivityServicesAsync(
+        string serial,
+        string packageName,
+        CancellationToken cancellationToken = default)
+    {
+        ValidatePackageName(packageName);
+        var result = await RunAsync(
+            ForDevice(serial, "shell", "dumpsys", "activity", "services", packageName),
+            "read Android activity services",
+            cancellationToken);
+        return result.StandardOutputText;
+    }
+
+
     public async Task TapAsync(
         string serial,
         int x,
@@ -168,6 +273,32 @@ public sealed class AdbAndroidDeviceTransport : IAndroidAutomationTransport
             cancellationToken);
     }
 
+    private async Task<AdbProcessResult?> RunAllowingMissingAsync(
+        IReadOnlyList<string> arguments,
+        string operation,
+        CancellationToken cancellationToken)
+    {
+        var result = await _runner.ExecuteAsync(
+            arguments,
+            _options.CommandTimeout,
+            cancellationToken);
+        if (result.ExitCode == 0)
+        {
+            return result;
+        }
+
+        _log.Write(
+            DeviceLogLevel.Debug,
+            "adb.command.optional-missing",
+            $"ADB could not {operation}; the optional value is treated as unavailable.",
+            new Dictionary<string, string>
+            {
+                ["exitCode"] = result.ExitCode.ToString(CultureInfo.InvariantCulture),
+                ["command"] = string.Join(" ", arguments)
+            });
+        return null;
+    }
+
     private async Task<AdbProcessResult> RunAsync(
         IReadOnlyList<string> arguments,
         string operation,
@@ -191,6 +322,21 @@ public sealed class AdbAndroidDeviceTransport : IAndroidAutomationTransport
         }
 
         return result;
+    }
+
+
+    private static void ValidatePackageName(string packageName)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(packageName);
+        if (packageName.Length > 255 ||
+            packageName.Any(character =>
+                !(char.IsLetterOrDigit(character) ||
+                  character is '.' or '_' or '-')))
+        {
+            throw new ArgumentException(
+                "Android package name contains unsupported characters.",
+                nameof(packageName));
+        }
     }
 
 
