@@ -1,7 +1,8 @@
 param(
     [string]$InputDirectory = ".\data\iphone-images",
     [string]$OutputDirectory = ".\out\iphone-image-pretest",
-    [int]$MinimumImages = 20
+    [int]$MinimumImages = 20,
+    [double]$MinimumDecodeRate = 0.90
 )
 
 $ErrorActionPreference = "Stop"
@@ -17,4 +18,5 @@ dotnet run --project .\src\PogoInventory.Cli --configuration Release -- `
   image-pretest `
   --input $InputDirectory `
   --out $OutputDirectory `
-  --min-images $MinimumImages
+  --min-images $MinimumImages `
+  --min-decode-rate $MinimumDecodeRate

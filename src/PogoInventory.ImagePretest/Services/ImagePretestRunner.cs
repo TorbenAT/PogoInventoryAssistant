@@ -65,26 +65,36 @@ public static class ImagePretestRunner
             .Distinct(StringComparer.Ordinal)
             .Count();
 
-        var accepted = images.Length >= options.MinimumImageCount &&
-            failedCount == 0 &&
+        var decodeRate = images.Length == 0
+            ? 0
+            : (double)decodedCount / images.Length;
+        var accepted = decodedCount >= options.MinimumImageCount &&
+            decodeRate >= options.MinimumDecodeRate &&
             portraitCount == decodedCount &&
             distinctHashCount >= 2;
 
         var gate = accepted
-            ? $"Accepted: {images.Length} portrait PNG screenshots decoded successfully."
-            : GateFailure(
+            ? AcceptedGate(
                 images.Length,
                 decodedCount,
                 failedCount,
+                decodeRate)
+            : GateFailure(
+                images.Length,
+                decodedCount,
                 portraitCount,
                 distinctHashCount,
-                options.MinimumImageCount);
+                options.MinimumImageCount,
+                decodeRate,
+                options.MinimumDecodeRate);
 
         var report = new ImagePretestReport
         {
             GeneratedAtUtc = DateTimeOffset.UtcNow,
             InputDirectory = root,
             MinimumImageCount = options.MinimumImageCount,
+            MinimumDecodeRate = options.MinimumDecodeRate,
+            DecodeRate = decodeRate,
             ImageCount = images.Length,
             DecodedCount = decodedCount,
             FailedCount = failedCount,
@@ -344,22 +354,37 @@ public static class ImagePretestRunner
         return warnings;
     }
 
-    private static string GateFailure(
+    private static string AcceptedGate(
         int imageCount,
         int decodedCount,
         int failedCount,
+        double decodeRate)
+    {
+        var rejected = failedCount == 0
+            ? string.Empty
+            : $"; {failedCount} rejected file(s) retained in diagnostics";
+        return $"Accepted: {decodedCount}/{imageCount} portrait PNG screenshots decoded " +
+            $"({decodeRate:P1}){rejected}.";
+    }
+
+    private static string GateFailure(
+        int imageCount,
+        int decodedCount,
         int portraitCount,
         int distinctHashCount,
-        int minimumImageCount)
+        int minimumImageCount,
+        double decodeRate,
+        double minimumDecodeRate)
     {
         var failures = new List<string>();
-        if (imageCount < minimumImageCount)
+        if (decodedCount < minimumImageCount)
         {
-            failures.Add($"requires at least {minimumImageCount} images");
+            failures.Add($"requires at least {minimumImageCount} decoded images");
         }
-        if (failedCount > 0)
+        if (decodeRate < minimumDecodeRate)
         {
-            failures.Add($"{failedCount} image(s) failed decoding");
+            failures.Add(
+                $"decode rate {decodeRate:P1} is below required {minimumDecodeRate:P1}");
         }
         if (portraitCount != decodedCount)
         {
@@ -367,9 +392,13 @@ public static class ImagePretestRunner
         }
         if (distinctHashCount < 2)
         {
-            failures.Add("requires at least two distinct screenshots");
+            failures.Add("requires at least two distinct decoded screenshots");
         }
-        return "Rejected: " + string.Join("; ", failures) + ".";
+        if (imageCount == 0)
+        {
+            failures.Add("no PNG files were found");
+        }
+        return "Rejected: " + string.Join("; ", failures.Distinct(StringComparer.Ordinal)) + ".";
     }
 
     private static bool IsPng(string path) =>

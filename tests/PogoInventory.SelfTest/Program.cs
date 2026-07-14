@@ -118,7 +118,9 @@ var tests = new (string Name, Func<Task> Run)[]
     ("Image pretest rejects insufficient image count", ImagePretestRejectsInsufficientCountAsync),
     ("Image pretest rejects landscape screenshots", ImagePretestRejectsLandscapeAsync),
     ("Image pretest writes all reports", ImagePretestWritesReportsAsync),
-    ("Image pretest ignores non-PNG files", ImagePretestIgnoresNonPngFilesAsync)
+    ("Image pretest ignores non-PNG files", ImagePretestIgnoresNonPngFilesAsync),
+    ("Image pretest tolerates isolated decode failure", ImagePretestToleratesIsolatedDecodeFailureAsync),
+    ("Image pretest rejects low decode rate", ImagePretestRejectsLowDecodeRateAsync)
 };
 
 var failed = 0;
@@ -2039,6 +2041,74 @@ static async Task ImagePretestIgnoresNonPngFilesAsync()
 
         AssertEqual(2, report.ImageCount, "non-PNG files should be ignored");
         AssertTrue(report.Accepted, "two distinct PNG screenshots should pass");
+    }
+    finally
+    {
+        DeleteDirectory(directory);
+    }
+}
+
+static async Task ImagePretestToleratesIsolatedDecodeFailureAsync()
+{
+    var directory = CreateTemporaryDirectory();
+    try
+    {
+        var fixtures = new[]
+        {
+            "InventoryList.png",
+            "PokemonDetails.png",
+            "AppraisalOpen.png"
+        };
+        for (var index = 0; index < 10; index++)
+        {
+            CopyPretestFixture(
+                directory,
+                fixtures[index % fixtures.Length],
+                $"IMG_{index + 1:D4}.png");
+        }
+        await File.WriteAllBytesAsync(
+            Path.Combine(directory, "IMG_0011.png"),
+            new byte[] { 137, 80, 78, 71, 13, 10, 26, 10 });
+
+        var report = await ImagePretestRunner.RunAsync(
+            directory,
+            new ImagePretestOptions { MinimumImageCount = 10 });
+
+        AssertTrue(report.Accepted, "one rejected image should not block a strong pretest set");
+        AssertEqual(10, report.DecodedCount, "isolated failure decoded count");
+        AssertEqual(1, report.FailedCount, "isolated failure count");
+        AssertTrue(report.DecodeRate >= 0.90, "isolated failure decode rate");
+        AssertTrue(
+            report.GateDetail.Contains("retained in diagnostics", StringComparison.Ordinal),
+            "accepted gate should mention retained rejection diagnostics");
+    }
+    finally
+    {
+        DeleteDirectory(directory);
+    }
+}
+
+static async Task ImagePretestRejectsLowDecodeRateAsync()
+{
+    var directory = CreateTemporaryDirectory();
+    try
+    {
+        CopyPretestFixture(directory, "InventoryList.png", "IMG_0001.png");
+        CopyPretestFixture(directory, "PokemonDetails.png", "IMG_0002.png");
+        await File.WriteAllBytesAsync(
+            Path.Combine(directory, "IMG_0003.png"),
+            new byte[] { 137, 80, 78, 71, 13, 10, 26, 10 });
+
+        var report = await ImagePretestRunner.RunAsync(
+            directory,
+            new ImagePretestOptions { MinimumImageCount = 2 });
+
+        AssertTrue(!report.Accepted, "a low decode rate should fail the gate");
+        AssertEqual(2, report.DecodedCount, "low-rate decoded count");
+        AssertEqual(1, report.FailedCount, "low-rate failure count");
+        AssertTrue(
+            report.GateDetail.Contains("below required", StringComparison.Ordinal),
+            "low-rate gate should explain decode-rate failure");
     }
     finally
     {

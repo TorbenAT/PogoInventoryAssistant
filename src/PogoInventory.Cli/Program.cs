@@ -592,7 +592,11 @@ static async Task<int> RunImagePretestAsync(
         ClusterThreshold = ParseUnitDouble(
             options,
             "cluster-threshold",
-            0.925)
+            0.925),
+        MinimumDecodeRate = ParseUnitDouble(
+            options,
+            "min-decode-rate",
+            0.90)
     };
 
     var report = await ImagePretestRunner.RunAsync(
@@ -609,6 +613,14 @@ static async Task<int> RunImagePretestAsync(
     Console.WriteLine($"Visual clusters: {report.ClusterCount}.");
     Console.WriteLine($"Exact duplicates: {report.ExactDuplicatePairCount}.");
     Console.WriteLine($"Near duplicates: {report.NearDuplicatePairCount}.");
+    Console.WriteLine($"Decode rate: {report.DecodeRate:P1} " +
+        $"(required {report.MinimumDecodeRate:P1}).");
+    foreach (var image in report.Images.Where(image => !image.Decoded))
+    {
+        Console.WriteLine(
+            $"Rejected image: {image.FileName}: " +
+            $"{image.ErrorCode}: {image.ErrorDetail}");
+    }
     Console.WriteLine(report.GateDetail);
     return report.Accepted ? 0 : 1;
 }
@@ -1449,7 +1461,7 @@ static void PrintHelp()
     Console.WriteLine("                        --version <version> --out <selection.json>");
     Console.WriteLine("                        [--parser-profile <parser.json>]");
     Console.WriteLine();
-    Console.WriteLine("  image-pretest --input <directory> --out <directory> [--min-images <n>]");
+    Console.WriteLine("  image-pretest --input <directory> --out <directory> [--min-images <n>] [--min-decode-rate <0-1>]");
     Console.WriteLine("                [--near-duplicate-threshold <0..1>] [--cluster-threshold <0..1>]");
     Console.WriteLine();
     Console.WriteLine("  device-snapshot --out <directory> [--adb <adb.exe>] [--serial <serial>] [--timeout-seconds <n>]");

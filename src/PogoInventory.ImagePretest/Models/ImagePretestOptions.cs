@@ -5,6 +5,7 @@ public sealed record ImagePretestOptions
     public int MinimumImageCount { get; init; } = 20;
     public double NearDuplicateThreshold { get; init; } = 0.995;
     public double ClusterThreshold { get; init; } = 0.925;
+    public double MinimumDecodeRate { get; init; } = 0.90;
     public int FingerprintWidth { get; init; } = 16;
     public int FingerprintHeight { get; init; } = 32;
 
@@ -31,6 +32,14 @@ public sealed record ImagePretestOptions
             throw new ArgumentOutOfRangeException(
                 nameof(ClusterThreshold),
                 "Cluster threshold must be between 0 and 1.");
+        }
+
+        if (!double.IsFinite(MinimumDecodeRate) ||
+            MinimumDecodeRate is <= 0 or > 1)
+        {
+            throw new ArgumentOutOfRangeException(
+                nameof(MinimumDecodeRate),
+                "Minimum decode rate must be greater than 0 and at most 1.");
         }
 
         if (ClusterThreshold >= NearDuplicateThreshold)

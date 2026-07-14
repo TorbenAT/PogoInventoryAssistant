@@ -6,6 +6,8 @@ public sealed record ImagePretestReport
     public required DateTimeOffset GeneratedAtUtc { get; init; }
     public required string InputDirectory { get; init; }
     public int MinimumImageCount { get; init; }
+    public double MinimumDecodeRate { get; init; }
+    public double DecodeRate { get; init; }
     public int ImageCount { get; init; }
     public int DecodedCount { get; init; }
     public int FailedCount { get; init; }
@@ -32,6 +34,14 @@ public sealed record ImagePretestReport
         {
             throw new InvalidOperationException(
                 $"Unsupported image pretest schema '{SchemaVersion}'.");
+        }
+
+        if (!double.IsFinite(MinimumDecodeRate) ||
+            MinimumDecodeRate is <= 0 or > 1 ||
+            !double.IsFinite(DecodeRate) ||
+            DecodeRate is < 0 or > 1)
+        {
+            throw new InvalidOperationException("Image pretest decode rates are invalid.");
         }
 
         if (ImageCount != Images.Count || DecodedCount + FailedCount != ImageCount)

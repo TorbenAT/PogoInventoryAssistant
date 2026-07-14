@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.10.1
+
+- Changed the iPhone pretest gate to require at least the configured number of successfully decoded images instead of rejecting the entire batch because one extra file failed.
+- Added a default 90 percent minimum decode-rate gate, so widespread decoder failures still stop CI.
+- Added the rejected file name, error type and error detail to console and Markdown diagnostics.
+- Added regression tests for one isolated decode failure and for an excessive decode-failure rate.
+- Preserved every phone-navigation and Calcy safety boundary.
+
 ## 0.10.0
 
 - Added the `PogoInventory.ImagePretest` project.

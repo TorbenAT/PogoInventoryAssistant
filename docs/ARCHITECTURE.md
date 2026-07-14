@@ -243,7 +243,7 @@ The parser is deliberately separated from the source mechanism. A real source ma
 
 `PogoInventory.Verification` owns expected-versus-observed comparison, evidence hashing and the zero-false-Complete gate. A production provider selection is locked to the exact verification report and parser profile hashes.
 
-## Version 0.10.0: cross-platform image pretest
+## Version 0.10.1: cross-platform image pretest
 
 ```text
 data/iphone-images/*.png

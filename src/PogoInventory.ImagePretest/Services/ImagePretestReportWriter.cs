@@ -44,6 +44,8 @@ public static class ImagePretestReportWriter
         builder.AppendLine($"- Images: {report.ImageCount}");
         builder.AppendLine($"- Decoded: {report.DecodedCount}");
         builder.AppendLine($"- Failed: {report.FailedCount}");
+        builder.AppendLine($"- Decode rate: {report.DecodeRate:P1}");
+        builder.AppendLine($"- Required decode rate: {report.MinimumDecodeRate:P1}");
         builder.AppendLine($"- Portrait: {report.PortraitCount}");
         builder.AppendLine($"- Geometry groups: {report.GeometryGroupCount}");
         builder.AppendLine($"- Distinct file hashes: {report.DistinctFileHashCount}");
@@ -76,6 +78,23 @@ public static class ImagePretestReportWriter
                 $"{image.GeometryKey} | {image.LengthBytes} | " +
                 $"{ShortHash(image.Sha256)} | " +
                 $"{(image.Decoded ? "Decoded" : EscapeMarkdown(image.ErrorCode ?? "Failed"))} |");
+        }
+
+        var rejected = report.Images.Where(image => !image.Decoded).ToArray();
+        if (rejected.Length > 0)
+        {
+            builder.AppendLine();
+            builder.AppendLine("## Rejected images");
+            builder.AppendLine();
+            builder.AppendLine("| File | Error | Detail |");
+            builder.AppendLine("|---|---|---|");
+            foreach (var image in rejected)
+            {
+                builder.AppendLine(
+                    $"| {EscapeMarkdown(image.FileName)} | " +
+                    $"{EscapeMarkdown(image.ErrorCode ?? "Failed")} | " +
+                    $"{EscapeMarkdown(image.ErrorDetail ?? string.Empty)} |");
+            }
         }
 
         builder.AppendLine();

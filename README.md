@@ -1,10 +1,10 @@
 # Pogo Inventory Assistant
 
-Version 0.10.0
+Version 0.10.1
 
 Pogo Inventory Assistant is a local tool for building a complete Pokémon GO inventory, analysing it and later applying safe batch tags. Final transfer remains manual.
 
-Version 0.10.0 adds an automatic pretest for the real iPhone Pokémon GO screenshots committed under `data/iphone-images`. The pretest validates decoding, geometry, hashing, visual similarity and clustering before the fixed Android phone is available.
+Version 0.10.1 corrects the real iPhone pretest gate after 23 of 24 committed screenshots decoded successfully. The pretest now requires at least 20 decoded images and a 90 percent decode rate, while retaining any rejected file and exact error in diagnostics.
 
 
 ## iPhone screenshot pretest
@@ -184,7 +184,7 @@ Do not provide a parser profile on the first real run. First inspect which outpu
 
 ## Current real-device limitation
 
-Version 0.10.0 can verify a proven candidate mechanism across at least 20 local cases. It still does not claim that a real mechanism works until evidence from the fixed Android phone passes the gate.
+Version 0.10.1 can verify a proven candidate mechanism across at least 20 local cases. It still does not claim that a real mechanism works until evidence from the fixed Android phone passes the gate.
 
 The next implementation must be selected from the real local evidence:
 

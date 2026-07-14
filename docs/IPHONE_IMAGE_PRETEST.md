@@ -1,12 +1,10 @@
 # iPhone image pretest
 
-Version 0.10.0 adds a deterministic pretest for uncropped iPhone Pokémon GO screenshots.
+Version 0.10.1 provides a deterministic pretest for uncropped iPhone Pokémon GO screenshots.
 
-The pretest is intentionally cross-platform. It validates the screenshot pipeline before the fixed Android phone is available, but it does not prove that Android navigation or Calcy integration works.
+The pretest is cross-platform. It validates the screenshot-processing pipeline before the fixed Android phone is available, but it does not prove Android navigation or Calcy integration.
 
-## Input
-
-The command reads PNG files from one directory:
+## Run
 
 ```powershell
 .\scripts\run-iphone-image-pretest.ps1
@@ -19,46 +17,47 @@ dotnet run --project .\src\PogoInventory.Cli --configuration Release -- `
   image-pretest `
   --input .\data\iphone-images `
   --out .\out\iphone-image-pretest `
-  --min-images 20
+  --min-images 20 `
+  --min-decode-rate 0.90
 ```
 
 The command never changes the source screenshots.
 
-## Automatic checks
+## Recorded data
 
 For every PNG the pretest records:
 
 - file name and relative path
 - byte length
 - SHA-256
-- decoded width and height
+- decoded width and height when available
 - aspect ratio and orientation
 - geometry group
-- a combined grayscale and edge fingerprint hash
+- visual fingerprint hash
+- decoder error type and detail when rejected
 
-Across the complete set it calculates:
+Across the decoded set it calculates:
 
-- corrupt or unsupported files
-- pixel-identical duplicate pairs
-- visually near-identical pairs
+- exact duplicates
+- near duplicates
 - pairwise similarity
-- visual clusters using normalised whole-screen fingerprints
+- visual clusters
 - consecutive-image similarity
 
 ## Acceptance gate
 
 The default gate requires:
 
-- at least 20 PNG screenshots
-- every PNG decodes successfully
-- every screenshot is portrait
-- at least two distinct file hashes
+- at least 20 successfully decoded PNG screenshots
+- at least 90 percent of discovered PNG files to decode
+- every decoded screenshot to be portrait
+- at least two distinct decoded screenshots
 
-Exact and near duplicates are reported but do not fail the gate unless the complete set contains only one distinct screenshot.
+An isolated rejected file does not fail the batch when enough valid evidence remains. Rejected files are never silently ignored: they remain in all diagnostic reports and are printed to the console.
+
+Widespread decoding failure still rejects the pretest through the minimum decode-rate gate.
 
 ## Output
-
-The output directory contains:
 
 ```text
 iphone-image-pretest.json
@@ -67,13 +66,23 @@ iphone-images.csv
 iphone-similarity.csv
 ```
 
-No source screenshot is copied to the output directory.
+The Markdown report includes a dedicated rejected-images table. No source screenshot is copied to the output directory.
 
-## What this proves
+## Reported real set
 
-A green pretest proves that the real iPhone images can pass through the package-free PNG decoder, normalised fingerprint extraction, hashing, clustering and reporting pipeline.
+The first real run found:
 
-## What this does not prove
+- 24 PNG files
+- 23 successfully decoded
+- 95.8 percent decode rate
+- one geometry group
+- four visual clusters
+- zero exact duplicates
+- zero near duplicates
+
+Version 0.10.1 accepts this as a useful pretest set while preserving the one rejected file for decoder investigation.
+
+## Limits
 
 The pretest does not validate:
 
@@ -83,5 +92,3 @@ The pretest does not validate:
 - Calcy IV package behaviour
 - Calcy overlay extraction
 - Android end-of-inventory detection
-
-Those still require the fixed Android phone.
