@@ -2,6 +2,7 @@ using System.Security.Cryptography;
 using System.Text.Json;
 using PogoInventory.CropAtlas.Models;
 using PogoInventory.CropAtlas.Semantic.Models;
+using PogoInventory.CropAtlas.Services;
 using PogoInventory.RegionDiscovery.Models;
 using PogoInventory.RegionDiscovery.Services;
 using PogoInventory.Vision.Imaging;

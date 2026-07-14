@@ -1,8 +1,26 @@
+## Version 0.13.1 compile correction
+
+The three reported CS0103 errors have one common cause: the semantic runner is
+in `PogoInventory.CropAtlas.Semantic.Services`, while the reused helper types
+are in `PogoInventory.CropAtlas.Services`.
+
+Static checks confirm:
+
+- `SemanticEvidenceRunner.cs` imports `PogoInventory.CropAtlas.Services`
+- `PixelImageTransforms` exists in that namespace
+- `CropAtlasJson` exists in that namespace
+- both helpers are in the same project assembly as the runner
+- the declared self-test count remains 103
+- no project reference change is required
+
+The preparation environment does not contain the .NET SDK, so GitHub Actions
+remains the authoritative compiler and test runner.
+
 # Validation report
 
 ## Version
 
-0.13.0
+0.13.1
 
 ## Accepted prior checkpoint
 

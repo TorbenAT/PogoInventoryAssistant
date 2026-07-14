@@ -2,7 +2,18 @@
 
 ## Current version
 
-0.13.0
+0.13.1
+
+## Build correction in 0.13.1
+
+GitHub Actions compiled the existing projects until
+`PogoInventory.CropAtlas`, where `SemanticEvidenceRunner.cs` failed with three
+CS0103 errors. The runner reused `PixelImageTransforms` and `CropAtlasJson`,
+which are declared in `PogoInventory.CropAtlas.Services`, but the nested
+semantic namespace did not import that namespace.
+
+Version 0.13.1 adds the missing namespace import. No crop logic, semantic
+policy, report schema, test expectation or phone-action boundary changed.
 
 ## Accepted checkpoint
 
@@ -81,7 +92,7 @@ TapAppraise
 SwipeNextPokemon
 ```
 
-Version 0.13.0 adds no phone input action.
+Version 0.13.1 adds no phone input action.
 
 ## Not completed
 

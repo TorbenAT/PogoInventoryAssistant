@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.13.1
+
+- Fixed the CropAtlas semantic evidence build by importing `PogoInventory.CropAtlas.Services` in `SemanticEvidenceRunner.cs`.
+- Restored visibility of the existing `PixelImageTransforms` and `CropAtlasJson` helpers from the nested semantic namespace.
+- Kept all semantic evidence behavior, report formats, thresholds and the 103-test expectation unchanged.
+- Added no phone input action.
+
 ## 0.13.0
 
 - Added a semantic evidence review-pack pipeline inside `PogoInventory.CropAtlas`.

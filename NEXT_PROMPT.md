@@ -1,6 +1,6 @@
 # Continuation prompt
 
-Use this text with the latest repository after version 0.13.0 is green.
+Use this text with the latest repository after version 0.13.1 is green.
 
 ---
 
@@ -12,7 +12,7 @@ Open and inspect the repository before changing anything. Treat
 `docs/IPHONE_CROP_ATLAS.md`, `docs/IPHONE_SEMANTIC_EVIDENCE.md`,
 `docs/CALCY_PROVIDER_VERIFICATION.md` and `docs/AUTOMATIC_NAVIGATION.md`.
 
-Current version: 0.13.0.
+Current version: 0.13.1.
 
 Accepted before this task:
 
@@ -26,7 +26,7 @@ Accepted before this task:
 - automated extraction disabled
 - 103 self-tests
 
-First verify that version 0.13.0 builds and all 103 self-tests pass.
+First verify that version 0.13.1 builds and all 103 self-tests pass.
 
 Next milestone: inspect the real
 `out/iphone-semantic-evidence/semantic-review-pack.zip` artifact and choose

@@ -315,3 +315,11 @@ The output is a review package, not a provider. It has no device-control
 dependency and cannot enable automated extraction. A later provider must consume
 a populated truth manifest and pass the existing zero-false-Complete safety
 pattern.
+
+## Version 0.13.1: namespace correction
+
+The semantic evidence layer reuses internal crop and JSON helpers from
+`PogoInventory.CropAtlas.Services`. The nested semantic service namespace now
+imports that parent service namespace explicitly. No architectural boundary
+changed.
+
