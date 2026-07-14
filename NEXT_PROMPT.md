@@ -1,6 +1,6 @@
 # Continuation prompt
 
-Use this text with the latest repository after version 0.6.0 is green.
+Use this text with the latest repository after version 0.6.1 is green.
 
 ---
 
@@ -8,7 +8,7 @@ I am building Pogo Inventory Assistant in C# and .NET 8.
 
 Open and inspect the repository before changing anything. Treat `PROJECT_STATE.md` as the source of truth. Read `docs/GUARDRAILS.md`, `docs/ARCHITECTURE.md` and `docs/AUTOMATIC_NAVIGATION.md`.
 
-Current version: 0.6.0.
+Current version: 0.6.1.
 
 Accepted before this task:
 
@@ -25,7 +25,7 @@ Accepted before this task:
 - deterministic fake phone and CI traversal
 - 52 self-tests
 
-First verify that the 0.6.0 GitHub Actions workflow is green and that the fake automatic scan captures exactly three items.
+First verify that the 0.6.1 GitHub Actions workflow is green and that the fake automatic scan captures exactly three items.
 
 Next milestone: M4 automatic core-profile bootstrap and Calcy observation extraction.
 

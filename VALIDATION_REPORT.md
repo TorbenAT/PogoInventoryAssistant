@@ -2,27 +2,56 @@
 
 ## Version
 
-0.6.0
+0.6.1
 
-## Environment limitation
+## Reported CI regression
 
-The build environment used to prepare this handoff does not contain the .NET SDK, MSBuild or ADB. A real C# compile and test run could therefore not be executed here.
+The 0.6.0 GitHub Actions build failed at:
 
-GitHub Actions is the authoritative compile and runtime validation for this release.
+```text
+InventoryAutomationRunner.cs(737,27): CS0173
+```
+
+The compiler could not infer a common type between `DateTimeOffset` and `null` in a conditional expression assigned to `var`.
+
+## Fix applied
+
+The variable is now explicitly nullable:
+
+```csharp
+DateTimeOffset? completedAt = status == AutomationRunStatus.Completed
+    ? DateTimeOffset.UtcNow
+    : null;
+```
+
+This is type-compatible with `InventoryScanCheckpoint.CompletedAtUtc`, which is already `DateTimeOffset?`.
+
+## Behavior impact
+
+None. The change is compile-only and does not alter:
+
+- automatic navigation
+- taps or swipes
+- timing and waiting logic
+- screen-state detection
+- evidence capture
+- checkpoint schema
+- resume behavior
+- end detection
+- safety boundaries
 
 ## Static validation completed
 
-- complete repository copied from accepted 0.5.0 source
-- new project and project references added to the solution
-- all JSON files parsed successfully
-- all seven project XML files parsed successfully and every project reference resolves
-- PowerShell and YAML files inspected
-- all 121 C# files parsed without syntax errors using the tree-sitter C# grammar
-- C# brace counts checked across the source tree
-- all required source and documentation files present across 200 repository files
-- synthetic appraisal variants preserve the existing appraisal and network-state anchor regions
+- complete repository unpacked from 0.6.0
+- failing source location inspected directly
+- nullable target property confirmed
+- explicit nullable type applied
+- all JSON files parse successfully
+- all project XML files parse successfully
+- all project references resolve
+- expected self-test declaration count remains 52
+- no private captures, inventory data, `bin`, `obj` or `.git` content included
 - ZIP root contains the solution directly
-- no `bin`, `obj`, `.git`, `local-data`, private captures or real inventory data included
 
 ## Expected CI validation
 
@@ -30,36 +59,14 @@ GitHub Actions must:
 
 1. restore .NET 8 projects
 2. build the full solution with warnings as errors
-3. run 52 self-tests
-4. run the existing analysis demo
+3. run all 52 self-tests
+4. run the analysis demo
 5. run the fake device snapshot
-6. run the deterministic automatic inventory scan
-7. capture exactly three fake inventory items
-8. run synthetic screen detection
-9. build and validate the synthetic calibration profile
-10. upload validation output
-
-## New automated checks
-
-- ADB tap command is exactly allow-listed
-- ADB swipe command is exactly allow-listed
-- automation profile loads and validates
-- automatic setup performs three named taps
-- three distinct appraisal items are captured
-- repeated unchanged swipes detect the end
-- maximum item count stops cleanly
-- completed checkpoint does not issue new input on rerun
-- checkpoint stores exact SHA-256 locks for both profiles
-
-## Manual review performed
-
-- no text-input method added
-- no arbitrary shell method exposed
-- no transfer or destructive action added
-- no random timing or random coordinates added
-- real data remains excluded by `.gitignore`
-- automatic scan path has no per-image approval requirement
+6. complete the deterministic three-item automatic inventory scan
+7. run synthetic screen detection
+8. build and validate the synthetic calibration profile
+9. upload validation output
 
 ## Release gate
 
-Do not begin the next milestone until GitHub Actions is green and reports all 52 tests passing.
+Do not begin the next milestone until GitHub Actions is green for 0.6.1.

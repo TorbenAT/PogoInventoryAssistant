@@ -2,7 +2,7 @@
 
 ## Current version
 
-0.6.0
+0.6.1
 
 ## Accepted checkpoint
 
@@ -15,7 +15,9 @@ Torben clarified the operational requirement:
 - no user involvement across 10,000+ Pokémon
 - once the phone profile is adjusted, traversal must run unattended
 
-Version 0.6.0 changes the project plan accordingly.
+Version 0.6.1 preserves that plan and fixes the nullable completion timestamp compile regression found by GitHub Actions.
+
+GitHub Actions for 0.6.0 reached the new Automation project and found one compile-only regression in `FinishAsync`. No runtime or test failure was reached. Version 0.6.1 applies the explicit nullable type required by the compiler.
 
 ## Completed
 
@@ -97,13 +99,13 @@ No other phone input is allowed.
 
 ## Important limitation
 
-Version 0.6.0 can automatically traverse and capture an ordered inventory once real local profiles are adjusted. The committed profiles are synthetic and must not be used against the real phone.
+Version 0.6.1 can automatically traverse and capture an ordered inventory once real local profiles are adjusted. The committed profiles are synthetic and must not be used against the real phone.
 
 The current evidence items contain ordered screenshots and fingerprints, not yet complete Pokémon observations.
 
 ## Required checkpoint after push
 
-1. Confirm GitHub Actions is green for 0.6.0.
+1. Confirm GitHub Actions is green for 0.6.1.
 2. Confirm all 52 self-tests pass.
 3. Confirm the deterministic fake inventory scan captures exactly three items.
 4. Confirm the checkpoint contains SHA-256 locks for both automation and screen profiles.

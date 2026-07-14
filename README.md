@@ -1,10 +1,10 @@
 # Pogo Inventory Assistant
 
-Version 0.6.0
+Version 0.6.1
 
 Pogo Inventory Assistant is a local tool for building a complete Pokémon GO inventory, analysing it and later applying safe batch tags. Final transfer remains manual.
 
-Version 0.6.0 adds the first automatic phone-navigation engine. Once the two local profiles are adjusted to the fixed Android phone, the program can open the first Pokémon, open appraisal, swipe through the inventory, capture every item and stop or resume without user interaction per Pokémon.
+Version 0.6.1 adds the first automatic phone-navigation engine. Once the two local profiles are adjusted to the fixed Android phone, the program can open the first Pokémon, open appraisal, swipe through the inventory, capture every item and stop or resume without user interaction per Pokémon.
 
 ## What works now
 
@@ -71,7 +71,7 @@ screen-profile.local.json
 
 That one-time adjustment is not work on 10,000 Pokémon. After it is accepted, the inventory traversal itself is automatic.
 
-Version 0.6.0 captures the inventory evidence and sequence. It does not yet extract species, CP, IVs, moves or special status from every captured Pokémon. Calcy integration and observation extraction are the next milestone.
+Version 0.6.1 captures the inventory evidence and sequence. It does not yet extract species, CP, IVs, moves or special status from every captured Pokémon. Calcy integration and observation extraction are the next milestone.
 
 ## Validate the repository
 

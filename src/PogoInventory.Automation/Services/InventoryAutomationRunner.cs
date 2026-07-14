@@ -734,7 +734,7 @@ public sealed class InventoryAutomationRunner
         string? detail,
         CancellationToken cancellationToken)
     {
-        var completedAt = status == AutomationRunStatus.Completed
+        DateTimeOffset? completedAt = status == AutomationRunStatus.Completed
             ? DateTimeOffset.UtcNow
             : null;
         var checkpoint = original with

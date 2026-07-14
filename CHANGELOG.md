@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.6.1
+
+- Fixed the GitHub Actions compile failure in `InventoryAutomationRunner.FinishAsync`.
+- Declared the conditional completion timestamp as `DateTimeOffset?`, matching `InventoryScanCheckpoint.CompletedAtUtc`.
+- Preserved all 0.6.0 automatic-navigation behavior and guardrails.
+- Added a regression release note and updated project handoff documents.
+
 ## 0.6.0
 
 - Added the isolated `PogoInventory.Automation` project.
