@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.14.1
+
+- Fixed CS0173 in `AppraisalAnalyzer` by declaring the candidate IV variable as `int?`.
+- Preserved `null` when no appraisal track is detected and an integer from 0 to 15 when it is detected.
+- Kept all appraisal geometry, thresholds, report schemas, phone preparation behavior and the 112-test expectation unchanged.
+- Added no phone input action.
+
 ## 0.14.0
 
 - Added the `PogoInventory.Appraisal` project.

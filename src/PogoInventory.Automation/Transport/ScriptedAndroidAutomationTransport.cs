@@ -51,7 +51,7 @@ public sealed class ScriptedAndroidAutomationTransport : IAndroidAutomationTrans
             DeviceName = "scripted-device",
             AndroidVersion = "16",
             ApiLevel = 36,
-            BuildFingerprint = "pogo/scripted/0.14.0",
+            BuildFingerprint = "pogo/scripted/0.14.1",
             Screen = new AndroidScreenInfo
             {
                 PhysicalWidth = image.Width,

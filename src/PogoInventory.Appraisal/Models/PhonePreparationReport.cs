@@ -51,7 +51,7 @@ public sealed record PhonePreparationReport
         if (AutomaticNavigationReady)
         {
             throw new InvalidOperationException(
-                "Version 0.14.0 cannot mark automatic navigation ready.");
+                "Version 0.14.1 cannot mark automatic navigation ready.");
         }
     }
 }

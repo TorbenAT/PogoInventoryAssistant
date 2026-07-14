@@ -1,8 +1,25 @@
+## Version 0.14.1 compile correction
+
+The reported CS0173 failure was isolated to local type inference in
+`AppraisalAnalyzer.MeasureBar`.
+
+Static checks confirm:
+
+- `estimatedIv` is explicitly declared as `int?`
+- the true branch returns an integer clamped to 0 through 15
+- the false branch remains null
+- `AppraisalBarMeasurement.EstimatedIv` is also `int?`
+- the declared self-test count remains 112
+- no project reference or phone action changed
+
+The preparation environment does not contain the .NET SDK. GitHub Actions
+remains the authoritative compiler and test runner.
+
 # Validation report
 
 ## Version
 
-0.14.0
+0.14.1
 
 ## Accepted prior checkpoint
 

@@ -243,7 +243,7 @@ public sealed class AppraisalAnalyzer
                 0,
                 1)
             : 0;
-        var estimatedIv = trackDetected
+        int? estimatedIv = trackDetected
             ? Math.Clamp(
                 (int)Math.Round(
                     fillFraction * 15,

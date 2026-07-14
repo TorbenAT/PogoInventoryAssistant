@@ -2,7 +2,20 @@
 
 ## Current version
 
-0.14.0
+0.14.1
+
+## Build correction in 0.14.1
+
+GitHub Actions built the existing projects and reached
+`PogoInventory.Appraisal`, where `AppraisalAnalyzer.cs` failed with CS0173.
+
+The conditional expression returned an `int` when a bar track was detected and
+`null` otherwise. Because the local variable used `var`, the compiler had no
+nullable target type available for the conditional expression.
+
+Version 0.14.1 explicitly declares the variable as `int?`. The intended
+behavior is unchanged: a measured candidate IV is 0 to 15, while an
+unmeasurable bar remains null.
 
 ## Accepted checkpoint
 
@@ -65,7 +78,7 @@ TapAppraise
 SwipeNextPokemon
 ```
 
-Version 0.14.0 adds no phone input action.
+Version 0.14.1 adds no phone input action.
 
 ## What the iPhone images now provide
 

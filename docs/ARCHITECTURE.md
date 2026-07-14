@@ -328,3 +328,11 @@ changed.
 ## Version 0.14.0: appraisal and phone preparation
 
 `PogoInventory.Appraisal` contains normalised visual definitions, bar measurement, offline pretesting and read-only phone preparation. It references the Device layer for screenshot capture but exposes no tap or swipe operation. Device-adjusted profiles remain unverified until a later truth gate passes.
+
+## Version 0.14.1: nullable candidate-IV correction
+
+The appraisal analyzer represents an unavailable IV estimate as null and a
+measured candidate as an integer from 0 through 15. Version 0.14.1 makes that
+nullable contract explicit in the local measurement variable. No architectural
+boundary changed.
+
