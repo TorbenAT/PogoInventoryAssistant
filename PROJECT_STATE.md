@@ -2,21 +2,21 @@
 
 ## Current version
 
-0.11.1
+0.12.0
 
-## Build correction in 0.11.1
+## Build correction in 0.12.0
 
 GitHub Actions compiled the new `PogoInventory.RegionDiscovery` project but the
 CLI failed with CS0246/CS0103 because `Program.cs` lacked the explicit
 `PogoInventory.RegionDiscovery.Models` and
 `PogoInventory.RegionDiscovery.Services` imports.
 
-Version 0.11.1 adds those two imports. The project reference was already
+Version 0.12.0 adds those two imports. The project reference was already
 present and no algorithm or phone-action boundary changed.
 
 ## Accepted checkpoint
 
-Torben reported that version 0.10.1 is fully green in GitHub Actions.
+Torben reported that version 0.11.1 is fully green in GitHub Actions.
 
 The accepted real iPhone pretest result is:
 
@@ -83,7 +83,24 @@ New `PogoInventory.RegionDiscovery` project:
 - CI execution against the committed iPhone screenshots
 - 91 expected self-tests
 
-All candidate meanings are provisional. Version 0.11.1 does not perform OCR and does not claim species, CP or IV extraction.
+All candidate meanings are provisional. Version 0.12.0 does not perform OCR and does not claim species, CP or IV extraction.
+
+### M4 phase 4c: crop atlas and evidence sufficiency
+
+New `PogoInventory.CropAtlas` project:
+
+- deterministic selection of strong candidate regions
+- same-kind overlap suppression
+- representative images from every visual cluster
+- read-only crops from the committed screenshots
+- package-free PNG encoding for derived evidence
+- cluster overview contact sheet
+- one contact sheet per candidate region
+- crop, cluster and region manifests
+- explicit `NeedsMoreImages` decision
+- exact underrepresented cluster identifiers
+- no semantic screen label, OCR or IV claim
+- 97 expected self-tests
 
 ## Input boundary
 
@@ -94,7 +111,7 @@ TapAppraise
 SwipeNextPokemon
 ```
 
-Version 0.11.1 adds no phone input action.
+Version 0.12.0 adds no phone input action.
 
 ## Not completed
 
@@ -112,27 +129,28 @@ Version 0.11.1 adds no phone input action.
 
 ## Required checkpoint after push
 
-1. Build all 13 projects.
-2. Confirm 91 of 91 self-tests pass.
-3. Confirm the iPhone pretest remains accepted with 23 decoded images.
-4. Confirm visual-region discovery is accepted.
-5. Confirm one geometry group and at least two clusters.
-6. Confirm the report contains 288 grid cells.
-7. Confirm at least one provisional candidate of each kind.
-8. Inspect the candidate and cluster reports from `validation-output`.
+1. Build all 14 projects.
+2. Confirm 97 of 97 self-tests pass.
+3. Confirm the accepted iPhone pretest remains unchanged.
+4. Confirm region discovery still produces 288 cells and four real visual clusters.
+5. Confirm crop-atlas generation is accepted.
+6. Confirm every selected region contains evidence from every cluster.
+7. Inspect `readiness.needsMoreImages` and the named underrepresented clusters.
+8. Inspect `cluster-overview.png` and the candidate contact sheets in `validation-output`.
 9. Preserve zero new phone actions.
 
 ## Next recommended milestone
 
-Use the real region report to build an automatic crop atlas and cluster explanation report:
+Use the real crop atlas to choose the first evidence-backed semantic experiment:
 
-- select the strongest non-overlapping state-discriminator regions
-- create read-only crops for each cluster representative
-- produce a compact contact-sheet manifest without copying private source images into Git
-- determine whether the current images contain enough detail for name, CP and appraisal-bar experiments
-- add OCR or IV-bar interpretation only after the crop evidence supports it
+- map visual clusters to provisional screen-state names only when the contact sheets make the distinction unambiguous
+- identify whether a consistent name/CP crop exists
+- identify whether appraisal bars occupy a consistent region
+- add measurement only for fields supported by the real crops
+- keep unsupported fields null
+- request more screenshots only for the exact clusters listed by the crop-atlas readiness report
 
-No additional screenshots are required before the 0.11.1 real report is inspected. More images should be requested only for a specific missing state or weak candidate region.
+When the Android phone becomes available, the real Calcy probe remains mandatory before selecting a production provider.
 
 ## Design decisions preserved
 

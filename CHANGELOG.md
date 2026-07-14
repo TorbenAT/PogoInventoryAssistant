@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.12.0
+
+- Added the `PogoInventory.CropAtlas` project.
+- Added deterministic selection of strong, non-overlapping screen-state, dynamic-content and text-dense candidate regions.
+- Added representative image selection for every discovered visual cluster.
+- Added read-only candidate crops, per-region contact sheets and a cluster overview PNG.
+- Added a readiness report that identifies underrepresented visual clusters and states exactly when more screenshots are useful.
+- Added a package-free PNG encoder for derived local evidence.
+- Added JSON, Markdown and CSV crop-atlas reports and GitHub Actions validation.
+- Added six self-tests, bringing the expected total to 97.
+- Added no phone input action and no OCR or IV claim.
+
 ## 0.11.1
 
 - Fixed the CLI build by importing the RegionDiscovery Models and Services namespaces.

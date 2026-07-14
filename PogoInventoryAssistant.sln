@@ -12,6 +12,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PogoInventory.Calibration",
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PogoInventory.Core", "src\PogoInventory.Core\PogoInventory.Core.csproj", "{A9D8628E-419A-4EFA-A14D-DF6D442C1A0A}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PogoInventory.CropAtlas", "src\PogoInventory.CropAtlas\PogoInventory.CropAtlas.csproj", "{C4A7E2B1-8E4F-4A5D-9C0E-12F8B3D91A20}"
+EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PogoInventory.Device", "src\PogoInventory.Device\PogoInventory.Device.csproj", "{C67A1E56-00B2-4D20-9A58-4517070EEA12}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PogoInventory.ImagePretest", "src\PogoInventory.ImagePretest\PogoInventory.ImagePretest.csproj", "{F2E7A83D-52A1-4DB8-9A0F-3DDECC0E1001}"
@@ -50,6 +52,10 @@ Global
 		{A9D8628E-419A-4EFA-A14D-DF6D442C1A0A}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{A9D8628E-419A-4EFA-A14D-DF6D442C1A0A}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{A9D8628E-419A-4EFA-A14D-DF6D442C1A0A}.Release|Any CPU.Build.0 = Release|Any CPU
+		{C4A7E2B1-8E4F-4A5D-9C0E-12F8B3D91A20}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{C4A7E2B1-8E4F-4A5D-9C0E-12F8B3D91A20}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{C4A7E2B1-8E4F-4A5D-9C0E-12F8B3D91A20}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{C4A7E2B1-8E4F-4A5D-9C0E-12F8B3D91A20}.Release|Any CPU.Build.0 = Release|Any CPU
 		{C67A1E56-00B2-4D20-9A58-4517070EEA12}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{C67A1E56-00B2-4D20-9A58-4517070EEA12}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{C67A1E56-00B2-4D20-9A58-4517070EEA12}.Release|Any CPU.ActiveCfg = Release|Any CPU

@@ -14,6 +14,8 @@ using PogoInventory.CalcyProbe.Services;
 using PogoInventory.Core.Analysis;
 using PogoInventory.Core.Models;
 using PogoInventory.Core.Policy;
+using PogoInventory.CropAtlas.Models;
+using PogoInventory.CropAtlas.Services;
 using PogoInventory.Device;
 using PogoInventory.Device.Adb;
 using PogoInventory.Device.Errors;
@@ -127,7 +129,13 @@ var tests = new (string Name, Func<Task> Run)[]
     ("Region discovery is deterministic", RegionDiscoveryIsDeterministicAsync),
     ("Region discovery writes all reports", RegionDiscoveryWritesReportsAsync),
     ("Region discovery rejects mixed geometry", RegionDiscoveryRejectsMixedGeometryAsync),
-    ("Region discovery retains isolated decode failure", RegionDiscoveryRetainsIsolatedDecodeFailureAsync)
+    ("Region discovery retains isolated decode failure", RegionDiscoveryRetainsIsolatedDecodeFailureAsync),
+    ("PNG encoder round-trips a decoded fixture", Sync(PngEncoderRoundTripsFixture)),
+    ("Crop atlas creates crops and contact sheets", CropAtlasCreatesCropsAndSheetsAsync),
+    ("Crop atlas selection is deterministic", CropAtlasSelectionIsDeterministicAsync),
+    ("Crop atlas writes all reports", CropAtlasWritesAllReportsAsync),
+    ("Crop atlas rejects a missing representative image", CropAtlasRejectsMissingRepresentativeAsync),
+    ("Crop atlas identifies underrepresented clusters", CropAtlasIdentifiesUnderrepresentedClustersAsync)
 };
 
 var failed = 0;
@@ -2266,6 +2274,269 @@ static async Task RegionDiscoveryRetainsIsolatedDecodeFailureAsync()
     finally
     {
         DeleteDirectory(directory);
+    }
+}
+
+
+static void PngEncoderRoundTripsFixture()
+{
+    var source = LoadFixture("PokemonDetails.png");
+    var encoded = PngEncoder.Encode(source);
+    var decoded = PngDecoder.Decode(encoded);
+
+    AssertEqual(source.Width, decoded.Width, "PNG encoder width");
+    AssertEqual(source.Height, decoded.Height, "PNG encoder height");
+    AssertEqual(
+        source.GetPixel(source.Width / 2, source.Height / 2),
+        decoded.GetPixel(decoded.Width / 2, decoded.Height / 2),
+        "PNG encoder centre pixel");
+}
+
+static async Task CropAtlasCreatesCropsAndSheetsAsync()
+{
+    var directory = CreateTemporaryDirectory();
+    try
+    {
+        var fixture = await CreateCropAtlasFixtureAsync(directory);
+        var report = await CropAtlasRunner.RunAsync(
+            fixture.Input,
+            fixture.RegionReportPath,
+            fixture.AtlasOutput,
+            TestCropAtlasOptions());
+        await CropAtlasReportWriter.WriteAsync(
+            report,
+            fixture.AtlasOutput);
+
+        AssertTrue(report.Accepted, "crop atlas fixture should pass");
+        AssertTrue(
+            report.SelectedRegionCount >= 3,
+            "crop atlas should select at least three regions");
+        AssertTrue(
+            report.CropCount >= report.SelectedRegionCount * report.ClusterCount,
+            "crop atlas should cover every cluster");
+        AssertTrue(
+            File.Exists(Path.Combine(
+                fixture.AtlasOutput,
+                report.OverviewFile)),
+            "crop atlas overview should exist");
+        foreach (var region in report.SelectedRegions)
+        {
+            AssertTrue(
+                File.Exists(Path.Combine(
+                    fixture.AtlasOutput,
+                    region.SheetFile.Replace(
+                        '/',
+                        Path.DirectorySeparatorChar))),
+                $"crop atlas sheet {region.SheetFile} should exist");
+        }
+    }
+    finally
+    {
+        DeleteDirectory(directory);
+    }
+}
+
+static async Task CropAtlasSelectionIsDeterministicAsync()
+{
+    var directory = CreateTemporaryDirectory();
+    try
+    {
+        var fixture = await CreateCropAtlasFixtureAsync(directory);
+        var firstOutput = Path.Combine(directory, "atlas-first");
+        var secondOutput = Path.Combine(directory, "atlas-second");
+        var first = await CropAtlasRunner.RunAsync(
+            fixture.Input,
+            fixture.RegionReportPath,
+            firstOutput,
+            TestCropAtlasOptions());
+        var second = await CropAtlasRunner.RunAsync(
+            fixture.Input,
+            fixture.RegionReportPath,
+            secondOutput,
+            TestCropAtlasOptions());
+
+        AssertEqual(
+            string.Join("|", first.SelectedRegions.Select(region =>
+                region.CandidateId)),
+            string.Join("|", second.SelectedRegions.Select(region =>
+                region.CandidateId)),
+            "deterministic crop atlas region ids");
+        AssertEqual(
+            string.Join("|", first.Crops.Select(crop =>
+                $"{crop.CandidateId}:{crop.ClusterId}:{crop.SourceFile}")),
+            string.Join("|", second.Crops.Select(crop =>
+                $"{crop.CandidateId}:{crop.ClusterId}:{crop.SourceFile}")),
+            "deterministic crop atlas crop order");
+    }
+    finally
+    {
+        DeleteDirectory(directory);
+    }
+}
+
+static async Task CropAtlasWritesAllReportsAsync()
+{
+    var directory = CreateTemporaryDirectory();
+    try
+    {
+        var fixture = await CreateCropAtlasFixtureAsync(directory);
+        var report = await CropAtlasRunner.RunAsync(
+            fixture.Input,
+            fixture.RegionReportPath,
+            fixture.AtlasOutput,
+            TestCropAtlasOptions());
+        await CropAtlasReportWriter.WriteAsync(
+            report,
+            fixture.AtlasOutput);
+
+        foreach (var fileName in new[]
+        {
+            "iphone-crop-atlas.json",
+            "iphone-crop-atlas.md",
+            "iphone-crop-atlas-regions.csv",
+            "iphone-crop-atlas-crops.csv",
+            "iphone-crop-atlas-clusters.csv",
+            "cluster-overview.png"
+        })
+        {
+            AssertTrue(
+                File.Exists(Path.Combine(fixture.AtlasOutput, fileName)),
+                $"crop atlas report {fileName} should exist");
+        }
+    }
+    finally
+    {
+        DeleteDirectory(directory);
+    }
+}
+
+static async Task CropAtlasRejectsMissingRepresentativeAsync()
+{
+    var directory = CreateTemporaryDirectory();
+    try
+    {
+        var fixture = await CreateCropAtlasFixtureAsync(directory);
+        var regionJson = await File.ReadAllTextAsync(
+            fixture.RegionReportPath);
+        var regionReport = JsonSerializer.Deserialize<RegionDiscoveryReport>(
+            regionJson,
+            RegionDiscoveryJson.CreateOptions(writeIndented: false))
+            ?? throw new InvalidOperationException(
+                "Missing test region report.");
+        File.Delete(Path.Combine(
+            fixture.Input,
+            regionReport.Images[0].FileName));
+
+        await ExpectFileNotFoundAsync(() => CropAtlasRunner.RunAsync(
+            fixture.Input,
+            fixture.RegionReportPath,
+            fixture.AtlasOutput,
+            TestCropAtlasOptions()));
+    }
+    finally
+    {
+        DeleteDirectory(directory);
+    }
+}
+
+static async Task CropAtlasIdentifiesUnderrepresentedClustersAsync()
+{
+    var directory = CreateTemporaryDirectory();
+    try
+    {
+        var fixture = await CreateCropAtlasFixtureAsync(directory);
+        var regionJson = await File.ReadAllTextAsync(
+            fixture.RegionReportPath);
+        var regionReport = JsonSerializer.Deserialize<RegionDiscoveryReport>(
+            regionJson,
+            RegionDiscoveryJson.CreateOptions(writeIndented: false))
+            ?? throw new InvalidOperationException(
+                "Missing test region report.");
+        var rewrittenImages = regionReport.Images
+            .Select((image, index) => image with
+            {
+                ClusterId = index == regionReport.Images.Count - 1
+                    ? "cluster-singleton"
+                    : "cluster-main"
+            })
+            .ToArray();
+        var rewritten = regionReport with
+        {
+            ClusterCount = 2,
+            Images = rewrittenImages
+        };
+        await File.WriteAllTextAsync(
+            fixture.RegionReportPath,
+            JsonSerializer.Serialize(
+                rewritten,
+                RegionDiscoveryJson.CreateOptions(writeIndented: true)));
+
+        var report = await CropAtlasRunner.RunAsync(
+            fixture.Input,
+            fixture.RegionReportPath,
+            fixture.AtlasOutput,
+            TestCropAtlasOptions());
+
+        AssertTrue(
+            report.Readiness.NeedsMoreImages,
+            "singleton cluster should request more images");
+        AssertTrue(
+            report.Readiness.UnderrepresentedClusters.Contains(
+                "cluster-singleton",
+                StringComparer.Ordinal),
+            "singleton cluster id should be listed");
+    }
+    finally
+    {
+        DeleteDirectory(directory);
+    }
+}
+
+static CropAtlasOptions TestCropAtlasOptions() =>
+    new()
+    {
+        MaximumCandidates = 6,
+        RepresentativesPerCluster = 2,
+        MaximumCropWidth = 160,
+        MaximumCropHeight = 160,
+        OverviewThumbnailWidth = 80,
+        OverviewThumbnailHeight = 160,
+        MaximumSameKindOverlap = 0.50
+    };
+
+static async Task<(
+    string Input,
+    string RegionReportPath,
+    string AtlasOutput)> CreateCropAtlasFixtureAsync(
+        string directory)
+{
+    var input = Path.Combine(directory, "input");
+    var regionOutput = Path.Combine(directory, "region");
+    var atlasOutput = Path.Combine(directory, "atlas");
+    CopyRegionFixtures(input);
+    var regionReport = await RegionDiscoveryRunner.RunAsync(
+        input,
+        TestRegionDiscoveryOptions());
+    Directory.CreateDirectory(regionOutput);
+    await RegionDiscoveryReportWriter.WriteAsync(
+        regionReport,
+        regionOutput);
+    return (
+        input,
+        Path.Combine(regionOutput, "iphone-region-discovery.json"),
+        atlasOutput);
+}
+
+static async Task ExpectFileNotFoundAsync(Func<Task> action)
+{
+    try
+    {
+        await action();
+        throw new InvalidOperationException(
+            "Expected FileNotFoundException.");
+    }
+    catch (FileNotFoundException)
+    {
     }
 }
 

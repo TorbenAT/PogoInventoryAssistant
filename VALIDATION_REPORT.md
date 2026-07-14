@@ -2,7 +2,7 @@
 
 ## Version
 
-0.11.1
+0.12.0
 
 ## Accepted prior result
 
@@ -20,7 +20,7 @@ zero near duplicates
 
 ## New implementation
 
-Version 0.11.1 adds a deterministic visual-region discovery layer.
+Version 0.12.0 adds a deterministic visual-region discovery layer.
 
 For each cell in a configurable normalised grid it calculates:
 
@@ -71,9 +71,9 @@ A green result proves deterministic localisation of stable, changing and cluster
 
 It does not prove OCR, IV-bar interpretation, Android coordinates, Calcy overlay extraction or complete Pokémon observations.
 
-No additional images should be requested until the real 0.11.1 region and cluster reports have been inspected.
+No additional images should be requested until the real 0.12.0 region and cluster reports have been inspected.
 
-## 0.11.1 compile correction
+## 0.12.0 compile correction
 
 The GitHub build proved that the new RegionDiscovery library itself compiled.
 The four failures were isolated to unresolved symbols in the CLI integration.
@@ -89,3 +89,21 @@ Static checks for this patch confirm:
 The preparation environment does not contain the .NET SDK, so GitHub Actions
 remains the authoritative compilation and execution check.
 
+## Version 0.12.0 static validation
+
+The preparation environment does not contain the .NET SDK. GitHub Actions
+therefore remains the authoritative compiler and test runner.
+
+Static validation completed:
+
+- 14 project files parsed as XML
+- every project reference resolves
+- every project is present in the solution
+- CLI contains both CropAtlas namespace imports
+- CLI contains the `image-crop-atlas` command
+- self-test project references CropAtlas
+- 97 self-tests are declared
+- all JSON files parse
+- GitHub Actions contains crop-atlas execution and verification
+- generated ZIP integrity passes
+- no committed source screenshot is modified or duplicated in the handoff

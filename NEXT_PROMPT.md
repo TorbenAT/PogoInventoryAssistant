@@ -1,6 +1,6 @@
 # Continuation prompt
 
-Use this text with the latest repository after version 0.11.1 is green.
+Use this text with the latest repository after version 0.12.0 is green.
 
 ---
 
@@ -8,7 +8,7 @@ I am building Pogo Inventory Assistant in C# and .NET 8.
 
 Open and inspect the repository before changing anything. Treat `PROJECT_STATE.md` as the source of truth. Read `docs/GUARDRAILS.md`, `docs/IPHONE_IMAGE_PRETEST.md`, `docs/IPHONE_VISUAL_REGION_DISCOVERY.md`, `docs/CALCY_PROVIDER_VERIFICATION.md` and `docs/AUTOMATIC_NAVIGATION.md`.
 
-Current version: 0.11.1.
+Current version: 0.12.0.12.0.
 
 Accepted before this task:
 
@@ -30,18 +30,18 @@ out/iphone-region-discovery/iphone-region-candidates.csv
 out/iphone-region-discovery/iphone-region-image-clusters.csv
 ```
 
-Next milestone: build a deterministic crop-atlas and cluster-explanation report from the strongest real candidate regions.
+Next milestone: inspect the real crop-atlas artifact and implement only the first semantic extraction experiment supported by its contact sheets.
 
 Required work:
 
-1. Select non-overlapping high-confidence screen-state and text-dense candidate regions.
-2. Produce a manifest linking every decoded screenshot, its visual cluster and selected region fingerprints.
-3. Generate local diagnostic crops or contact sheets only under ignored output directories.
-4. Keep every semantic label provisional unless supported by measured evidence.
-5. Determine whether the current images are sufficient for name, CP and appraisal-bar extraction experiments.
-6. Request more screenshots only for a precise missing state or coverage gap.
-7. Do not claim iPhone results validate Android coordinates, timing or Calcy geometry.
-8. Add no new phone input action.
+1. Read `out/iphone-crop-atlas/iphone-crop-atlas.json`.
+2. Record `readiness.needsMoreImages` and any named underrepresented clusters.
+3. Inspect the cluster overview and every selected-region contact sheet.
+4. Assign provisional screen-state labels only where the evidence is visually unambiguous.
+5. Select either name/CP extraction or appraisal-bar measurement as the first semantic experiment, not both unless both are strongly supported.
+6. Add a truth manifest and zero-false-Complete acceptance test for that field.
+7. Keep unsupported fields null and do not guess.
+8. Add no phone input action.
 9. Update project state, continuation prompt, release notes and validation report.
 
 When the fixed Android phone becomes available, run the real Calcy probe before selecting a production provider.

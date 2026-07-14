@@ -4,7 +4,7 @@
 
 The Device Harness is the only project allowed to execute ADB commands.
 
-Version 0.11.1 has three separate interfaces.
+Version 0.12.0 has three separate interfaces.
 
 ## Read interface
 
@@ -37,7 +37,7 @@ This extends the read interface with a fixed set of named, read-only inspection 
 - app-ops state
 - running services
 
-The interface does not expose arbitrary shell commands. Version 0.11.1 uses it only for the local Calcy evidence probe.
+The interface does not expose arbitrary shell commands. Version 0.12.0 uses it only for the local Calcy evidence probe.
 
 ## Automation interface
 

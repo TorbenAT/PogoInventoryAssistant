@@ -16,6 +16,8 @@ using PogoInventory.Core.Analysis;
 using PogoInventory.Core.Models;
 using PogoInventory.Core.Policy;
 using PogoInventory.Core.Reporting;
+using PogoInventory.CropAtlas.Models;
+using PogoInventory.CropAtlas.Services;
 using PogoInventory.Device;
 using PogoInventory.Device.Adb;
 using PogoInventory.Device.Errors;
@@ -88,6 +90,9 @@ static async Task<int> MainAsync(string[] args)
                 args.Skip(1).ToArray(),
                 cancellationSource.Token),
             "image-region-discovery" => await RunImageRegionDiscoveryAsync(
+                args.Skip(1).ToArray(),
+                cancellationSource.Token),
+            "image-crop-atlas" => await RunImageCropAtlasAsync(
                 args.Skip(1).ToArray(),
                 cancellationSource.Token),
             "device-snapshot" => await CaptureDeviceSnapshotAsync(
@@ -679,6 +684,75 @@ static async Task<int> RunImageRegionDiscoveryAsync(
     }
     Console.WriteLine(report.GateDetail);
     return report.Accepted ? 0 : 11;
+}
+
+
+static async Task<int> RunImageCropAtlasAsync(
+    string[] args,
+    CancellationToken cancellationToken)
+{
+    var options = ParseOptions(args);
+    var inputDirectory = Require(options, "input");
+    var regionReportPath = Require(options, "region-report");
+    var outputDirectory = Require(options, "out");
+    var atlasOptions = new CropAtlasOptions
+    {
+        MaximumCandidates = ParsePositiveInt(
+            options,
+            "max-candidates",
+            8),
+        RepresentativesPerCluster = ParsePositiveInt(
+            options,
+            "representatives-per-cluster",
+            2),
+        MaximumCropWidth = ParsePositiveInt(
+            options,
+            "max-crop-width",
+            640),
+        MaximumCropHeight = ParsePositiveInt(
+            options,
+            "max-crop-height",
+            480),
+        OverviewThumbnailWidth = ParsePositiveInt(
+            options,
+            "overview-width",
+            220),
+        OverviewThumbnailHeight = ParsePositiveInt(
+            options,
+            "overview-height",
+            480),
+        MaximumSameKindOverlap = ParseUnitDouble(
+            options,
+            "max-same-kind-overlap",
+            0.35)
+    };
+
+    var report = await CropAtlasRunner.RunAsync(
+        inputDirectory,
+        regionReportPath,
+        outputDirectory,
+        atlasOptions,
+        cancellationToken);
+    await CropAtlasReportWriter.WriteAsync(
+        report,
+        outputDirectory,
+        cancellationToken);
+
+    Console.WriteLine(
+        $"iPhone crop atlas: {report.CropCount} crops from " +
+        $"{report.SelectedRegionCount} candidate regions.");
+    Console.WriteLine($"Visual clusters: {report.ClusterCount}.");
+    Console.WriteLine(
+        $"Semantic experiment readiness: " +
+        $"{report.Readiness.ReadyForSemanticExperiments}.");
+    Console.WriteLine(
+        $"More images indicated: {report.Readiness.NeedsMoreImages}.");
+    foreach (var reason in report.Readiness.Reasons)
+    {
+        Console.WriteLine($"Readiness: {reason}");
+    }
+    Console.WriteLine(report.GateDetail);
+    return report.Accepted ? 0 : 12;
 }
 
 static async Task<int> CaptureDeviceSnapshotAsync(
@@ -1519,6 +1593,9 @@ static void PrintHelp()
     Console.WriteLine();
     Console.WriteLine("  image-pretest --input <directory> --out <directory> [--min-images <n>] [--min-decode-rate <0-1>]");
     Console.WriteLine("  image-region-discovery --input <directory> --out <directory> [--min-images <n>] [--min-decode-rate <0-1>] [--cluster-threshold <0-1>] [--grid-columns <n>] [--grid-rows <n>]");
+    Console.WriteLine("  image-crop-atlas --input <directory> --region-report <file> --out <directory>");
+    Console.WriteLine("                   [--max-candidates <n>] [--representatives-per-cluster <n>]");
+    Console.WriteLine("                   [--max-crop-width <n>] [--max-crop-height <n>]");
     Console.WriteLine("                [--near-duplicate-threshold <0..1>] [--cluster-threshold <0..1>]");
     Console.WriteLine();
     Console.WriteLine("  device-snapshot --out <directory> [--adb <adb.exe>] [--serial <serial>] [--timeout-seconds <n>]");

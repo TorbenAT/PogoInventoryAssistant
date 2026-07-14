@@ -245,6 +245,44 @@ jobs:
             if ($count -lt 1) { throw "Expected at least one $kind candidate." }
           }
 
+
+      - name: Build crop atlas from committed iPhone images
+        if: ${{ hashFiles('data/iphone-images/*.png') != '' }}
+        run: >-
+          dotnet run --project .\src\PogoInventory.Cli --configuration Release --no-build --
+          image-crop-atlas
+          --input .\data\iphone-images
+          --region-report .\out\iphone-region-discovery\iphone-region-discovery.json
+          --out .\out\iphone-crop-atlas
+          --max-candidates 8
+          --representatives-per-cluster 2
+          --max-crop-width 640
+          --max-crop-height 480
+
+      - name: Verify iPhone crop atlas
+        if: ${{ hashFiles('data/iphone-images/*.png') != '' }}
+        shell: pwsh
+        run: |
+          $report = Get-Content .\out\iphone-crop-atlas\iphone-crop-atlas.json -Raw | ConvertFrom-Json
+          if (-not $report.accepted) { throw "The iPhone crop atlas was rejected." }
+          if ($report.clusterCount -lt 2) { throw "Expected at least two crop-atlas clusters." }
+          if ($report.selectedRegionCount -lt 3) { throw "Expected at least three selected candidate regions." }
+          if ($report.cropCount -lt ($report.selectedRegionCount * $report.clusterCount)) {
+            throw "Every selected region must contain evidence from every visual cluster."
+          }
+          if (-not (Test-Path .\out\iphone-crop-atlas\cluster-overview.png)) {
+            throw "The cluster overview image is missing."
+          }
+          $sheetCount = @(Get-ChildItem .\out\iphone-crop-atlas\sheets\*.png).Count
+          if ($sheetCount -ne $report.selectedRegionCount) {
+            throw "Expected one contact sheet for every selected region."
+          }
+          Write-Host "Semantic experiment readiness: $($report.readiness.readyForSemanticExperiments)"
+          Write-Host "More images indicated: $($report.readiness.needsMoreImages)"
+          foreach ($reason in $report.readiness.reasons) {
+            Write-Host "Readiness: $reason"
+          }
+
       - name: Upload validation output
         if: always()
         uses: actions/upload-artifact@v4

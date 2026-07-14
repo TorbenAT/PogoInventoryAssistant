@@ -294,3 +294,13 @@ The CLI imports the `PogoInventory.RegionDiscovery.Models` and
 `PogoInventory.RegionDiscovery.Services` namespaces explicitly. This corrects
 the compile failure in the command-line integration without changing the
 region-discovery algorithm, reports, input boundary or safety model.
+
+## Version 0.12.0: crop-atlas evidence layer
+
+`PogoInventory.CropAtlas` consumes the accepted
+`PogoInventory.RegionDiscovery` report and the original read-only screenshots.
+
+It produces derived PNG crops and manifests under `out`. The project does not
+perform device control and does not assign semantic Pokémon fields. Its only
+decision is whether the current visual clusters have enough representative
+evidence for a later semantic experiment.

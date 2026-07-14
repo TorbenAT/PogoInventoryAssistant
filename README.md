@@ -1,10 +1,10 @@
 # Pogo Inventory Assistant
 
-Version 0.11.1
+Version 0.12.0
 
 Pogo Inventory Assistant is a local tool for building a complete Pokémon GO inventory, analysing it and later applying safe batch tags. Final transfer remains manual.
 
-Version 0.11.1 uses the accepted real iPhone screenshot set to discover stable, changing and cluster-discriminating normalised screen regions. The output is evidence for the next extraction step; it does not yet perform OCR or claim species, CP or IV values.
+Version 0.12.0 uses the accepted real iPhone screenshot set to discover stable, changing and cluster-discriminating normalised screen regions. The output is evidence for the next extraction step; it does not yet perform OCR or claim species, CP or IV values.
 
 
 ## iPhone screenshot pretest
@@ -209,9 +209,26 @@ dotnet run --project .\src\PogoInventory.Cli --configuration Release -- `
 
 Do not provide a parser profile on the first real run. First inspect which output mechanism actually exists on the phone.
 
+## iPhone crop atlas
+
+Version 0.12.0 turns the real visual-region report into derived crop evidence.
+It selects strong candidate regions, creates one contact sheet per candidate,
+and generates a cluster overview.
+
+Run:
+
+```powershell
+.\scripts\run-iphone-crop-atlas.ps1
+```
+
+The resulting JSON report states whether more screenshots are needed and names
+the exact underrepresented visual clusters. A green atlas is evidence that the
+current screenshots are suitable for the next semantic experiment; it is not
+itself an OCR or IV result.
+
 ## Current real-device limitation
 
-Version 0.11.1 can verify a proven candidate mechanism across at least 20 local cases and can locate provisional visual regions in the accepted iPhone screenshots. It still does not claim that a real mechanism works until evidence from the fixed Android phone passes the gate.
+Version 0.12.0 can verify a proven candidate mechanism across at least 20 local cases and can locate provisional visual regions in the accepted iPhone screenshots. It still does not claim that a real mechanism works until evidence from the fixed Android phone passes the gate.
 
 The next implementation must be selected from the real local evidence:
 
