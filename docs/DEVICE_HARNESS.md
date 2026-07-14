@@ -4,7 +4,7 @@
 
 The Device Harness is the only project allowed to execute ADB commands.
 
-Version 0.6.1 has two separate interfaces.
+Version 0.6.2 has two separate interfaces.
 
 ## Read interface
 

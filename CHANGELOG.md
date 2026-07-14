@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.6.2
+
+- Fixed the only failing 0.6.1 self-test.
+- Replaced the stale hard-coded expected harness version `0.2.0` with `DeviceHarnessOptions.CurrentVersion`.
+- Bumped the runtime version and deterministic fake build fingerprints to 0.6.2.
+- Preserved all automatic-navigation behavior and safety boundaries.
+
 ## 0.6.1
 
 - Fixed the GitHub Actions compile failure in `InventoryAutomationRunner.FinishAsync`.

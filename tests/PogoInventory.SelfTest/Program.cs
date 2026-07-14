@@ -350,7 +350,10 @@ static async Task FakeSnapshotWritesFilesAsync()
 
         using var manifest = JsonDocument.Parse(await File.ReadAllTextAsync(result.ManifestPath));
         var root = manifest.RootElement;
-        AssertEqual("0.2.0", root.GetProperty("harnessVersion").GetString(), "harness version");
+        AssertEqual(
+            DeviceHarnessOptions.CurrentVersion,
+            root.GetProperty("harnessVersion").GetString(),
+            "harness version");
         AssertEqual(
             result.ScreenshotSha256,
             root.GetProperty("screenshotSha256").GetString(),

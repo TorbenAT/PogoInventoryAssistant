@@ -2,71 +2,78 @@
 
 ## Version
 
-0.6.1
+0.6.2
 
-## Reported CI regression
+## Reported CI result
 
-The 0.6.0 GitHub Actions build failed at:
+The 0.6.1 solution compiled successfully. GitHub Actions then ran all 52 self-tests.
+
+Result:
 
 ```text
-InventoryAutomationRunner.cs(737,27): CS0173
+51/52 tests passed.
 ```
 
-The compiler could not infer a common type between `DateTimeOffset` and `null` in a conditional expression assigned to `var`.
+The only failure was:
 
-## Fix applied
+```text
+Fake snapshot writes PNG, metadata and manifest:
+Expected harness version to be '0.2.0', got '0.6.1'.
+```
 
-The variable is now explicitly nullable:
+## Root cause
+
+The production path already used `DeviceHarnessOptions.CurrentVersion` when writing the manifest. The self-test still contained a historical literal from the original device-harness release:
 
 ```csharp
-DateTimeOffset? completedAt = status == AutomationRunStatus.Completed
-    ? DateTimeOffset.UtcNow
-    : null;
+AssertEqual("0.2.0", ...);
 ```
 
-This is type-compatible with `InventoryScanCheckpoint.CompletedAtUtc`, which is already `DateTimeOffset?`.
+The application output was correct. The assertion was stale.
 
-## Behavior impact
+## Fix
 
-None. The change is compile-only and does not alter:
+The self-test now compares the manifest value with the same version constant used by the product:
 
-- automatic navigation
-- taps or swipes
-- timing and waiting logic
-- screen-state detection
+```csharp
+AssertEqual(
+    DeviceHarnessOptions.CurrentVersion,
+    root.GetProperty("harnessVersion").GetString(),
+    "harness version");
+```
+
+`DeviceHarnessOptions.CurrentVersion` and the deterministic fake build fingerprints are bumped to `0.6.2`.
+
+## Behaviour impact
+
+None outside version metadata. The following remain unchanged:
+
+- automatic inventory navigation
+- input action whitelist
+- screen-state checks
 - evidence capture
-- checkpoint schema
-- resume behavior
-- end detection
-- safety boundaries
+- checkpoint and resume logic
+- end-of-inventory detection
+- no transfer automation
 
 ## Static validation completed
 
-- complete repository unpacked from 0.6.0
-- failing source location inspected directly
-- nullable target property confirmed
-- explicit nullable type applied
+- complete 0.6.1 repository unpacked
+- failing assertion located from the GitHub Actions log
+- assertion changed to the shared version constant
 - all JSON files parse successfully
 - all project XML files parse successfully
 - all project references resolve
-- expected self-test declaration count remains 52
-- no private captures, inventory data, `bin`, `obj` or `.git` content included
-- ZIP root contains the solution directly
+- self-test declaration count remains 52
+- ZIP contains no private captures, inventory data, `bin`, `obj` or `.git` content
 
-## Expected CI validation
+## Required CI result
 
-GitHub Actions must:
+GitHub Actions must now:
 
-1. restore .NET 8 projects
-2. build the full solution with warnings as errors
-3. run all 52 self-tests
-4. run the analysis demo
-5. run the fake device snapshot
-6. complete the deterministic three-item automatic inventory scan
-7. run synthetic screen detection
-8. build and validate the synthetic calibration profile
-9. upload validation output
+1. build all seven projects
+2. pass all 52 self-tests
+3. complete the deterministic three-item fake inventory scan
+4. complete the synthetic vision and calibration checks
 
-## Release gate
-
-Do not begin the next milestone until GitHub Actions is green for 0.6.1.
+Do not begin the next milestone until 0.6.2 is green.

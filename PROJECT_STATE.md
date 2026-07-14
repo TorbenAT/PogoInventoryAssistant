@@ -2,7 +2,7 @@
 
 ## Current version
 
-0.6.1
+0.6.2
 
 ## Accepted checkpoint
 
@@ -15,9 +15,9 @@ Torben clarified the operational requirement:
 - no user involvement across 10,000+ Pokémon
 - once the phone profile is adjusted, traversal must run unattended
 
-Version 0.6.1 preserves that plan and fixes the nullable completion timestamp compile regression found by GitHub Actions.
+Version 0.6.2 preserves that plan and fixes the stale harness-version assertion found after the 0.6.1 build succeeded.
 
-GitHub Actions for 0.6.0 reached the new Automation project and found one compile-only regression in `FinishAsync`. No runtime or test failure was reached. Version 0.6.1 applies the explicit nullable type required by the compiler.
+GitHub Actions for 0.6.1 built successfully and ran all 52 self-tests. Exactly one test failed because it still expected the historical harness version `0.2.0`, while the manifest correctly reported `0.6.1`. Version 0.6.2 makes that assertion use `DeviceHarnessOptions.CurrentVersion` and bumps the current runtime version to `0.6.2`.
 
 ## Completed
 
@@ -99,13 +99,13 @@ No other phone input is allowed.
 
 ## Important limitation
 
-Version 0.6.1 can automatically traverse and capture an ordered inventory once real local profiles are adjusted. The committed profiles are synthetic and must not be used against the real phone.
+Version 0.6.2 can automatically traverse and capture an ordered inventory once real local profiles are adjusted. The committed profiles are synthetic and must not be used against the real phone.
 
 The current evidence items contain ordered screenshots and fingerprints, not yet complete Pokémon observations.
 
 ## Required checkpoint after push
 
-1. Confirm GitHub Actions is green for 0.6.1.
+1. Confirm GitHub Actions is green for 0.6.2.
 2. Confirm all 52 self-tests pass.
 3. Confirm the deterministic fake inventory scan captures exactly three items.
 4. Confirm the checkpoint contains SHA-256 locks for both automation and screen profiles.

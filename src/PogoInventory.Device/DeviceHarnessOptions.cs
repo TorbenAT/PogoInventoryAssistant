@@ -2,7 +2,7 @@ namespace PogoInventory.Device;
 
 public sealed record DeviceHarnessOptions
 {
-    public const string CurrentVersion = "0.6.1";
+    public const string CurrentVersion = "0.6.2";
 
     public string AdbPath { get; init; } = "adb";
     public TimeSpan CommandTimeout { get; init; } = TimeSpan.FromSeconds(15);

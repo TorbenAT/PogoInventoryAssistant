@@ -92,4 +92,4 @@ Timing is deterministic and correctness-driven:
 
 ## Current data output
 
-Version 0.6.1 records ordered evidence. The next layer will turn each evidence item into a structured Pokémon observation using Calcy and visual extraction.
+Version 0.6.2 records ordered evidence. The next layer will turn each evidence item into a structured Pokémon observation using Calcy and visual extraction.
