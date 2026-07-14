@@ -2,62 +2,78 @@
 
 ## Current version
 
-0.10.1
+0.11.0
 
 ## Accepted checkpoint
 
-Torben reported version 0.9.0 fully green. Version 0.10.0 then processed the 24 committed iPhone screenshots and produced this real result:
+Torben reported that version 0.10.1 is fully green in GitHub Actions.
 
-- 23 of 24 images decoded
-- one geometry group
-- four visual clusters
-- no exact duplicates
-- no near duplicates
-- one image failed decoding
+The accepted real iPhone pretest result is:
 
-The 0.10.0 gate rejected the entire pretest solely because one extra image failed, even though 23 usable screenshots exceeded the requested minimum of 20. Version 0.10.1 corrects that gate.
+- 24 committed PNG screenshots
+- 23 successfully decoded screenshots
+- 95.8 percent decode rate
+- one screenshot geometry group
+- four automatically discovered visual clusters
+- zero exact duplicate pairs
+- zero near-duplicate pairs
+- one rejected PNG retained as a decoder diagnostic
+
+This proves the real screenshots can pass through the package-free image pipeline. It does not yet prove semantic Pokémon-data extraction.
 
 ## Completed
 
 ### M0 to M3
 
-- .NET 8 foundation and conservative KEEP, REVIEW and DELETE engine
-- read-only Android device harness
+- .NET 8 foundation
+- conservative KEEP, REVIEW and DELETE analysis
+- Android device harness
 - deterministic screen detection and calibration
-- automatic inventory navigation with only four named actions
-- local evidence, checkpoints and safe resume
+- automatic inventory navigation
+- ordered local evidence, checkpoints and safe resume
+- four named phone actions only
 
-### M4 phases 1 to 3
+### M4 Calcy and observation foundation
 
 - automatic core-profile bootstrap
-- structured nullable Calcy observations
+- nullable structured observations
 - checkpoint schema 2.0
 - Calcy package and live-check probe
 - profile-driven raw-text parser
-- twenty-case Calcy provider verification gate
-- zero-false-Complete gate and provider hash locking
+- twenty-case zero-wrong-Complete verification gate
+- provider selection locked to report and parser hashes
 
-### M4 phase 4a: iPhone image pretest
+### M4 phase 4a: real iPhone image pretest
 
-- deterministic PNG enumeration
-- package-free decoding
-- geometry, orientation, length and SHA-256 inventory
-- combined grayscale and edge fingerprints
+- real PNG decoding
+- geometry and orientation inventory
+- SHA-256 evidence
+- grayscale and edge fingerprints
 - all-pairs visual similarity
-- exact and near-duplicate detection
-- deterministic visual clustering
-- JSON, Markdown and CSV reports
-- CI processing of `data/iphone-images/*.png`
+- duplicate and near-duplicate checks
+- automatic visual clustering
+- accepted isolated decode-failure policy
 
-### 0.10.1 correction
+### M4 phase 4b: visual-region discovery
 
-- `--min-images` now means successfully decoded images
-- default minimum decode rate is 90 percent
-- isolated rejected files remain warnings and diagnostics
-- widespread decoder failure still stops CI
-- console output prints rejected filename, error type and error detail
-- Markdown contains a rejected-images table
-- two regression tests added, bringing the expected total to 86
+New `PogoInventory.RegionDiscovery` project:
+
+- normalised 12 by 24 screen grid
+- mean luminance and edge density per cell
+- global cross-image variation
+- consecutive-image variation
+- within-cluster variation
+- between-cluster separation
+- provisional stable-chrome candidates
+- provisional screen-state discriminator candidates
+- provisional dynamic-content candidates
+- provisional text-dense candidates
+- JSON, Markdown and three CSV reports
+- deterministic candidate grouping
+- CI execution against the committed iPhone screenshots
+- 91 expected self-tests
+
+All candidate meanings are provisional. Version 0.11.0 does not perform OCR and does not claim species, CP or IV extraction.
 
 ## Input boundary
 
@@ -68,40 +84,54 @@ TapAppraise
 SwipeNextPokemon
 ```
 
-Version 0.10.1 adds no phone input action.
+Version 0.11.0 adds no phone input action.
+
+## Not completed
+
+- semantic labels for the four real visual clusters
+- OCR of name, CP, HP or other text
+- IV-bar measurement from real screenshots
+- status-marker extraction
+- real Android Calcy evidence
+- production `ICalcyObservationProvider`
+- automatic twenty-case real evidence collection
+- SQLite inventory database
+- full real-inventory decision plan
+- automatic tagging
+- transfer remains manual and is not implemented
 
 ## Required checkpoint after push
 
-1. Build all 12 projects.
-2. Confirm 86 of 86 self-tests pass.
-3. Confirm the committed iPhone pretest runs automatically.
-4. Confirm 23 of 24 images decode.
-5. Confirm the 95.8 percent decode rate exceeds the 90 percent requirement.
-6. Confirm the pretest is accepted.
-7. Record the rejected filename and exact decoder error from the Action log or report.
-8. Preserve zero new phone input actions.
+1. Build all 13 projects.
+2. Confirm 91 of 91 self-tests pass.
+3. Confirm the iPhone pretest remains accepted with 23 decoded images.
+4. Confirm visual-region discovery is accepted.
+5. Confirm one geometry group and at least two clusters.
+6. Confirm the report contains 288 grid cells.
+7. Confirm at least one provisional candidate of each kind.
+8. Inspect the candidate and cluster reports from `validation-output`.
+9. Preserve zero new phone actions.
 
 ## Next recommended milestone
 
-Use the accepted iPhone report to build a deterministic visual-region discovery report. Keep all region labels provisional until supported by real evidence.
+Use the real region report to build an automatic crop atlas and cluster explanation report:
 
-When the Android phone is available:
+- select the strongest non-overlapping state-discriminator regions
+- create read-only crops for each cluster representative
+- produce a compact contact-sheet manifest without copying private source images into Git
+- determine whether the current images contain enough detail for name, CP and appraisal-bar experiments
+- add OCR or IV-bar interpretation only after the crop evidence supports it
 
-1. run `calcy-probe`
-2. run `calcy-live-check`
-3. compare Android screenshots with the iPhone visual groups
-4. implement only the extraction mechanism proven by real evidence
-5. collect 20 real verification cases automatically
-6. pass the existing zero-wrong-Complete gate
+No additional screenshots are required before the 0.11.0 real report is inspected. More images should be requested only for a specific missing state or weak candidate region.
 
 ## Design decisions preserved
 
 - no hidden game API
 - no transfer automation
-- no anti-detection or human imitation
+- no anti-detection logic
 - no random timing or coordinates
 - deterministic state-aware waiting
 - Unknown means stop
-- incomplete data stays incomplete
-- source screenshots are never modified
-- rejected images remain traceable rather than silently discarded
+- incomplete data remains incomplete
+- screenshots are read only
+- real data remains local or explicitly committed by Torben

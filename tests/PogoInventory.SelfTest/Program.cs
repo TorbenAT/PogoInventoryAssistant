@@ -25,6 +25,8 @@ using PogoInventory.Observations.Models;
 using PogoInventory.Observations.Parsing;
 using PogoInventory.Observations.Providers;
 using PogoInventory.Observations.Sources;
+using PogoInventory.RegionDiscovery.Models;
+using PogoInventory.RegionDiscovery.Services;
 using PogoInventory.Vision.Imaging;
 using PogoInventory.Vision.Models;
 using PogoInventory.Vision.Profiles;
@@ -120,7 +122,12 @@ var tests = new (string Name, Func<Task> Run)[]
     ("Image pretest writes all reports", ImagePretestWritesReportsAsync),
     ("Image pretest ignores non-PNG files", ImagePretestIgnoresNonPngFilesAsync),
     ("Image pretest tolerates isolated decode failure", ImagePretestToleratesIsolatedDecodeFailureAsync),
-    ("Image pretest rejects low decode rate", ImagePretestRejectsLowDecodeRateAsync)
+    ("Image pretest rejects low decode rate", ImagePretestRejectsLowDecodeRateAsync),
+    ("Region discovery creates grid and candidates", RegionDiscoveryCreatesGridAndCandidatesAsync),
+    ("Region discovery is deterministic", RegionDiscoveryIsDeterministicAsync),
+    ("Region discovery writes all reports", RegionDiscoveryWritesReportsAsync),
+    ("Region discovery rejects mixed geometry", RegionDiscoveryRejectsMixedGeometryAsync),
+    ("Region discovery retains isolated decode failure", RegionDiscoveryRetainsIsolatedDecodeFailureAsync)
 };
 
 var failed = 0;
@@ -2113,6 +2120,186 @@ static async Task ImagePretestRejectsLowDecodeRateAsync()
     finally
     {
         DeleteDirectory(directory);
+    }
+}
+
+
+static async Task RegionDiscoveryCreatesGridAndCandidatesAsync()
+{
+    var directory = CreateTemporaryDirectory();
+    try
+    {
+        CopyRegionFixtures(directory);
+        var report = await RegionDiscoveryRunner.RunAsync(
+            directory,
+            TestRegionDiscoveryOptions());
+
+        AssertTrue(report.Accepted, "region discovery fixture set should pass");
+        AssertEqual(32, report.CellCount, "region discovery cell count");
+        AssertTrue(report.ClusterCount >= 2, "region discovery cluster count");
+        foreach (var kind in Enum.GetValues<RegionCandidateKind>())
+        {
+            AssertTrue(
+                report.CandidateCount(kind) >= 1,
+                $"region discovery should produce {kind} candidate");
+        }
+    }
+    finally
+    {
+        DeleteDirectory(directory);
+    }
+}
+
+static async Task RegionDiscoveryIsDeterministicAsync()
+{
+    var directory = CreateTemporaryDirectory();
+    try
+    {
+        CopyRegionFixtures(directory);
+        var options = TestRegionDiscoveryOptions();
+        var first = await RegionDiscoveryRunner.RunAsync(directory, options);
+        var second = await RegionDiscoveryRunner.RunAsync(directory, options);
+
+        AssertEqual(first.CellCount, second.CellCount, "deterministic cell count");
+        for (var index = 0; index < first.Cells.Count; index++)
+        {
+            AssertEqual(
+                first.Cells[index].ScreenStateScore,
+                second.Cells[index].ScreenStateScore,
+                $"deterministic state score {index}");
+            AssertEqual(
+                first.Cells[index].DynamicContentScore,
+                second.Cells[index].DynamicContentScore,
+                $"deterministic dynamic score {index}");
+        }
+        AssertEqual(
+            string.Join("|", first.Candidates.Select(candidate => candidate.Id)),
+            string.Join("|", second.Candidates.Select(candidate => candidate.Id)),
+            "deterministic candidate ids");
+    }
+    finally
+    {
+        DeleteDirectory(directory);
+    }
+}
+
+static async Task RegionDiscoveryWritesReportsAsync()
+{
+    var directory = CreateTemporaryDirectory();
+    try
+    {
+        var input = Path.Combine(directory, "input");
+        var output = Path.Combine(directory, "output");
+        CopyRegionFixtures(input);
+        var report = await RegionDiscoveryRunner.RunAsync(
+            input,
+            TestRegionDiscoveryOptions());
+        await RegionDiscoveryReportWriter.WriteAsync(report, output);
+
+        foreach (var fileName in new[]
+        {
+            "iphone-region-discovery.json",
+            "iphone-region-discovery.md",
+            "iphone-region-cells.csv",
+            "iphone-region-candidates.csv",
+            "iphone-region-image-clusters.csv"
+        })
+        {
+            AssertTrue(
+                File.Exists(Path.Combine(output, fileName)),
+                $"region discovery report {fileName} should exist");
+        }
+    }
+    finally
+    {
+        DeleteDirectory(directory);
+    }
+}
+
+static async Task RegionDiscoveryRejectsMixedGeometryAsync()
+{
+    var directory = CreateTemporaryDirectory();
+    try
+    {
+        CopyRegionFixtures(directory);
+        CopyPretestFixture(directory, "Landscape.png", "IMG_0007.png");
+        var report = await RegionDiscoveryRunner.RunAsync(
+            directory,
+            TestRegionDiscoveryOptions() with
+            {
+                MinimumDecodedImages = 6,
+                MinimumDecodeRate = 0.80
+            });
+
+        AssertTrue(!report.Accepted, "mixed geometry should reject region discovery");
+        AssertTrue(
+            report.GateDetail.Contains("geometry", StringComparison.OrdinalIgnoreCase) ||
+            report.GateDetail.Contains("pretest", StringComparison.OrdinalIgnoreCase),
+            "mixed geometry gate should explain rejection");
+    }
+    finally
+    {
+        DeleteDirectory(directory);
+    }
+}
+
+static async Task RegionDiscoveryRetainsIsolatedDecodeFailureAsync()
+{
+    var directory = CreateTemporaryDirectory();
+    try
+    {
+        CopyRegionFixtures(directory);
+        await File.WriteAllBytesAsync(
+            Path.Combine(directory, "IMG_0007.png"),
+            new byte[] { 137, 80, 78, 71, 13, 10, 26, 10 });
+        var report = await RegionDiscoveryRunner.RunAsync(
+            directory,
+            TestRegionDiscoveryOptions() with
+            {
+                MinimumDecodeRate = 0.80
+            });
+
+        AssertTrue(report.Accepted, "isolated decoder failure should not block discovery");
+        AssertEqual(6, report.DecodedCount, "region discovery decoded count");
+        AssertEqual(1, report.FailedCount, "region discovery failed count");
+    }
+    finally
+    {
+        DeleteDirectory(directory);
+    }
+}
+
+static RegionDiscoveryOptions TestRegionDiscoveryOptions() =>
+    new()
+    {
+        MinimumDecodedImages = 6,
+        MinimumDecodeRate = 0.90,
+        ClusterThreshold = 0.970,
+        GridColumns = 4,
+        GridRows = 8,
+        CellFingerprintWidth = 4,
+        CellFingerprintHeight = 4,
+        MaximumCandidatesPerKind = 3,
+        MinimumCandidateScore = 0.01
+    };
+
+static void CopyRegionFixtures(string directory)
+{
+    var fixtures = new[]
+    {
+        "InventoryList.png",
+        "PokemonDetails.png",
+        "PokemonMenuOpen.png",
+        "AppraisalOpen.png",
+        "SearchOpen.png",
+        "TagDialogOpen.png"
+    };
+    for (var index = 0; index < fixtures.Length; index++)
+    {
+        CopyPretestFixture(
+            directory,
+            fixtures[index],
+            $"IMG_{index + 1:D4}.png");
     }
 }
 

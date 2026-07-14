@@ -2,70 +2,73 @@
 
 ## Version
 
-0.10.1
+0.11.0
 
-## Reported real CI result
+## Accepted prior result
 
-The 0.10.0 iPhone pretest completed image analysis and reported:
+Torben reported version 0.10.1 fully green in GitHub Actions.
+
+The real iPhone fixture set previously produced:
 
 ```text
-iPhone image pretest: 23/24 decoded.
-Geometry groups: 1.
-Visual clusters: 4.
-Exact duplicates: 0.
-Near duplicates: 0.
-Rejected: 1 image(s) failed decoding.
+23/24 decoded
+one geometry group
+four visual clusters
+zero exact duplicates
+zero near duplicates
 ```
 
-This proved that the processing pipeline worked for 23 real iPhone screenshots. The failure was caused by an overly strict batch gate, not by insufficient usable evidence.
+## New implementation
 
-## Fix applied
+Version 0.11.0 adds a deterministic visual-region discovery layer.
 
-The gate now requires:
+For each cell in a configurable normalised grid it calculates:
 
-- at least `MinimumImageCount` successfully decoded images
-- at least 90 percent successful decoding by default
-- every decoded image to be portrait
-- at least two distinct decoded screenshots
+- luminance
+- edge density
+- global variation
+- consecutive variation
+- within-cluster variation
+- between-cluster separation
+- four provisional candidate scores
 
-A rejected file no longer blocks a sufficiently large, high-quality pretest set. It remains present in JSON, CSV, Markdown and console diagnostics.
-
-For the reported set:
-
-- decoded minimum: 20
-- decoded result: 23
-- required decode rate: 90.0 percent
-- actual decode rate: 95.8 percent
-- expected gate result: accepted
+Adjacent high-scoring cells are grouped into normalised candidate rectangles.
 
 ## Static validation completed
 
-- image-pretest acceptance logic updated
-- minimum decode-rate option added and validated
-- report model records actual and required decode rates
-- console prints rejected filename and exact error
-- Markdown adds a rejected-images section
-- isolated-failure regression test added
-- low-decode-rate rejection test added
-- expected self-test total is 86
-- all JSON files parse successfully
-- all project XML files parse successfully
-- all project references resolve
-- no new ADB command or phone input action added
-- no screenshot source file is modified
+- new `PogoInventory.RegionDiscovery` project added
+- project references added to CLI and self-test projects
+- project added to the solution and all configurations
+- CLI command and PowerShell script added
+- GitHub Actions real-image step added
+- JSON, Markdown and CSV report writers added
+- no source screenshot copying added
+- no new Android input interface or action added
+- all JSON files parsed successfully
+- all project XML files parsed successfully
+- every project reference resolves
+- all C# files parsed for syntax before packaging
+- expected self-test declaration count: 91
 
 ## Expected GitHub Actions validation
 
-1. restore and build all 12 projects
-2. run all 86 self-tests
-3. complete all existing synthetic navigation, calibration, Calcy and verification checks
-4. process all 24 committed iPhone PNG files
-5. decode 23 or more files
-6. meet the 90 percent minimum decode rate
-7. accept the iPhone pretest
-8. print the rejected image name and error detail
-9. upload JSON, Markdown and CSV reports
+GitHub Actions must:
 
-## Remaining investigation
+1. restore and build all 13 projects
+2. run 91 self-tests
+3. keep the existing iPhone image pretest green
+4. run `image-region-discovery` against `data/iphone-images`
+5. accept at least twenty decoded screenshots
+6. confirm one geometry group
+7. confirm at least two visual clusters
+8. produce exactly 288 cells for the 12 by 24 grid
+9. produce at least one candidate of each provisional kind
+10. upload all reports in `validation-output`
 
-The single rejected PNG should not be guessed at. Use the exact filename and decoder error printed by 0.10.1 to decide whether the file is corrupt or whether the package-free PNG decoder should support an additional valid PNG variant.
+## Interpretation boundary
+
+A green result proves deterministic localisation of stable, changing and cluster-discriminating image areas.
+
+It does not prove OCR, IV-bar interpretation, Android coordinates, Calcy overlay extraction or complete Pokémon observations.
+
+No additional images should be requested until the real 0.11.0 region and cluster reports have been inspected.

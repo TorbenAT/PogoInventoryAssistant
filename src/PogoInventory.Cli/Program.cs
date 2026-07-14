@@ -85,6 +85,9 @@ static async Task<int> MainAsync(string[] args)
             "image-pretest" => await RunImagePretestAsync(
                 args.Skip(1).ToArray(),
                 cancellationSource.Token),
+            "image-region-discovery" => await RunImageRegionDiscoveryAsync(
+                args.Skip(1).ToArray(),
+                cancellationSource.Token),
             "device-snapshot" => await CaptureDeviceSnapshotAsync(
                 args.Skip(1).ToArray(),
                 cancellationSource.Token),
@@ -623,6 +626,57 @@ static async Task<int> RunImagePretestAsync(
     }
     Console.WriteLine(report.GateDetail);
     return report.Accepted ? 0 : 1;
+}
+
+static async Task<int> RunImageRegionDiscoveryAsync(
+    string[] args,
+    CancellationToken cancellationToken)
+{
+    var options = ParseOptions(args);
+    var inputDirectory = Require(options, "input");
+    var outputDirectory = Require(options, "out");
+    var discoveryOptions = new RegionDiscoveryOptions
+    {
+        MinimumDecodedImages = ParsePositiveInt(options, "min-images", 20),
+        MinimumDecodeRate = ParseUnitDouble(options, "min-decode-rate", 0.90),
+        NearDuplicateThreshold = ParseUnitDouble(
+            options,
+            "near-duplicate-threshold",
+            0.995),
+        ClusterThreshold = ParseUnitDouble(
+            options,
+            "cluster-threshold",
+            0.925),
+        GridColumns = ParsePositiveInt(options, "grid-columns", 12),
+        GridRows = ParsePositiveInt(options, "grid-rows", 24),
+        MaximumCandidatesPerKind = ParsePositiveInt(
+            options,
+            "max-candidates-per-kind",
+            6)
+    };
+
+    var report = await RegionDiscoveryRunner.RunAsync(
+        inputDirectory,
+        discoveryOptions,
+        cancellationToken);
+    await RegionDiscoveryReportWriter.WriteAsync(
+        report,
+        outputDirectory,
+        cancellationToken);
+
+    Console.WriteLine(
+        $"iPhone region discovery: {report.DecodedCount}/{report.ImageCount} decoded.");
+    Console.WriteLine($"Visual clusters: {report.ClusterCount}.");
+    Console.WriteLine(
+        $"Grid cells: {report.CellCount} " +
+        $"({report.GridColumns}x{report.GridRows}).");
+    foreach (var kind in Enum.GetValues<RegionCandidateKind>())
+    {
+        Console.WriteLine(
+            $"{kind} candidates: {report.CandidateCount(kind)}.");
+    }
+    Console.WriteLine(report.GateDetail);
+    return report.Accepted ? 0 : 11;
 }
 
 static async Task<int> CaptureDeviceSnapshotAsync(
@@ -1462,6 +1516,7 @@ static void PrintHelp()
     Console.WriteLine("                        [--parser-profile <parser.json>]");
     Console.WriteLine();
     Console.WriteLine("  image-pretest --input <directory> --out <directory> [--min-images <n>] [--min-decode-rate <0-1>]");
+    Console.WriteLine("  image-region-discovery --input <directory> --out <directory> [--min-images <n>] [--min-decode-rate <0-1>] [--cluster-threshold <0-1>] [--grid-columns <n>] [--grid-rows <n>]");
     Console.WriteLine("                [--near-duplicate-threshold <0..1>] [--cluster-threshold <0..1>]");
     Console.WriteLine();
     Console.WriteLine("  device-snapshot --out <directory> [--adb <adb.exe>] [--serial <serial>] [--timeout-seconds <n>]");

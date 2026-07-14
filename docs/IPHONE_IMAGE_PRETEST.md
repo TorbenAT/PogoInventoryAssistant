@@ -1,6 +1,6 @@
 # iPhone image pretest
 
-Version 0.10.1 provides a deterministic pretest for uncropped iPhone Pokémon GO screenshots.
+Version 0.11.0 provides a deterministic pretest for uncropped iPhone Pokémon GO screenshots.
 
 The pretest is cross-platform. It validates the screenshot-processing pipeline before the fixed Android phone is available, but it does not prove Android navigation or Calcy integration.
 
@@ -80,7 +80,7 @@ The first real run found:
 - zero exact duplicates
 - zero near duplicates
 
-Version 0.10.1 accepts this as a useful pretest set while preserving the one rejected file for decoder investigation.
+Version 0.11.0 accepts this as a useful pretest set while preserving the one rejected file for decoder investigation.
 
 ## Limits
 

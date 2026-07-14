@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.11.0
+
+- Added deterministic visual-region discovery over the committed iPhone screenshots.
+- Added a normalised grid with luminance, edge, variation and cluster-separation metrics.
+- Added provisional stable-chrome, screen-state, dynamic-content and text-dense candidate regions.
+- Added JSON, Markdown and CSV reports plus real-image GitHub Actions validation.
+- Added five regression tests, bringing the expected total to 91.
+- Added no phone input actions and no semantic OCR claims.
+
 ## 0.10.1
 
 - Changed the iPhone pretest gate to require at least the configured number of successfully decoded images instead of rejecting the entire batch because one extra file failed.

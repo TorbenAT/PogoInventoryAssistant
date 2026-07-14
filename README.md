@@ -1,10 +1,10 @@
 # Pogo Inventory Assistant
 
-Version 0.10.1
+Version 0.11.0
 
 Pogo Inventory Assistant is a local tool for building a complete Pokémon GO inventory, analysing it and later applying safe batch tags. Final transfer remains manual.
 
-Version 0.10.1 corrects the real iPhone pretest gate after 23 of 24 committed screenshots decoded successfully. The pretest now requires at least 20 decoded images and a 90 percent decode rate, while retaining any rejected file and exact error in diagnostics.
+Version 0.11.0 uses the accepted real iPhone screenshot set to discover stable, changing and cluster-discriminating normalised screen regions. The output is evidence for the next extraction step; it does not yet perform OCR or claim species, CP or IV values.
 
 
 ## iPhone screenshot pretest
@@ -27,6 +27,33 @@ out/iphone-image-pretest/iphone-similarity.csv
 It checks that at least 20 PNG screenshots decode, remain portrait and contain at least two distinct images. It also reports exact duplicates, near duplicates and visual clusters. It never modifies or copies the source screenshots.
 
 This is a cross-platform image-pipeline test. It does not validate Android ADB navigation or Calcy output.
+
+## iPhone visual-region discovery
+
+After the pretest passes, run:
+
+```powershell
+.\scripts\run-iphone-region-discovery.ps1
+```
+
+The system divides every decoded screenshot into a normalised 12 by 24 grid and measures:
+
+- stable edge-bearing regions
+- areas that separate the visual clusters
+- areas that change between consecutive images
+- edge-dense areas that may later support text or number extraction
+
+Reports are written to:
+
+```text
+out/iphone-region-discovery/iphone-region-discovery.json
+out/iphone-region-discovery/iphone-region-discovery.md
+out/iphone-region-discovery/iphone-region-cells.csv
+out/iphone-region-discovery/iphone-region-candidates.csv
+out/iphone-region-discovery/iphone-region-image-clusters.csv
+```
+
+All candidate labels are provisional visual descriptions. No OCR or IV interpretation is performed. Source screenshots are read only.
 
 ## What works now
 
@@ -160,7 +187,7 @@ along with the nullable Pokémon fields, provider information, warnings, raw out
 .\scripts\parse-synthetic-calcy-output.ps1
 ```
 
-The expected test count is 68.
+The expected test count is 91.
 
 ## Real-device Calcy probe
 
@@ -184,7 +211,7 @@ Do not provide a parser profile on the first real run. First inspect which outpu
 
 ## Current real-device limitation
 
-Version 0.10.1 can verify a proven candidate mechanism across at least 20 local cases. It still does not claim that a real mechanism works until evidence from the fixed Android phone passes the gate.
+Version 0.11.0 can verify a proven candidate mechanism across at least 20 local cases and can locate provisional visual regions in the accepted iPhone screenshots. It still does not claim that a real mechanism works until evidence from the fixed Android phone passes the gate.
 
 The next implementation must be selected from the real local evidence:
 
@@ -209,6 +236,7 @@ Read next:
 
 - `PROJECT_STATE.md`
 - `NEXT_PROMPT.md`
+- `docs/IPHONE_VISUAL_REGION_DISCOVERY.md`
 - `docs/CALCY_DEVICE_PROBE.md`
 - `docs/CALCY_LIVE_CHECK.md`
 - `docs/CALCY_TEXT_PARSER.md`

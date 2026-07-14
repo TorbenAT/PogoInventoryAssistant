@@ -264,3 +264,27 @@ The image-pretest layer depends only on `PogoInventory.Vision`. It has no ADB, a
 The layer never modifies or copies its source screenshots. It produces metadata, hashes, similarities and cluster membership only.
 
 An accepted iPhone pretest proves that real screenshots can pass through the visual plumbing. It does not validate Android coordinates, Android timing or Calcy extraction.
+
+## Version 0.11.0: visual-region discovery
+
+```text
+data/iphone-images/*.png
+        │
+        ├── PogoInventory.ImagePretest
+        │     visual clusters
+        │
+        ▼
+PogoInventory.RegionDiscovery
+  normalised grid
+  luminance and edge metrics
+  global and consecutive variation
+  within-cluster stability
+  between-cluster separation
+  provisional candidate rectangles
+        │
+        ▼
+out/iphone-region-discovery/*
+```
+
+The region layer depends on the image pretest and vision layers only. It does not depend on ADB, automation, Calcy or inventory decisions. Candidate labels describe measured visual behaviour and are not semantic Pokémon field recognition.
+

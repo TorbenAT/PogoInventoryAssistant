@@ -1,7 +1,16 @@
-# iPhone screenshot pretest input
+# iPhone screenshot analysis input
 
 Place uncropped iPhone Pokémon GO screenshots in this directory.
 
-The `image-pretest` command reads PNG files only. It does not modify the images and it does not use them as proof that Android navigation or Calcy integration works.
+The commands read PNG files only and never modify them:
 
-The screenshots currently committed by Torben remain in this directory when the release ZIP is unpacked over the repository.
+```powershell
+.\scripts\run-iphone-image-pretest.ps1
+.\scripts\run-iphone-region-discovery.ps1
+```
+
+The first command validates decoding, geometry, similarity and visual clusters. The second measures stable, changing and cluster-discriminating normalised regions.
+
+Neither command proves Android navigation, Android coordinates or Calcy integration.
+
+The screenshots currently committed by Torben remain in this directory when a release ZIP is unpacked over the repository.

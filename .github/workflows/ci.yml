@@ -218,6 +218,33 @@ jobs:
             Write-Host "$($report.failedCount) iPhone image(s) were retained as decoder diagnostics."
           }
 
+      - name: Discover visual regions in committed iPhone images
+        if: ${{ hashFiles('data/iphone-images/*.png') != '' }}
+        run: >-
+          dotnet run --project .\src\PogoInventory.Cli --configuration Release --no-build --
+          image-region-discovery
+          --input .\data\iphone-images
+          --out .\out\iphone-region-discovery
+          --min-images 20
+          --min-decode-rate 0.90
+          --grid-columns 12
+          --grid-rows 24
+
+      - name: Verify iPhone visual region discovery
+        if: ${{ hashFiles('data/iphone-images/*.png') != '' }}
+        shell: pwsh
+        run: |
+          $report = Get-Content .\out\iphone-region-discovery\iphone-region-discovery.json -Raw | ConvertFrom-Json
+          if (-not $report.accepted) { throw "The iPhone visual region discovery was rejected." }
+          if ($report.decodedCount -lt 20) { throw "Expected at least twenty decoded images." }
+          if ($report.geometryGroupCount -ne 1) { throw "Expected one iPhone screenshot geometry." }
+          if ($report.clusterCount -lt 2) { throw "Expected at least two visual clusters." }
+          if ($report.cellCount -ne 288) { throw "Expected a 12x24 region grid." }
+          foreach ($kind in @("StableChrome", "ScreenStateDiscriminator", "DynamicContent", "TextDense")) {
+            $count = @($report.candidates | Where-Object { $_.kind -eq $kind }).Count
+            if ($count -lt 1) { throw "Expected at least one $kind candidate." }
+          }
+
       - name: Upload validation output
         if: always()
         uses: actions/upload-artifact@v4
