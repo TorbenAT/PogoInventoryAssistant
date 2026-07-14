@@ -1,0 +1,13 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\PogoInventory.Device\PogoInventory.Device.csproj" />
+    <ProjectReference Include="..\PogoInventory.RegionDiscovery\PogoInventory.RegionDiscovery.csproj" />
+    <ProjectReference Include="..\PogoInventory.Vision\PogoInventory.Vision.csproj" />
+  </ItemGroup>
+</Project>

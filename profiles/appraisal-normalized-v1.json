@@ -1,0 +1,84 @@
+{
+  "schemaVersion": "1.0",
+  "profileId": "appraisal-normalized-v1",
+  "referencePlatform": "iPhoneEvidenceNormalized",
+  "referenceAspectRatio": 0.4613,
+  "bars": [
+    {
+      "kind": "Attack",
+      "region": {
+        "x": 0.11,
+        "y": 0.763,
+        "width": 0.38,
+        "height": 0.016
+      }
+    },
+    {
+      "kind": "Defense",
+      "region": {
+        "x": 0.11,
+        "y": 0.806,
+        "width": 0.38,
+        "height": 0.016
+      }
+    },
+    {
+      "kind": "Hp",
+      "region": {
+        "x": 0.11,
+        "y": 0.85,
+        "width": 0.38,
+        "height": 0.016
+      }
+    }
+  ],
+  "searchXOffsets": [
+    -0.05,
+    -0.03,
+    -0.01,
+    0,
+    0.01,
+    0.03,
+    0.05
+  ],
+  "searchYOffsets": [
+    -0.08,
+    -0.06,
+    -0.04,
+    -0.02,
+    0,
+    0.02,
+    0.04,
+    0.06,
+    0.08
+  ],
+  "searchScales": [
+    0.9,
+    1.0,
+    1.1
+  ],
+  "colors": {
+    "orangeRedMinimum": 180,
+    "orangeGreenMinimum": 55,
+    "orangeGreenMaximum": 220,
+    "orangeBlueMaximum": 175,
+    "orangeRedGreenDeltaMinimum": 20,
+    "orangeGreenBlueDeltaMinimum": 15,
+    "trackChannelMinimum": 125,
+    "trackChannelMaximum": 245,
+    "trackMaximumChannelSpread": 34,
+    "minimumColumnCoverage": 0.12,
+    "minimumTrackWidthFraction": 0.42,
+    "maximumTrackGapFraction": 0.08
+  },
+  "candidateScoreMinimum": 0.82,
+  "minimumOrangeBars": 2,
+  "minimumTrackBars": 2,
+  "completeBarConfidenceMinimum": 0.72,
+  "verified": false,
+  "verificationReportSha256": null,
+  "verifiedAtUtc": null,
+  "sourceScreenshotSha256": null,
+  "sourceScreenWidth": null,
+  "sourceScreenHeight": null
+}

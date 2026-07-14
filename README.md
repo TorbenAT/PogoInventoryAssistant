@@ -1,10 +1,10 @@
 # Pogo Inventory Assistant
 
-Version 0.13.1
+Version 0.14.0
 
 Pogo Inventory Assistant is a local tool for building a complete Pokémon GO inventory, analysing it and later applying safe batch tags. Final transfer remains manual.
 
-Version 0.12.0 uses the accepted real iPhone screenshot set to discover stable, changing and cluster-discriminating normalised screen regions. The output is evidence for the next extraction step; it does not yet perform OCR or claim species, CP or IV values.
+Version 0.14.0 reuses the accepted iPhone evidence as normalised appraisal definitions. It can fit those definitions to a connected Android screenshot, generate a local device-adjusted profile and produce candidate IV measurements. Complete IV output remains locked behind later verification.
 
 
 ## iPhone screenshot pretest
@@ -244,6 +244,21 @@ truth template.
 The pack does not assert screen state, species, CP or IV values. Automated
 extraction remains disabled until the truth template is populated and a
 zero-false-Complete verification gate passes.
+
+## Prepare the Android phone
+
+The iPhone screenshots now provide normalised appraisal definitions rather than
+fixed pixel coordinates.
+
+With the phone manually open on an appraisal screen, run:
+
+```powershell
+.\scripts\prepare-android-phone.ps1
+```
+
+This is read only. It captures one screenshot, auto-fits the three bar regions,
+and writes a local Android-adjusted profile. Candidate IV values remain
+unverified and cannot be emitted as Complete.
 
 ## Current real-device limitation
 

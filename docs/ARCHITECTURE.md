@@ -323,3 +323,8 @@ The semantic evidence layer reuses internal crop and JSON helpers from
 imports that parent service namespace explicitly. No architectural boundary
 changed.
 
+
+
+## Version 0.14.0: appraisal and phone preparation
+
+`PogoInventory.Appraisal` contains normalised visual definitions, bar measurement, offline pretesting and read-only phone preparation. It references the Device layer for screenshot capture but exposes no tap or swipe operation. Device-adjusted profiles remain unverified until a later truth gate passes.

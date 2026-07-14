@@ -330,6 +330,38 @@ jobs:
           }
           Write-Host "Next action: $($report.readiness.recommendedNextAction)"
 
+
+      - name: Run appraisal visual pretest
+        if: ${{ hashFiles('data/iphone-images/*.png') != '' }}
+        run: >-
+          dotnet run --project .\src\PogoInventory.Cli --configuration Release --no-build --
+          appraisal-pretest
+          --input .\data\iphone-images
+          --region-report .\out\iphone-region-discovery\iphone-region-discovery.json
+          --profile .\profiles\appraisal-normalized-v1.json
+          --out .\out\appraisal-pretest
+          --min-images 20
+          --min-candidates 5
+          --min-dominant-cluster-share 0.70
+
+      - name: Verify appraisal visual pretest
+        if: ${{ hashFiles('data/iphone-images/*.png') != '' }}
+        shell: pwsh
+        run: |
+          $report = Get-Content .\out\appraisal-pretest\appraisal-pretest.json -Raw | ConvertFrom-Json
+          if (-not $report.accepted) { throw "The appraisal visual pretest was rejected." }
+          if ($report.candidateCount -lt 5) { throw "Expected at least five appraisal candidates." }
+          if ($report.completeCount -ne 0) { throw "An unverified appraisal profile must produce zero Complete observations." }
+          if ($report.dominantCandidateClusterShare -lt 0.70) {
+            throw "Appraisal candidates must be concentrated in one real visual cluster."
+          }
+          if (-not (Test-Path .\out\appraisal-pretest\appraisal-review-pack.zip)) {
+            throw "The appraisal review pack is missing."
+          }
+          Write-Host "Appraisal candidates: $($report.candidateCount)"
+          Write-Host "Dominant cluster: $($report.dominantCandidateCluster)"
+          Write-Host "Dominant share: $($report.dominantCandidateClusterShare)"
+
       - name: Upload validation output
         if: always()
         uses: actions/upload-artifact@v4

@@ -1,5 +1,18 @@
 # Changelog
 
+## 0.14.0
+
+- Added the `PogoInventory.Appraisal` project.
+- Added a normalised cross-platform appraisal profile derived from the real iPhone evidence.
+- Added automatic translation and scale fitting for the three appraisal bars.
+- Added colour-based track and orange-fill measurement with candidate IV estimates.
+- Added a hard verification lock: the committed profile can produce Candidate but never Complete observations.
+- Added an appraisal pretest over the committed iPhone screenshots, diagnostic overlays and a review ZIP.
+- Added the read-only `phone-prepare` command, which captures one Android screenshot and generates a device-adjusted local profile when an appraisal screen is visible.
+- Added `scripts/prepare-android-phone.ps1`.
+- Added nine self-tests, bringing the expected total to 112.
+- Added no phone tap or swipe action.
+
 ## 0.13.1
 
 - Fixed the CropAtlas semantic evidence build by importing `PogoInventory.CropAtlas.Services` in `SemanticEvidenceRunner.cs`.

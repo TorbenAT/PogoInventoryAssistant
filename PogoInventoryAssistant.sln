@@ -2,6 +2,8 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
 VisualStudioVersion = 17.0.31903.59
 MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PogoInventory.Appraisal", "src\PogoInventory.Appraisal\PogoInventory.Appraisal.csproj", "{C5B8049A-5A95-4E7B-88C0-6614F707D140}"
+EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PogoInventory.Automation", "src\PogoInventory.Automation\PogoInventory.Automation.csproj", "{3D8EAF74-0B5D-4D86-AF2B-71624B8C9A01}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PogoInventory.Bootstrap", "src\PogoInventory.Bootstrap\PogoInventory.Bootstrap.csproj", "{A4E3D57D-193C-4FF0-90A8-6846BC9EC3FD}"
@@ -36,6 +38,10 @@ Global
 		Release|Any CPU = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{C5B8049A-5A95-4E7B-88C0-6614F707D140}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{C5B8049A-5A95-4E7B-88C0-6614F707D140}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{C5B8049A-5A95-4E7B-88C0-6614F707D140}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{C5B8049A-5A95-4E7B-88C0-6614F707D140}.Release|Any CPU.Build.0 = Release|Any CPU
 		{3D8EAF74-0B5D-4D86-AF2B-71624B8C9A01}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{3D8EAF74-0B5D-4D86-AF2B-71624B8C9A01}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{3D8EAF74-0B5D-4D86-AF2B-71624B8C9A01}.Release|Any CPU.ActiveCfg = Release|Any CPU

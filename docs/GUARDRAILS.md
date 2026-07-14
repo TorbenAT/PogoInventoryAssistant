@@ -18,7 +18,7 @@ The software must not include functions for:
 
 Final transfer remains manual.
 
-## Allowed input in version 0.13.1
+## Allowed input in version 0.14.0
 
 Only four named input actions are allowed:
 

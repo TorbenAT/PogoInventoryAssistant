@@ -17,7 +17,7 @@ Read these files before changing code:
 - A future delete tag requires Exact identity and a documented reason.
 - All ADB process execution belongs inside `PogoInventory.Device`.
 - Do not expose arbitrary shell execution to any higher layer.
-- Version 0.13.1 permits only the named tap and swipe actions defined in `docs/GUARDRAILS.md`.
+- Version 0.14.0 permits only the named tap and swipe actions defined in `docs/GUARDRAILS.md`.
 - Every input action requires a validated profile, expected state, post-action state check, timeout and audit record.
 - No manual screenshot approval is required in the automatic local scan path.
 - Preserve fake transports, synthetic fixtures and package-free self-tests.
@@ -40,6 +40,8 @@ Run:
 .\scripts\run-fake-calcy-probe.ps1
 .\scripts\run-fake-calcy-live-check.ps1
 .\scripts\run-iphone-image-pretest.ps1
+.\scripts\run-appraisal-pretest.ps1
+.\scripts\prepare-android-phone.ps1
 .\scripts\parse-synthetic-calcy-output.ps1
 .\scripts\detect-synthetic-screen.ps1
 .\scripts\build-synthetic-calibration-profile.ps1

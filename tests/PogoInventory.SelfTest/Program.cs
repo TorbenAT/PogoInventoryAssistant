@@ -1,5 +1,7 @@
 using System.Globalization;
 using System.Text.Json;
+using PogoInventory.Appraisal.Models;
+using PogoInventory.Appraisal.Services;
 using PogoInventory.Automation.Models;
 using PogoInventory.Automation.Services;
 using PogoInventory.Automation.Transport;
@@ -143,7 +145,16 @@ var tests = new (string Name, Func<Task> Run)[]
     ("Semantic review pack excludes source screenshots", SemanticReviewPackExcludesSourceScreenshotsAsync),
     ("Semantic evidence ordering is deterministic", SemanticEvidenceOrderingIsDeterministicAsync),
     ("Semantic evidence rejects atlas path traversal", SemanticEvidenceRejectsAtlasPathTraversalAsync),
-    ("Semantic evidence identifies cluster coverage gaps", SemanticEvidenceIdentifiesClusterCoverageGapsAsync)
+    ("Semantic evidence identifies cluster coverage gaps", SemanticEvidenceIdentifiesClusterCoverageGapsAsync),
+    ("Appraisal analyzer estimates synthetic bars", Sync(AppraisalAnalyzerEstimatesSyntheticBars)),
+    ("Appraisal analyzer auto fits shifted layout", Sync(AppraisalAnalyzerAutoFitsShiftedLayout)),
+    ("Unverified appraisal profile never completes", Sync(UnverifiedAppraisalProfileNeverCompletes)),
+    ("Verified appraisal profile can complete", Sync(VerifiedAppraisalProfileCanComplete)),
+    ("Appraisal pretest writes review pack", AppraisalPretestWritesReviewPackAsync),
+    ("Appraisal pretest keeps candidates in one cluster", AppraisalPretestKeepsCandidatesInOneClusterAsync),
+    ("Phone preparation writes generated profile", PhonePreparationWritesGeneratedProfileAsync),
+    ("Phone preparation remains read only on non appraisal screen", PhonePreparationHandlesNonAppraisalScreenAsync),
+    ("Appraisal profile rejects incomplete verification metadata", Sync(AppraisalProfileRejectsIncompleteVerificationMetadata))
 };
 
 var failed = 0;
@@ -2850,6 +2861,632 @@ static async Task<(
             cropFixture.AtlasOutput,
             "iphone-crop-atlas.json"),
         Path.Combine(directory, "semantic"));
+}
+
+
+static void AppraisalAnalyzerEstimatesSyntheticBars()
+{
+    var profile = TestAppraisalProfile();
+    var image = CreateSyntheticAppraisalImage(
+        profile,
+        new AppraisalLayoutTransform(),
+        15,
+        10,
+        5);
+    var result = new AppraisalAnalyzer().Analyze(image, profile);
+
+    AssertEqual(
+        AppraisalAnalysisStatus.Candidate,
+        result.Status,
+        "unverified appraisal status");
+    AssertWithin(15, result.AttackIv, 1, "attack IV");
+    AssertWithin(10, result.DefenseIv, 1, "defense IV");
+    AssertWithin(5, result.HpIv, 1, "HP IV");
+}
+
+static void AppraisalAnalyzerAutoFitsShiftedLayout()
+{
+    var profile = TestAppraisalProfile();
+    var expected = new AppraisalLayoutTransform
+    {
+        XOffset = 0.02,
+        YOffset = -0.03,
+        Scale = 1.05
+    };
+    var image = CreateSyntheticAppraisalImage(
+        profile,
+        expected,
+        14,
+        11,
+        7);
+    var result = new AppraisalAnalyzer().Analyze(image, profile);
+
+    AssertTrue(result.IsAppraisal, "shifted appraisal should be detected");
+    AssertNear(1.05, result.Transform.Scale, 0.0001, "fitted scale");
+    AssertNear(0.02, result.Transform.XOffset, 0.0001, "fitted X offset");
+    AssertNear(-0.03, result.Transform.YOffset, 0.011, "fitted Y offset");
+}
+
+static void UnverifiedAppraisalProfileNeverCompletes()
+{
+    var profile = TestAppraisalProfile();
+    var result = new AppraisalAnalyzer().Analyze(
+        CreateSyntheticAppraisalImage(
+            profile,
+            new AppraisalLayoutTransform(),
+            15,
+            15,
+            15),
+        profile);
+    AssertEqual(
+        AppraisalAnalysisStatus.Candidate,
+        result.Status,
+        "unverified profile status");
+    AssertTrue(!result.IsComplete, "unverified profile cannot complete");
+}
+
+static void VerifiedAppraisalProfileCanComplete()
+{
+    var profile = TestAppraisalProfile() with
+    {
+        Verified = true,
+        VerificationReportSha256 = new string('a', 64),
+        VerifiedAtUtc = new DateTimeOffset(
+            2026,
+            7,
+            14,
+            12,
+            0,
+            0,
+            TimeSpan.Zero)
+    };
+    profile.Validate();
+    var result = new AppraisalAnalyzer().Analyze(
+        CreateSyntheticAppraisalImage(
+            profile,
+            new AppraisalLayoutTransform(),
+            15,
+            14,
+            13),
+        profile,
+        allowComplete: true);
+    AssertEqual(
+        AppraisalAnalysisStatus.Complete,
+        result.Status,
+        "verified profile status");
+}
+
+static async Task AppraisalPretestWritesReviewPackAsync()
+{
+    var directory = CreateTemporaryDirectory();
+    try
+    {
+        var fixture = await CreateAppraisalPretestFixtureAsync(directory);
+        var report = await AppraisalPretestRunner.RunAsync(
+            fixture.Input,
+            fixture.ProfilePath,
+            fixture.Output,
+            new AppraisalPretestOptions
+            {
+                MinimumDecodedImages = 20,
+                MinimumCandidateImages = 5,
+                MinimumDominantClusterShare = 0.70
+            },
+            fixture.RegionReportPath);
+        await AppraisalPretestReportWriter.WriteAsync(
+            report,
+            fixture.Output);
+
+        AssertTrue(report.Accepted, "appraisal pretest should pass");
+        AssertEqual(6, report.CandidateCount, "appraisal candidate count");
+        AssertEqual(0, report.CompleteCount, "appraisal Complete count");
+        AssertTrue(
+            File.Exists(Path.Combine(
+                fixture.Output,
+                "appraisal-review-pack.zip")),
+            "appraisal review pack should exist");
+    }
+    finally
+    {
+        DeleteDirectory(directory);
+    }
+}
+
+static async Task AppraisalPretestKeepsCandidatesInOneClusterAsync()
+{
+    var directory = CreateTemporaryDirectory();
+    try
+    {
+        var fixture = await CreateAppraisalPretestFixtureAsync(directory);
+        var report = await AppraisalPretestRunner.RunAsync(
+            fixture.Input,
+            fixture.ProfilePath,
+            fixture.Output,
+            new AppraisalPretestOptions
+            {
+                MinimumDecodedImages = 20,
+                MinimumCandidateImages = 5,
+                MinimumDominantClusterShare = 0.70
+            },
+            fixture.RegionReportPath);
+
+        AssertEqual(
+            "cluster-appraisal",
+            report.DominantCandidateCluster,
+            "dominant appraisal cluster");
+        AssertEqual(
+            1d,
+            report.DominantCandidateClusterShare,
+            "dominant appraisal cluster share");
+    }
+    finally
+    {
+        DeleteDirectory(directory);
+    }
+}
+
+static async Task PhonePreparationWritesGeneratedProfileAsync()
+{
+    var directory = CreateTemporaryDirectory();
+    try
+    {
+        var profile = TestAppraisalProfile();
+        var image = CreateSyntheticAppraisalImage(
+            profile,
+            new AppraisalLayoutTransform
+            {
+                XOffset = 0.02,
+                YOffset = -0.03,
+                Scale = 1.05
+            },
+            15,
+            12,
+            9);
+        var screenshot = PngEncoder.Encode(image);
+        var device = FakeAndroidDeviceTransport.CreateDescriptor("PHONE-001");
+        var metadata = FakeAndroidDeviceTransport.CreateMetadata(device.Serial) with
+        {
+            Screen = new AndroidScreenInfo
+            {
+                PhysicalWidth = image.Width,
+                PhysicalHeight = image.Height
+            }
+        };
+        var transport = new FakeAndroidDeviceTransport(
+            new[] { device },
+            new Dictionary<string, AndroidDeviceMetadata>(StringComparer.Ordinal)
+            {
+                [device.Serial] = metadata
+            },
+            screenshot);
+        var report = await new PhonePreparationRunner(transport).RunAsync(
+            directory,
+            profile);
+
+        AssertTrue(report.AdbReady, "phone ADB readiness");
+        AssertTrue(
+            report.AppraisalCalibrationReady,
+            "phone appraisal calibration readiness");
+        AssertTrue(
+            !report.AutomaticNavigationReady,
+            "phone automatic navigation must remain false");
+        AssertTrue(
+            report.GeneratedProfileFile is not null &&
+            File.Exists(Path.Combine(
+                directory,
+                report.GeneratedProfileFile)),
+            "generated phone profile should exist");
+    }
+    finally
+    {
+        DeleteDirectory(directory);
+    }
+}
+
+static async Task PhonePreparationHandlesNonAppraisalScreenAsync()
+{
+    var directory = CreateTemporaryDirectory();
+    try
+    {
+        var profile = TestAppraisalProfile();
+        var blank = new PixelImage(
+            400,
+            800,
+            Enumerable.Repeat((byte)255, 400 * 800 * 4).ToArray());
+        var device = FakeAndroidDeviceTransport.CreateDescriptor("PHONE-002");
+        var metadata = FakeAndroidDeviceTransport.CreateMetadata(device.Serial) with
+        {
+            Screen = new AndroidScreenInfo
+            {
+                PhysicalWidth = blank.Width,
+                PhysicalHeight = blank.Height
+            }
+        };
+        var transport = new FakeAndroidDeviceTransport(
+            new[] { device },
+            new Dictionary<string, AndroidDeviceMetadata>(StringComparer.Ordinal)
+            {
+                [device.Serial] = metadata
+            },
+            PngEncoder.Encode(blank));
+        var report = await new PhonePreparationRunner(transport).RunAsync(
+            directory,
+            profile);
+
+        AssertTrue(report.AdbReady, "blank-screen ADB readiness");
+        AssertTrue(
+            !report.AppraisalCalibrationReady,
+            "blank screen should not calibrate appraisal");
+        AssertTrue(
+            report.GeneratedProfileFile is null,
+            "blank screen should not generate profile");
+        AssertTrue(
+            report.NextActions.Any(action =>
+                action.Contains(
+                    "appraisal screen",
+                    StringComparison.OrdinalIgnoreCase)),
+            "blank screen should request manual appraisal navigation");
+    }
+    finally
+    {
+        DeleteDirectory(directory);
+    }
+}
+
+static void AppraisalProfileRejectsIncompleteVerificationMetadata()
+{
+    var profile = TestAppraisalProfile() with
+    {
+        Verified = true,
+        VerificationReportSha256 = null,
+        VerifiedAtUtc = null
+    };
+
+    try
+    {
+        profile.Validate();
+        throw new InvalidOperationException(
+            "Expected appraisal profile validation failure.");
+    }
+    catch (InvalidOperationException exception) when (
+        exception.Message !=
+        "Expected appraisal profile validation failure.")
+    {
+    }
+}
+
+static AppraisalVisualProfile TestAppraisalProfile() =>
+    new()
+    {
+        ProfileId = "appraisal-self-test",
+        ReferenceAspectRatio = 0.5,
+        Bars = new[]
+        {
+            new AppraisalBarDefinition
+            {
+                Kind = AppraisalBarKind.Attack,
+                Region = new NormalizedRegion
+                {
+                    X = 0.10,
+                    Y = 0.65,
+                    Width = 0.50,
+                    Height = 0.025
+                }
+            },
+            new AppraisalBarDefinition
+            {
+                Kind = AppraisalBarKind.Defense,
+                Region = new NormalizedRegion
+                {
+                    X = 0.10,
+                    Y = 0.72,
+                    Width = 0.50,
+                    Height = 0.025
+                }
+            },
+            new AppraisalBarDefinition
+            {
+                Kind = AppraisalBarKind.Hp,
+                Region = new NormalizedRegion
+                {
+                    X = 0.10,
+                    Y = 0.79,
+                    Width = 0.50,
+                    Height = 0.025
+                }
+            }
+        },
+        SearchXOffsets = new[]
+        {
+            -0.04,
+            -0.03,
+            -0.02,
+            -0.01,
+            0d,
+            0.01,
+            0.02,
+            0.03,
+            0.04
+        },
+        SearchYOffsets = new[]
+        {
+            -0.05,
+            -0.04,
+            -0.03,
+            -0.02,
+            -0.01,
+            0d,
+            0.01,
+            0.02,
+            0.03,
+            0.04,
+            0.05
+        },
+        SearchScales = new[] { 0.95, 1d, 1.05 },
+        Colors = new AppraisalColorProfile
+        {
+            OrangeRedMinimum = 180,
+            OrangeGreenMinimum = 55,
+            OrangeGreenMaximum = 220,
+            OrangeBlueMaximum = 175,
+            OrangeRedGreenDeltaMinimum = 20,
+            OrangeGreenBlueDeltaMinimum = 15,
+            TrackChannelMinimum = 125,
+            TrackChannelMaximum = 245,
+            TrackMaximumChannelSpread = 34,
+            MinimumColumnCoverage = 0.12,
+            MinimumTrackWidthFraction = 0.42,
+            MaximumTrackGapFraction = 0.08
+        },
+        CandidateScoreMinimum = 0.82,
+        MinimumOrangeBars = 2,
+        MinimumTrackBars = 2,
+        CompleteBarConfidenceMinimum = 0.72,
+        Verified = false
+    };
+
+static PixelImage CreateSyntheticAppraisalImage(
+    AppraisalVisualProfile profile,
+    AppraisalLayoutTransform transform,
+    int attack,
+    int defense,
+    int hp)
+{
+    const int width = 400;
+    const int height = 800;
+    var rgba = new byte[width * height * 4];
+    for (var index = 0; index < rgba.Length; index += 4)
+    {
+        rgba[index] = 248;
+        rgba[index + 1] = 248;
+        rgba[index + 2] = 248;
+        rgba[index + 3] = 255;
+    }
+
+    var values = new Dictionary<AppraisalBarKind, int>
+    {
+        [AppraisalBarKind.Attack] = attack,
+        [AppraisalBarKind.Defense] = defense,
+        [AppraisalBarKind.Hp] = hp
+    };
+
+    foreach (var definition in profile.Bars)
+    {
+        var region = AppraisalAnalyzer.TransformRegion(
+            definition.Region,
+            transform);
+        var rectangle = region.ToPixels(width, height);
+        var trackLeft = rectangle.X +
+            Math.Max(1, (int)Math.Round(rectangle.Width * 0.08));
+        var trackRight = rectangle.X + rectangle.Width -
+            Math.Max(2, (int)Math.Round(rectangle.Width * 0.08));
+        var trackTop = rectangle.Y +
+            Math.Max(1, rectangle.Height / 4);
+        var trackBottom = rectangle.Y + rectangle.Height -
+            Math.Max(2, rectangle.Height / 4);
+        var trackWidth = trackRight - trackLeft + 1;
+        var fillWidth = (int)Math.Round(
+            trackWidth *
+            values[definition.Kind] /
+            15d,
+            MidpointRounding.AwayFromZero);
+
+        for (var y = trackTop; y <= trackBottom; y++)
+        {
+            for (var x = trackLeft; x <= trackRight; x++)
+            {
+                var filled = x < trackLeft + fillWidth;
+                SetSyntheticPixel(
+                    rgba,
+                    width,
+                    height,
+                    x,
+                    y,
+                    filled ? (byte)240 : (byte)205,
+                    filled ? (byte)145 : (byte)205,
+                    filled ? (byte)45 : (byte)205,
+                    255);
+            }
+        }
+
+        foreach (var fraction in new[] { 1d / 3d, 2d / 3d })
+        {
+            var separator = trackLeft +
+                (int)Math.Round(trackWidth * fraction);
+            for (var y = trackTop; y <= trackBottom; y++)
+            {
+                SetSyntheticPixel(
+                    rgba,
+                    width,
+                    height,
+                    separator,
+                    y,
+                    252,
+                    252,
+                    252,
+                    255);
+            }
+        }
+    }
+
+    return new PixelImage(width, height, rgba);
+}
+
+static void SetSyntheticPixel(
+    byte[] rgba,
+    int width,
+    int height,
+    int x,
+    int y,
+    byte red,
+    byte green,
+    byte blue,
+    byte alpha)
+{
+    if ((uint)x >= (uint)width ||
+        (uint)y >= (uint)height)
+    {
+        return;
+    }
+
+    var index = (y * width + x) * 4;
+    rgba[index] = red;
+    rgba[index + 1] = green;
+    rgba[index + 2] = blue;
+    rgba[index + 3] = alpha;
+}
+
+static async Task<(
+    string Input,
+    string ProfilePath,
+    string Output,
+    string RegionReportPath)> CreateAppraisalPretestFixtureAsync(
+        string directory)
+{
+    var input = Path.Combine(directory, "input");
+    var output = Path.Combine(directory, "output");
+    var regionOutput = Path.Combine(directory, "region");
+    var profilePath = Path.Combine(directory, "profile.json");
+    Directory.CreateDirectory(input);
+
+    var profile = TestAppraisalProfile();
+    await AppraisalProfileLoader.WriteAsync(
+        profile,
+        profilePath);
+
+    for (var index = 0; index < 20; index++)
+    {
+        var image = index < 6
+            ? CreateSyntheticAppraisalImage(
+                profile,
+                new AppraisalLayoutTransform(),
+                15 - index % 3,
+                12 - index % 2,
+                8 + index % 4)
+            : CreateSyntheticNoiseImage(
+                400,
+                800,
+                index + 500);
+        await File.WriteAllBytesAsync(
+            Path.Combine(input, $"IMG_{index:0000}.png"),
+            PngEncoder.Encode(image));
+    }
+
+    var discovery = await RegionDiscoveryRunner.RunAsync(
+        input,
+        new RegionDiscoveryOptions
+        {
+            MinimumDecodedImages = 20,
+            MinimumDecodeRate = 1,
+            NearDuplicateThreshold = 0.99999,
+            ClusterThreshold = 0.90,
+            GridColumns = 8,
+            GridRows = 16,
+            MaximumCandidatesPerKind = 4
+        });
+    var adjustedImages = discovery.Images
+        .Select((item, index) => item with
+        {
+            ClusterId = index < 6
+                ? "cluster-appraisal"
+                : "cluster-other"
+        })
+        .ToArray();
+    var adjusted = discovery with
+    {
+        ClusterCount = 2,
+        Images = adjustedImages
+    };
+    Directory.CreateDirectory(regionOutput);
+    await File.WriteAllTextAsync(
+        Path.Combine(
+            regionOutput,
+            "iphone-region-discovery.json"),
+        JsonSerializer.Serialize(
+            adjusted,
+            RegionDiscoveryJson.CreateOptions(writeIndented: true)));
+
+    return (
+        input,
+        profilePath,
+        output,
+        Path.Combine(
+            regionOutput,
+            "iphone-region-discovery.json"));
+}
+
+
+static PixelImage CreateSyntheticNoiseImage(
+    int width,
+    int height,
+    int seed)
+{
+    var random = new Random(seed);
+    var rgba = new byte[checked(width * height * 4)];
+    for (var index = 0; index < rgba.Length; index += 4)
+    {
+        var baseValue = (byte)random.Next(20, 170);
+        rgba[index] = baseValue;
+        rgba[index + 1] = (byte)Math.Clamp(
+            baseValue + random.Next(-12, 13),
+            0,
+            255);
+        rgba[index + 2] = (byte)Math.Clamp(
+            baseValue + random.Next(-12, 13),
+            0,
+            255);
+        rgba[index + 3] = 255;
+    }
+
+    return new PixelImage(width, height, rgba);
+}
+
+static void AssertNear(
+    double expected,
+    double actual,
+    double tolerance,
+    string description)
+{
+    if (Math.Abs(actual - expected) > tolerance)
+    {
+        throw new InvalidOperationException(
+            $"Expected {description} within {tolerance} of {expected}, got {actual}.");
+    }
+}
+
+static void AssertWithin(
+    int expected,
+    int? actual,
+    int tolerance,
+    string description)
+{
+    if (actual is null ||
+        Math.Abs(actual.Value - expected) > tolerance)
+    {
+        throw new InvalidOperationException(
+            $"Expected {description} within {tolerance} of {expected}, got " +
+            $"{actual?.ToString(CultureInfo.InvariantCulture) ?? "null"}.");
+    }
 }
 
 static RegionDiscoveryOptions TestRegionDiscoveryOptions() =>

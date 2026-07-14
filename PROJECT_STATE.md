@@ -2,86 +2,59 @@
 
 ## Current version
 
-0.13.1
-
-## Build correction in 0.13.1
-
-GitHub Actions compiled the existing projects until
-`PogoInventory.CropAtlas`, where `SemanticEvidenceRunner.cs` failed with three
-CS0103 errors. The runner reused `PixelImageTransforms` and `CropAtlasJson`,
-which are declared in `PogoInventory.CropAtlas.Services`, but the nested
-semantic namespace did not import that namespace.
-
-Version 0.13.1 adds the missing namespace import. No crop logic, semantic
-policy, report schema, test expectation or phone-action boundary changed.
+0.14.0
 
 ## Accepted checkpoint
 
-Torben reported version 0.12.0 fully green in GitHub Actions.
+Torben reported version 0.13.1 fully green in GitHub Actions.
 
 Accepted real iPhone evidence:
 
 - 24 committed PNG screenshots
-- 23 successfully decoded screenshots
-- 95.8 percent decode rate
-- one screenshot geometry group
-- four automatically discovered visual clusters
-- zero exact duplicate pairs
-- zero near-duplicate pairs
-- one rejected PNG retained as a decoder diagnostic
-- accepted visual-region discovery
-- accepted crop-atlas generation
+- 23 decoded screenshots
+- four visual clusters
+- cluster 01 is inventory list
+- cluster 02 is Pokémon details
+- cluster 03 is appraisal
+- cluster 04 is the details action menu
+- accepted region discovery, crop atlas and semantic evidence pack
 
 ## Completed
 
-### M0 to M3
+### Foundation
 
-- .NET 8 foundation
+- .NET 8 solution
 - conservative KEEP, REVIEW and DELETE analysis
-- Android device harness
-- deterministic screen detection and calibration
-- automatic inventory navigation
-- ordered local evidence, checkpoints and safe resume
-- four named phone actions only
+- read-only Android device harness
+- deterministic screen calibration
+- automatic inventory navigation limited to four named actions
+- checkpoints and safe resume
+- Calcy probe and verification gate
 
-### M4 Calcy and observation foundation
+### iPhone evidence pipeline
 
-- automatic core-profile bootstrap
-- nullable structured observations
-- checkpoint schema 2.0
-- Calcy package and live-check probe
-- profile-driven raw-text parser
-- twenty-case zero-wrong-Complete verification gate
-- provider selection locked to report and parser hashes
+- decoding, hashing, similarity and clustering
+- normalised region discovery
+- crop atlas and semantic evidence review pack
+- no full source screenshot copied into review packs
 
-### M4 iPhone visual evidence
+### M4 phase 4e: appraisal definitions and phone preparation
 
-- real PNG decoding and geometry inventory
-- SHA-256 evidence
-- grayscale and edge fingerprints
-- all-pairs similarity and clustering
-- normalised 12 by 24 visual-region discovery
-- stable, changing and cluster-separating region candidates
-- deterministic crop atlas
-- representative evidence for every visual cluster
-- package-free derived PNG output
-- explicit cluster-coverage readiness
+Version 0.14.0 adds:
 
-### M4 phase 4d: semantic evidence review pack
-
-Version 0.13.0 adds:
-
-- one evidence case per decoded screenshot
-- one derived crop per case and selected candidate region
-- copied cluster overview and candidate contact sheets
-- deterministic JSON, Markdown and CSV manifests
-- `semantic-review-pack.zip`
-- intentionally empty truth values for screen state, species, CP and IV
-- external-review readiness
-- automated-extraction readiness fixed to false
-- exact underrepresented-cluster reporting
-- no source screenshot copied into the review ZIP
-- 103 expected self-tests
+- `PogoInventory.Appraisal`
+- normalised Attack, Defense and HP bar definitions
+- automatic X/Y translation and uniform-scale fitting
+- orange-fill and neutral-track measurement
+- candidate IV estimates
+- diagnostic overlays and bar crops
+- iPhone appraisal pretest
+- dominant-cluster concentration gate
+- hard zero-Complete gate for unverified profiles
+- read-only `phone-prepare`
+- local device-adjusted profile generation
+- Android readiness report
+- 112 expected self-tests
 
 ## Input boundary
 
@@ -92,60 +65,53 @@ TapAppraise
 SwipeNextPokemon
 ```
 
-Version 0.13.1 adds no phone input action.
+Version 0.14.0 adds no phone input action.
+
+## What the iPhone images now provide
+
+The screenshots provide reusable normalised definitions and initial colour
+thresholds. They do not lock the solution to iPhone pixels.
+
+When the Android phone is connected, the profile searches translation and scale
+around those definitions. A single visible appraisal screen can therefore
+generate phone-specific definitions automatically.
 
 ## Not completed
 
-- semantic labels for the four real visual clusters
-- populated truth data for the real screenshots
-- OCR of name, CP, HP or other text
-- IV-bar measurement from real screenshots
-- status-marker extraction
-- real Android Calcy evidence
-- production `ICalcyObservationProvider`
-- automatic twenty-case real provider verification
+- real Android phone preparation run
+- three-screen Android profile stability check
+- twenty-case appraisal truth verification
+- verified Complete visual IV provider
+- real Calcy evidence and provider selection
+- species and CP extraction
 - SQLite inventory database
-- full real-inventory decision plan
-- automatic tagging
-- transfer remains manual and is not implemented
+- final tagging plan
+- transfer remains manual
 
 ## Required checkpoint after push
 
-1. Build all 14 projects.
-2. Confirm 103 of 103 self-tests pass.
-3. Confirm the accepted iPhone pretest and region discovery remain unchanged.
-4. Confirm crop-atlas generation remains accepted.
-5. Confirm semantic evidence contains at least twenty cases.
-6. Confirm every case contains every selected candidate region.
-7. Confirm `semantic-review-pack.zip` is created.
-8. Confirm the truth template starts unreviewed with null semantic fields.
-9. Record `needsMoreImages` and any named underrepresented clusters.
-10. Preserve zero new phone actions.
+1. Build all 15 projects.
+2. Confirm 112 of 112 self-tests pass.
+3. Confirm the existing iPhone evidence stages remain green.
+4. Confirm appraisal pretest finds at least five candidates.
+5. Confirm candidates are concentrated at least 70 percent in one cluster.
+6. Confirm the unverified profile produces zero Complete observations.
+7. Confirm `appraisal-review-pack.zip` is created.
+8. Preserve zero new phone actions.
 
 ## Next recommended milestone
 
-Inspect the real semantic review pack and select one evidence-backed semantic
-experiment:
+When the Android phone and PC are available:
 
-- name and CP extraction, or
-- appraisal-bar measurement
+1. manually open a Pokémon appraisal screen
+2. run `scripts/prepare-android-phone.ps1`
+3. inspect `phone-readiness.json`
+4. confirm a device-adjusted profile is generated
+5. repeat on at least three different Pokémon
+6. compare fitted regions and candidate IV values
+7. run Calcy probe and live check
+8. collect twenty real verification cases before allowing Complete IV output
 
-Do not implement both merely because both are possible. Select the field with
-the clearest and most consistent crop evidence, populate truth for at least
-twenty cases, and require zero false Complete results.
-
-More source screenshots should be requested only when the semantic report
-names an underrepresented cluster or the selected field lacks enough visible
-variation.
-
-## Design decisions preserved
-
-- no hidden game API
-- no transfer automation
-- no anti-detection logic
-- no random timing or coordinates
-- deterministic state-aware waiting
-- Unknown means stop
-- incomplete data remains incomplete
-- screenshots are read only
-- generated review data contains derived crops, not copied full screenshots
+Until then, improve only diagnostics and verification scaffolding. Do not add
+location changes, transfer automation, anti-detection logic or arbitrary shell
+execution.

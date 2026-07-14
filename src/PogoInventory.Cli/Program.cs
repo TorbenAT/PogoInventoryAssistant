@@ -1,6 +1,8 @@
 using System.Globalization;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using PogoInventory.Appraisal.Models;
+using PogoInventory.Appraisal.Services;
 using PogoInventory.Automation.Errors;
 using PogoInventory.Automation.Services;
 using PogoInventory.Automation.Transport;
@@ -98,6 +100,12 @@ static async Task<int> MainAsync(string[] args)
                 args.Skip(1).ToArray(),
                 cancellationSource.Token),
             "image-semantic-evidence" => await RunImageSemanticEvidenceAsync(
+                args.Skip(1).ToArray(),
+                cancellationSource.Token),
+            "appraisal-pretest" => await RunAppraisalPretestAsync(
+                args.Skip(1).ToArray(),
+                cancellationSource.Token),
+            "phone-prepare" => await PreparePhoneAsync(
                 args.Skip(1).ToArray(),
                 cancellationSource.Token),
             "device-snapshot" => await CaptureDeviceSnapshotAsync(
@@ -825,6 +833,104 @@ static async Task<int> RunImageSemanticEvidenceAsync(
             report.ReviewPackFile)}");
     Console.WriteLine(report.GateDetail);
     return report.Accepted ? 0 : 13;
+}
+
+
+static async Task<int> RunAppraisalPretestAsync(
+    string[] args,
+    CancellationToken cancellationToken)
+{
+    var options = ParseOptions(args);
+    var inputDirectory = Require(options, "input");
+    var profilePath = Require(options, "profile");
+    var outputDirectory = Require(options, "out");
+    var regionReportPath = Optional(options, "region-report");
+    var pretestOptions = new AppraisalPretestOptions
+    {
+        MinimumDecodedImages = ParsePositiveInt(
+            options,
+            "min-images",
+            20),
+        MinimumCandidateImages = ParsePositiveInt(
+            options,
+            "min-candidates",
+            5),
+        MinimumDominantClusterShare = ParseUnitDouble(
+            options,
+            "min-dominant-cluster-share",
+            0.70)
+    };
+
+    var report = await AppraisalPretestRunner.RunAsync(
+        inputDirectory,
+        profilePath,
+        outputDirectory,
+        pretestOptions,
+        regionReportPath,
+        cancellationToken);
+    await AppraisalPretestReportWriter.WriteAsync(
+        report,
+        outputDirectory,
+        cancellationToken);
+
+    Console.WriteLine(
+        $"Appraisal pretest: {report.CandidateCount} candidates from " +
+        $"{report.DecodedCount}/{report.ImageCount} decoded screenshots.");
+    Console.WriteLine(
+        $"Complete observations: {report.CompleteCount}.");
+    Console.WriteLine(
+        $"Dominant candidate cluster: " +
+        $"{report.DominantCandidateCluster ?? "Unavailable"} " +
+        $"({report.DominantCandidateClusterShare:P1}).");
+    foreach (var warning in report.Warnings)
+    {
+        Console.WriteLine($"Warning: {warning}");
+    }
+    Console.WriteLine(report.GateDetail);
+    return report.Accepted ? 0 : 14;
+}
+
+static async Task<int> PreparePhoneAsync(
+    string[] args,
+    CancellationToken cancellationToken)
+{
+    var options = ParseOptions(args);
+    var outputDirectory = Require(options, "out");
+    var profile = await AppraisalProfileLoader.LoadAsync(
+        Require(options, "profile"),
+        cancellationToken);
+    var transport = CreateRealAndroidTransport(options);
+    var runner = new PhonePreparationRunner(
+        transport,
+        new ConsoleDeviceLog());
+    var report = await runner.RunAsync(
+        outputDirectory,
+        profile,
+        Optional(options, "serial"),
+        cancellationToken);
+
+    Console.WriteLine();
+    Console.WriteLine("Android phone preparation complete.");
+    Console.WriteLine($"Device: {report.Device.Serial}");
+    Console.WriteLine(
+        $"Screenshot: {report.ScreenshotWidth}x{report.ScreenshotHeight}");
+    Console.WriteLine(
+        $"Appraisal status: {report.Appraisal.Status}");
+    Console.WriteLine(
+        $"Appraisal calibration ready: " +
+        $"{report.AppraisalCalibrationReady}");
+    Console.WriteLine(
+        $"Verified IV extraction ready: " +
+        $"{report.VerifiedIvExtractionReady}");
+    Console.WriteLine(
+        $"Automatic navigation ready: " +
+        $"{report.AutomaticNavigationReady}");
+    foreach (var action in report.NextActions)
+    {
+        Console.WriteLine($"Next: {action}");
+    }
+
+    return 0;
 }
 
 static async Task<int> CaptureDeviceSnapshotAsync(
@@ -1671,6 +1777,9 @@ static void PrintHelp()
     Console.WriteLine("  image-semantic-evidence --input <directory> --region-report <file>");
     Console.WriteLine("                          --crop-atlas-report <file> --out <directory>");
     Console.WriteLine("                          [--min-cases <n>] [--min-cases-per-cluster <n>]");
+    Console.WriteLine("  appraisal-pretest --input <directory> --profile <file> --out <directory>");
+    Console.WriteLine("                    [--region-report <file>] [--min-images <n>] [--min-candidates <n>]");
+    Console.WriteLine("  phone-prepare --profile <file> --out <directory> [--serial <id>] [--adb <path>]");
     Console.WriteLine("                [--near-duplicate-threshold <0..1>] [--cluster-threshold <0..1>]");
     Console.WriteLine();
     Console.WriteLine("  device-snapshot --out <directory> [--adb <adb.exe>] [--serial <serial>] [--timeout-seconds <n>]");
