@@ -15,7 +15,7 @@ Read these files before changing code:
 - A future delete tag requires Exact identity and a documented reason.
 - All ADB process execution belongs inside `PogoInventory.Device`.
 - Do not expose arbitrary shell execution to any higher layer.
-- Version 0.6.2 permits only the named tap and swipe actions defined in `docs/GUARDRAILS.md`.
+- Version 0.7.0 permits only the named tap and swipe actions defined in `docs/GUARDRAILS.md`.
 - Every input action requires a validated profile, expected state, post-action state check, timeout and audit record.
 - No manual screenshot approval is required in the automatic local scan path.
 - Preserve fake transports, synthetic fixtures and package-free self-tests.
@@ -31,6 +31,7 @@ Run:
 .\scripts\test.ps1
 .\scripts\run-demo.ps1
 .\scripts\run-fake-device.ps1
+.\scripts\run-fake-core-profile-bootstrap.ps1
 .\scripts\run-fake-inventory-scan.ps1
 .\scripts\detect-synthetic-screen.ps1
 .\scripts\build-synthetic-calibration-profile.ps1
@@ -42,3 +43,11 @@ Do not claim a build or test passed unless it was actually executed. Record limi
 ## Versioning
 
 Use semantic versions. Every handoff ZIP contains the complete repository directly at the ZIP root.
+
+## Observation rules
+
+- Real Calcy access must remain behind `ICalcyObservationProvider`.
+- Never mark an observation Complete without species, CP and all three IV values.
+- Unknown values remain null.
+- Provider failures are recorded and must not be guessed away.
+- The fake provider is test-only and must never be selected silently for a real phone.

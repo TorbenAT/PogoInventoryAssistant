@@ -1,0 +1,81 @@
+{
+  "schemaVersion": "1.0",
+  "requiredOrientation": "Portrait",
+  "minimumWidth": 160,
+  "minimumHeight": 320,
+  "minimumAspectRatio": 0.45,
+  "maximumAspectRatio": 0.55,
+  "minimumStateScore": 0.96,
+  "minimumWinnerMargin": 0.02,
+  "name": "Synthetic automatic core bootstrap",
+  "states": [
+    {
+      "state": "InventoryList",
+      "anchors": [
+        {
+          "name": "inventory-grid",
+          "region": { "x": 0.05, "y": 0.70, "width": 0.25, "height": 0.20 },
+          "mode": "Color",
+          "expectation": "Required",
+          "fingerprintWidth": 8,
+          "fingerprintHeight": 8,
+          "matchThreshold": 0.98,
+          "weight": 1.0,
+          "sampleFixtureIds": ["bootstrap-inventory-list"]
+        }
+      ]
+    },
+    {
+      "state": "PokemonDetails",
+      "anchors": [
+        {
+          "name": "details-cp",
+          "region": { "x": 0.35, "y": 0.05, "width": 0.30, "height": 0.15 },
+          "mode": "Color",
+          "expectation": "Required",
+          "fingerprintWidth": 8,
+          "fingerprintHeight": 8,
+          "matchThreshold": 0.98,
+          "weight": 1.0,
+          "sampleFixtureIds": ["bootstrap-pokemon-details"]
+        }
+      ]
+    },
+    {
+      "state": "PokemonMenuOpen",
+      "anchors": [
+        {
+          "name": "menu-panel",
+          "region": { "x": 0.72, "y": 0.30, "width": 0.23, "height": 0.40 },
+          "mode": "Color",
+          "expectation": "Required",
+          "fingerprintWidth": 8,
+          "fingerprintHeight": 8,
+          "matchThreshold": 0.98,
+          "weight": 1.0,
+          "sampleFixtureIds": ["bootstrap-pokemon-menu-open"]
+        }
+      ]
+    },
+    {
+      "state": "AppraisalOpen",
+      "anchors": [
+        {
+          "name": "appraisal-bars",
+          "region": { "x": 0.35, "y": 0.75, "width": 0.30, "height": 0.18 },
+          "mode": "Color",
+          "expectation": "Required",
+          "fingerprintWidth": 8,
+          "fingerprintHeight": 8,
+          "matchThreshold": 0.98,
+          "weight": 1.0,
+          "sampleFixtureIds": [
+            "bootstrap-appraisal-1",
+            "bootstrap-appraisal-2",
+            "bootstrap-appraisal-3"
+          ]
+        }
+      ]
+    }
+  ]
+}

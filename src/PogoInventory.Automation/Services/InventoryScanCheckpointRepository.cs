@@ -1,12 +1,14 @@
 using System.Text.Json;
 using PogoInventory.Automation.Errors;
 using PogoInventory.Automation.Models;
+using PogoInventory.Observations.Models;
 
 namespace PogoInventory.Automation.Services;
 
 public static class InventoryScanCheckpointRepository
 {
     public const string FileName = "inventory-scan-checkpoint.json";
+    public const string CurrentSchemaVersion = "2.0";
 
     public static async Task<InventoryScanCheckpoint?> LoadAsync(
         string outputDirectory,
@@ -21,13 +23,7 @@ public static class InventoryScanCheckpointRepository
         try
         {
             var json = await File.ReadAllTextAsync(path, cancellationToken);
-            var checkpoint = JsonSerializer.Deserialize<InventoryScanCheckpoint>(
-                json,
-                AutomationJson.CreateOptions(writeIndented: false)) ??
-                throw new AutomationException(
-                    AutomationErrorCode.CheckpointCorrupt,
-                    $"Checkpoint '{path}' contained no data.");
-
+            var checkpoint = DeserializeAndMigrate(json, path);
             Validate(checkpoint);
             return checkpoint;
         }
@@ -60,9 +56,61 @@ public static class InventoryScanCheckpointRepository
         return path;
     }
 
+    public static InventoryScanCheckpoint DeserializeAndMigrate(
+        string json,
+        string sourceName = "checkpoint")
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(json);
+        using var document = JsonDocument.Parse(json);
+        var schemaVersion = document.RootElement.TryGetProperty(
+            "schemaVersion",
+            out var schemaElement)
+            ? schemaElement.GetString()
+            : null;
+
+        if (schemaVersion is null or "1.0")
+        {
+            var legacy = JsonSerializer.Deserialize<InventoryScanCheckpoint>(
+                json,
+                AutomationJson.CreateOptions(writeIndented: false)) ??
+                throw new AutomationException(
+                    AutomationErrorCode.CheckpointCorrupt,
+                    $"Checkpoint '{sourceName}' contained no data.");
+
+            return legacy with
+            {
+                SchemaVersion = CurrentSchemaVersion,
+                MigratedFromSchemaVersion = schemaVersion ?? "1.0",
+                Items = legacy.Items
+                    .OrderBy(x => x.SequenceNumber)
+                    .Select(item => item with
+                    {
+                        Observation = CalcyObservation.Unavailable(
+                            "CheckpointMigration",
+                            "Observation was not collected by checkpoint schema 1.0.")
+                    })
+                    .ToArray()
+            };
+        }
+
+        if (schemaVersion != CurrentSchemaVersion)
+        {
+            throw new AutomationException(
+                AutomationErrorCode.CheckpointCorrupt,
+                $"Unsupported checkpoint schema '{schemaVersion}'.");
+        }
+
+        return JsonSerializer.Deserialize<InventoryScanCheckpoint>(
+            json,
+            AutomationJson.CreateOptions(writeIndented: false)) ??
+            throw new AutomationException(
+                AutomationErrorCode.CheckpointCorrupt,
+                $"Checkpoint '{sourceName}' contained no data.");
+    }
+
     private static void Validate(InventoryScanCheckpoint checkpoint)
     {
-        if (checkpoint.SchemaVersion != "1.0")
+        if (checkpoint.SchemaVersion != CurrentSchemaVersion)
         {
             throw new AutomationException(
                 AutomationErrorCode.CheckpointCorrupt,
@@ -89,6 +137,19 @@ public static class InventoryScanCheckpointRepository
                 throw new AutomationException(
                     AutomationErrorCode.CheckpointCorrupt,
                     "Checkpoint item sequence is not contiguous.");
+            }
+
+            try
+            {
+                item.Observation.Validate();
+            }
+            catch (InvalidOperationException exception)
+            {
+                throw new AutomationException(
+                    AutomationErrorCode.CheckpointCorrupt,
+                    $"Checkpoint item {item.SequenceNumber} has an invalid observation: " +
+                    exception.Message,
+                    exception);
             }
 
             expected++;

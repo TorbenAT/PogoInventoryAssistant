@@ -2,7 +2,8 @@ namespace PogoInventory.Automation.Models;
 
 public sealed record InventoryScanCheckpoint
 {
-    public string SchemaVersion { get; init; } = "1.0";
+    public string SchemaVersion { get; init; } = "2.0";
+    public string? MigratedFromSchemaVersion { get; init; }
     public required string RunId { get; init; }
     public required string AutomationProfileName { get; init; }
     public required string AutomationProfileSha256 { get; init; }

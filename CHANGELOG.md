@@ -1,5 +1,18 @@
 # Changelog
 
+## 0.7.0
+
+- Added automatic core screen-profile bootstrap from a known InventoryList start.
+- Added the `PogoInventory.Bootstrap` project and local profile acceptance workflow.
+- Added the `PogoInventory.Observations` project and `ICalcyObservationProvider` boundary.
+- Added Complete, Partial, Conflicting, Failed and Unavailable observation states.
+- Attached structured nullable observations to every inventory scan item.
+- Added raw provider output SHA-256 validation.
+- Added fake, scripted and unavailable providers.
+- Upgraded inventory checkpoints to schema 2.0 with schema 1.0 migration.
+- Added tests for partial, conflicting, failed and migrated observations.
+- Added CI checks for core bootstrap and three deterministic fake observations.
+
 ## 0.6.2
 
 - Fixed the only failing 0.6.1 self-test.

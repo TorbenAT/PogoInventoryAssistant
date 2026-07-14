@@ -188,3 +188,27 @@ Writes are atomic. Sequence numbers must be contiguous.
 A running checkpoint can resume only if the phone is still on `AppraisalOpen` for the last captured Pokémon and the identity fingerprint matches. The runner then swipes once and waits for a changed identity before capturing the next sequence item.
 
 Completed and safely stopped checkpoints are immutable. A new output directory starts a new run.
+
+## Version 0.7.0 additions
+
+### Bootstrap layer
+
+`PogoInventory.Bootstrap` coordinates the existing device, automation, calibration and vision layers. It may use only the existing named phone actions.
+
+### Observation layer
+
+`PogoInventory.Observations` owns the Calcy provider boundary and result model. Automation depends on this abstraction, not on a specific Calcy transport.
+
+```text
+Android screenshot
+       |
+InventoryAutomationRunner
+       |
+ICalcyObservationProvider
+       |
+CalcyObservation
+       |
+Checkpoint schema 2.0
+```
+
+The real adapter will be added only after the current phone and Calcy version are verified.

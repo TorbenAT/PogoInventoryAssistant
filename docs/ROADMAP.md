@@ -90,3 +90,17 @@ The manual capture-approval route is retained only as a fallback.
 - count reconciliation
 - final human spot-check
 - manual transfer only
+
+## M4 phase 1 completed in 0.7.0
+
+- automatic core profile bootstrap
+- structured observation contract
+- fake and failure providers
+- checkpoint schema 2.0 migration
+
+## M4 phase 2 next
+
+- verify current Calcy IV version on the fixed phone
+- implement the proven provider mechanism
+- add freshness and stale-output protection
+- run a one-Pokémon real verification before a long inventory scan

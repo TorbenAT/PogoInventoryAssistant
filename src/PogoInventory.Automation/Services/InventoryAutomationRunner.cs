@@ -7,6 +7,8 @@ using PogoInventory.Device;
 using PogoInventory.Device.Logging;
 using PogoInventory.Device.Models;
 using PogoInventory.Device.Transport;
+using PogoInventory.Observations.Models;
+using PogoInventory.Observations.Providers;
 using PogoInventory.Vision.Imaging;
 using PogoInventory.Vision.Models;
 using PogoInventory.Vision.Profiles;
@@ -18,15 +20,19 @@ public sealed class InventoryAutomationRunner
     private readonly IAndroidAutomationTransport _transport;
     private readonly ScreenStateDetector _detector;
     private readonly IDeviceLog _log;
+    private readonly ICalcyObservationProvider _observationProvider;
 
     public InventoryAutomationRunner(
         IAndroidAutomationTransport transport,
         ScreenStateDetector? detector = null,
-        IDeviceLog? log = null)
+        IDeviceLog? log = null,
+        ICalcyObservationProvider? observationProvider = null)
     {
         _transport = transport ?? throw new ArgumentNullException(nameof(transport));
         _detector = detector ?? new ScreenStateDetector();
         _log = log ?? NullDeviceLog.Instance;
+        _observationProvider = observationProvider ??
+            new UnavailableCalcyObservationProvider();
     }
 
     public async Task<InventoryAutomationResult> RunAsync(
@@ -219,6 +225,7 @@ public sealed class InventoryAutomationRunner
                 }
 
                 var item = await CaptureItemAsync(
+                    selected.Serial,
                     captureDirectory,
                     items.Count + 1,
                     current,
@@ -242,6 +249,16 @@ public sealed class InventoryAutomationRunner
                     StateBefore = ScreenState.AppraisalOpen,
                     StateAfter = ScreenState.AppraisalOpen,
                     Detail = item.ScreenshotFileName
+                });
+                actions.Add(new AutomationActionRecord
+                {
+                    SequenceNumber = actions.Count + 1,
+                    Kind = AutomationActionKind.CaptureObservation,
+                    StartedAtUtc = current.CapturedAtUtc,
+                    CompletedAtUtc = DateTimeOffset.UtcNow,
+                    StateBefore = ScreenState.AppraisalOpen,
+                    StateAfter = ScreenState.AppraisalOpen,
+                    Detail = $"{item.Observation.ProviderName}:{item.Observation.Status}"
                 });
 
                 checkpoint = await SaveRunningAsync(
@@ -675,7 +692,8 @@ public sealed class InventoryAutomationRunner
         };
     }
 
-    private static async Task<InventoryScanItem> CaptureItemAsync(
+    private async Task<InventoryScanItem> CaptureItemAsync(
+        string serial,
         string captureDirectory,
         int sequenceNumber,
         ScreenProbe probe,
@@ -688,15 +706,68 @@ public sealed class InventoryAutomationRunner
             probe.ScreenshotPng,
             cancellationToken);
 
+        var screenshotSha256 = Hash(probe.ScreenshotPng);
+        CalcyObservation observation;
+        try
+        {
+            observation = await _observationProvider.ObserveAsync(
+                new CalcyObservationRequest
+                {
+                    SequenceNumber = sequenceNumber,
+                    DeviceSerial = serial,
+                    CapturedAtUtc = probe.CapturedAtUtc,
+                    ScreenshotPng = probe.ScreenshotPng.ToArray(),
+                    ScreenshotSha256 = screenshotSha256
+                },
+                cancellationToken);
+
+            if (observation is null)
+            {
+                observation = CalcyObservation.Failed(
+                    _observationProvider.Name,
+                    "NullObservation",
+                    "The observation provider returned null.");
+            }
+            else
+            {
+                observation = CalcyObservation.WithRawOutput(observation);
+                observation.Validate();
+            }
+        }
+        catch (OperationCanceledException)
+        {
+            throw;
+        }
+        catch (Exception exception)
+        {
+            observation = CalcyObservation.Failed(
+                _observationProvider.Name,
+                exception.GetType().Name,
+                exception.Message);
+        }
+
+        _log.Write(
+            DeviceLogLevel.Information,
+            "inventory.automation.observation",
+            "Pokémon observation captured.",
+            new Dictionary<string, string>
+            {
+                ["sequence"] = sequenceNumber.ToString(),
+                ["provider"] = observation.ProviderName,
+                ["status"] = observation.Status.ToString(),
+                ["confidence"] = observation.Confidence.ToString("F4")
+            });
+
         return new InventoryScanItem
         {
             SequenceNumber = sequenceNumber,
             CapturedAtUtc = probe.CapturedAtUtc,
             ScreenshotFileName = Path.Combine("captures", fileName).Replace('\\', '/'),
-            ScreenshotSha256 = Hash(probe.ScreenshotPng),
+            ScreenshotSha256 = screenshotSha256,
             IdentityFingerprintBase64 = Convert.ToBase64String(probe.IdentityFingerprint),
             IdentityFingerprintSha256 = Hash(probe.IdentityFingerprint),
-            ScreenStateConfidence = probe.Detection.Confidence
+            ScreenStateConfidence = probe.Detection.Confidence,
+            Observation = observation
         };
     }
 

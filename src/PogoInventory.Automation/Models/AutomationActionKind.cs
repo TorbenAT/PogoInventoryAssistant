@@ -7,5 +7,6 @@ public enum AutomationActionKind
     TapAppraise,
     SwipeNextPokemon,
     CaptureEvidence,
+    CaptureObservation,
     WaitForState
 }

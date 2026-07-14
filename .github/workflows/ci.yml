@@ -49,6 +49,34 @@ jobs:
           --max-items 3
           --out .\out\automatic-inventory-scan
 
+      - name: Verify structured fake observations
+        shell: pwsh
+        run: |
+          $checkpoint = Get-Content .\out\automatic-inventory-scan\inventory-scan-checkpoint.json -Raw | ConvertFrom-Json
+          if ($checkpoint.schemaVersion -ne "2.0") { throw "Expected checkpoint schema 2.0." }
+          if ($checkpoint.items.Count -ne 3) { throw "Expected exactly three scan items." }
+          $notComplete = @($checkpoint.items | Where-Object { $_.observation.status -ne "Complete" })
+          if ($notComplete.Count -ne 0) { throw "All fake observations must be Complete." }
+          $species = @($checkpoint.items | ForEach-Object { $_.observation.species })
+          if (($species -join ",") -ne "Pikachu,Machop,Eevee") { throw "Unexpected fake species sequence." }
+
+      - name: Run automatic core profile bootstrap
+        run: >-
+          dotnet run --project .\src\PogoInventory.Cli --configuration Release --no-build --
+          profile-bootstrap --fake
+          --profile .\data\automation-profile.synthetic.json
+          --anchors .\data\calibration\core-anchor-plan.synthetic.json
+          --fixtures .\data\screen-fixtures
+          --out .\out\core-profile-bootstrap
+
+      - name: Verify core profile bootstrap acceptance
+        shell: pwsh
+        run: |
+          $report = Get-Content .\out\core-profile-bootstrap\acceptance\calibration-acceptance.json -Raw | ConvertFrom-Json
+          if (-not $report.accepted) { throw "Automatic core profile bootstrap was rejected." }
+          if ($report.falsePositiveCount -ne 0) { throw "Core profile has false positives." }
+          if ($report.misclassificationCount -ne 0) { throw "Core profile has misclassifications." }
+
       - name: Run synthetic screen detection
         run: >-
           dotnet run --project .\src\PogoInventory.Cli --configuration Release --no-build --

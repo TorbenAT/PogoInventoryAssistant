@@ -2,6 +2,7 @@ using System.Text.Json;
 using PogoInventory.Automation.Models;
 using PogoInventory.Automation.Services;
 using PogoInventory.Automation.Transport;
+using PogoInventory.Bootstrap.Services;
 using PogoInventory.Calibration.Errors;
 using PogoInventory.Calibration.Models;
 using PogoInventory.Calibration.Reporting;
@@ -15,6 +16,8 @@ using PogoInventory.Device.Adb;
 using PogoInventory.Device.Errors;
 using PogoInventory.Device.Models;
 using PogoInventory.Device.Transport;
+using PogoInventory.Observations.Models;
+using PogoInventory.Observations.Providers;
 using PogoInventory.Vision.Imaging;
 using PogoInventory.Vision.Models;
 using PogoInventory.Vision.Profiles;
@@ -74,7 +77,13 @@ var tests = new (string Name, Func<Task> Run)[]
     ("Automation profile loads and validates", AutomationProfileLoadsAndValidatesAsync),
     ("Automatic scan captures three items and detects end", AutomaticScanCapturesThreeItemsAsync),
     ("Automatic scan respects maximum item limit", AutomaticScanRespectsMaximumItemLimitAsync),
-    ("Completed automatic checkpoint is idempotent", CompletedAutomaticCheckpointIsIdempotentAsync)
+    ("Completed automatic checkpoint is idempotent", CompletedAutomaticCheckpointIsIdempotentAsync),
+    ("Fake scan attaches complete observations", FakeScanAttachesCompleteObservationsAsync),
+    ("Partial observation stays partial", PartialObservationStaysPartialAsync),
+    ("Conflicting observation stays conflicting", ConflictingObservationStaysConflictingAsync),
+    ("Observation provider failure is recorded", ObservationProviderFailureIsRecordedAsync),
+    ("Legacy checkpoint migrates to schema 2", Sync(LegacyCheckpointMigratesToSchema2)),
+    ("Automatic core bootstrap builds accepted profile", AutomaticCoreBootstrapBuildsAcceptedProfileAsync)
 };
 
 var failed = 0;
@@ -1296,7 +1305,9 @@ static async Task AutomaticScanCapturesThreeItemsAsync()
         var profile = await AutomationProfileLoader.LoadAsync(
             RepositoryPath("data", "automation-profile.synthetic.json"));
         var screenProfile = await LoadSyntheticProfileAsync();
-        var runner = new InventoryAutomationRunner(transport);
+        var runner = new InventoryAutomationRunner(
+            transport,
+            observationProvider: new FakeCalcyObservationProvider());
 
         var result = await runner.RunAsync(
             directory,
@@ -1310,6 +1321,7 @@ static async Task AutomaticScanCapturesThreeItemsAsync()
             result.Checkpoint.StopReason,
             "scan stop reason");
         AssertEqual(3, result.Checkpoint.Items.Count, "captured item count");
+        AssertEqual("2.0", result.Checkpoint.SchemaVersion, "checkpoint schema");
         AssertEqual(3, Directory.GetFiles(result.CaptureDirectory, "*.png").Length, "capture file count");
         AssertTrue(
             transport.Actions.Count(action => action.StartsWith("tap:", StringComparison.Ordinal)) == 3,
@@ -1381,6 +1393,181 @@ static async Task CompletedAutomaticCheckpointIsIdempotentAsync()
         AssertEqual(first.Checkpoint.RunId, second.Checkpoint.RunId, "idempotent run id");
         AssertEqual(2, second.Checkpoint.Items.Count, "idempotent item count");
         AssertEqual(0, secondTransport.Actions.Count, "idempotent input action count");
+    }
+    finally
+    {
+        DeleteDirectory(directory);
+    }
+}
+
+static async Task AutomaticCoreBootstrapBuildsAcceptedProfileAsync()
+{
+    var directory = CreateTemporaryDirectory();
+    try
+    {
+        var automationProfile = await AutomationProfileLoader.LoadAsync(
+            RepositoryPath("data", "automation-profile.synthetic.json"));
+        var anchorPlan = await AnchorPlanLoader.LoadAsync(
+            RepositoryPath("data", "calibration", "core-anchor-plan.synthetic.json"));
+        var transport = CreateScriptedAutomationTransport();
+        var result = await new CoreProfileBootstrapRunner(transport).RunAsync(
+            directory,
+            automationProfile,
+            anchorPlan);
+
+        AssertTrue(result.Acceptance.Accepted, "automatic core profile should be accepted");
+        AssertEqual(6, result.CapturedFiles.Count, "bootstrap capture count");
+        AssertEqual(4, result.Profile.States.Count, "bootstrap state count");
+        AssertEqual(0, result.Acceptance.FalsePositiveCount, "bootstrap false positives");
+        AssertEqual(0, result.Acceptance.MisclassificationCount, "bootstrap misclassifications");
+        AssertTrue(File.Exists(result.ProfilePath), "bootstrap profile should exist");
+    }
+    finally
+    {
+        DeleteDirectory(directory);
+    }
+}
+
+static async Task FakeScanAttachesCompleteObservationsAsync()
+{
+    var directory = CreateTemporaryDirectory();
+    try
+    {
+        var profile = await AutomationProfileLoader.LoadAsync(
+            RepositoryPath("data", "automation-profile.synthetic.json"));
+        var screenProfile = await LoadSyntheticProfileAsync();
+        var result = await new InventoryAutomationRunner(
+                CreateScriptedAutomationTransport(),
+                observationProvider: new FakeCalcyObservationProvider())
+            .RunAsync(directory, profile, screenProfile, maximumItems: 3);
+
+        AssertTrue(
+            result.Checkpoint.Items.All(item =>
+                item.Observation.Status == CalcyObservationStatus.Complete),
+            "all fake observations should be complete");
+        AssertEqual("Pikachu", result.Checkpoint.Items[0].Observation.Species, "first species");
+        AssertEqual((int?)0, result.Checkpoint.Items[1].Observation.AttackIv, "second attack IV");
+        AssertTrue(
+            result.Checkpoint.Items.All(item =>
+                item.Observation.RawProviderOutputSha256 is { Length: 64 }),
+            "all fake observations should have a raw-output hash");
+    }
+    finally
+    {
+        DeleteDirectory(directory);
+    }
+}
+
+static async Task PartialObservationStaysPartialAsync()
+{
+    var partial = CalcyObservation.WithRawOutput(new CalcyObservation
+    {
+        ProviderName = "PartialProvider",
+        Status = CalcyObservationStatus.Partial,
+        Confidence = 0.7,
+        Species = "Wooper",
+        Cp = 311,
+        RawProviderOutput = "species=Wooper;cp=311"
+    });
+    var result = await RunOneItemWithProviderAsync(
+        new ScriptedCalcyObservationProvider(
+            new Dictionary<int, CalcyObservation> { [1] = partial }));
+
+    AssertEqual(CalcyObservationStatus.Partial, result.Status, "partial status");
+    AssertEqual("Wooper", result.Species, "partial species");
+    AssertEqual((int?)null, result.AttackIv, "unknown partial attack IV");
+}
+
+static async Task ConflictingObservationStaysConflictingAsync()
+{
+    var conflicting = CalcyObservation.WithRawOutput(new CalcyObservation
+    {
+        ProviderName = "ConflictProvider",
+        Status = CalcyObservationStatus.Conflicting,
+        Confidence = 0.2,
+        Species = "Eevee",
+        Cp = 500,
+        RawProviderOutput = "species candidates=Eevee,Vaporeon",
+        Warnings = new[] { "SpeciesConflict" }
+    });
+    var result = await RunOneItemWithProviderAsync(
+        new ScriptedCalcyObservationProvider(
+            new Dictionary<int, CalcyObservation> { [1] = conflicting }));
+
+    AssertEqual(CalcyObservationStatus.Conflicting, result.Status, "conflicting status");
+    AssertTrue(result.Warnings.Contains("SpeciesConflict"), "conflict warning");
+}
+
+static async Task ObservationProviderFailureIsRecordedAsync()
+{
+    var result = await RunOneItemWithProviderAsync(
+        new ScriptedCalcyObservationProvider(
+            exceptions: new Dictionary<int, Exception>
+            {
+                [1] = new InvalidOperationException("simulated provider failure")
+            }));
+
+    AssertEqual(CalcyObservationStatus.Failed, result.Status, "failed status");
+    AssertEqual("InvalidOperationException", result.ErrorCode, "provider error code");
+    AssertTrue(
+        result.ErrorDetail?.Contains("simulated provider failure", StringComparison.Ordinal) == true,
+        "provider failure detail");
+}
+
+static void LegacyCheckpointMigratesToSchema2()
+{
+    const string json = """
+        {
+          "schemaVersion": "1.0",
+          "runId": "legacy-run",
+          "automationProfileName": "legacy-profile",
+          "automationProfileSha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "screenProfileSha256": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+          "deviceSerial": "LEGACY",
+          "screenWidth": 180,
+          "screenHeight": 360,
+          "startedAtUtc": "2026-07-14T00:00:00Z",
+          "updatedAtUtc": "2026-07-14T00:00:01Z",
+          "status": "Running",
+          "stopReason": "None",
+          "items": [
+            {
+              "sequenceNumber": 1,
+              "capturedAtUtc": "2026-07-14T00:00:01Z",
+              "screenshotFileName": "captures/000001.png",
+              "screenshotSha256": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+              "identityFingerprintBase64": "AA==",
+              "identityFingerprintSha256": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
+              "screenStateConfidence": 1.0
+            }
+          ],
+          "actions": []
+        }
+        """;
+
+    var migrated = InventoryScanCheckpointRepository.DeserializeAndMigrate(json, "self-test");
+    AssertEqual("2.0", migrated.SchemaVersion, "migrated schema");
+    AssertEqual("1.0", migrated.MigratedFromSchemaVersion, "source schema");
+    AssertEqual(
+        CalcyObservationStatus.Unavailable,
+        migrated.Items.Single().Observation.Status,
+        "migrated observation status");
+}
+
+static async Task<CalcyObservation> RunOneItemWithProviderAsync(
+    ICalcyObservationProvider provider)
+{
+    var directory = CreateTemporaryDirectory();
+    try
+    {
+        var profile = await AutomationProfileLoader.LoadAsync(
+            RepositoryPath("data", "automation-profile.synthetic.json"));
+        var screenProfile = await LoadSyntheticProfileAsync();
+        var result = await new InventoryAutomationRunner(
+                CreateScriptedAutomationTransport(),
+                observationProvider: provider)
+            .RunAsync(directory, profile, screenProfile, maximumItems: 1);
+        return result.Checkpoint.Items.Single().Observation;
     }
     finally
     {

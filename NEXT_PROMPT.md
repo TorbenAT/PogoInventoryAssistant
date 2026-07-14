@@ -1,89 +1,68 @@
 # Continuation prompt
 
-Use this text with the latest repository after version 0.6.2 is green.
+Use this text with the latest repository after version 0.7.0 is green.
 
 ---
 
 I am building Pogo Inventory Assistant in C# and .NET 8.
 
-Open and inspect the repository before changing anything. Treat `PROJECT_STATE.md` as the source of truth. Read `docs/GUARDRAILS.md`, `docs/ARCHITECTURE.md` and `docs/AUTOMATIC_NAVIGATION.md`.
+Open and inspect the repository before changing anything. Treat `PROJECT_STATE.md` as the source of truth. Read `docs/GUARDRAILS.md`, `docs/AUTOMATIC_CORE_BOOTSTRAP.md` and `docs/CALCY_OBSERVATION_PIPELINE.md`.
 
-Current version: 0.6.2.
+Current version: 0.7.0.
 
 Accepted before this task:
 
-- conservative inventory decision engine
-- Android discovery, health and screenshots
-- fail-closed screen-state detector
-- synthetic calibration framework
-- strict tap/swipe Android input interface
-- automatic inventory-to-appraisal navigation
-- automatic swipe-through and identity-change verification
-- end-of-inventory detection
-- automatic local evidence capture
-- atomic checkpoint and safe resume
-- deterministic fake phone and CI traversal
-- 52 self-tests
+- automatic core profile bootstrap from a known InventoryList screen
+- no per-image approval
+- four-action input whitelist
+- automatic inventory traversal and resume
+- checkpoint schema 2.0
+- `ICalcyObservationProvider`
+- nullable structured observation fields
+- fake, scripted and unavailable providers
+- raw provider output hashing
+- 58 self-tests
 
-First verify that the 0.6.2 GitHub Actions workflow is green, all 52 self-tests pass, and the fake automatic scan captures exactly three items.
+First verify that GitHub Actions is green, all 58 tests pass, the fake bootstrap is accepted, and the fake inventory scan contains three Complete observations in order: Pikachu, Machop, Eevee.
 
-Next milestone: M4 automatic core-profile bootstrap and Calcy observation extraction.
-
-User requirements:
-
-- no per-Pokémon interaction
-- no manual image approval
-- no manual phone navigation during the 10,000+ item run
-- one-time local phone/profile adjustment is acceptable
-- after setup, the scan must run unattended over one or two nights
+Next milestone: M4 phase 2, real Calcy IV integration.
 
 Required work:
 
-1. Add an automatic bootstrap command that starts from a known InventoryList screen.
-2. Use only the four already approved input actions.
-3. Capture labelled InventoryList, PokemonDetails, PokemonMenuOpen and multiple AppraisalOpen examples automatically.
-4. Keep all real captures local and ignored by Git, but do not require per-image privacy approval.
-5. Build a local core screen profile automatically from configured stable anchor regions.
-6. Validate the generated profile against the automatically captured samples and negative screens.
-7. Refuse to start a long inventory scan unless the core profile passes zero-false-positive checks for the required states.
-8. Introduce `ICalcyObservationProvider` behind a separate adapter boundary.
-9. Investigate the current Calcy IV version on the fixed Android phone. Do not assume the old PGo-CalcaBotaBotaCalca logcat or clipboard method still works.
-10. Add a fake Calcy provider for CI.
-11. Attach at minimum these nullable fields to each ordered item:
-    - species or Pokédex number
-    - form where available
-    - CP
-    - HP
-    - level
-    - Attack IV
-    - Defense IV
-    - HP IV
-    - gender where available
-    - fast move and charged moves where available
-12. Store raw provider output and confidence with every observation.
-13. Unknown or conflicting data must not be guessed.
-14. Add checkpoint migration from schema 1.0 to the new observation schema.
-15. Add deterministic tests for complete, partial, conflicting and failed Calcy observations.
-16. Update README, architecture, roadmap, project state, continuation prompt, changelog and validation report.
+1. Add a diagnostic command that reports Android package presence and version for Calcy IV without changing Pokémon GO data.
+2. Keep all ADB execution inside `PogoInventory.Device`.
+3. Test the current installed Calcy version on the fixed phone.
+4. Do not assume the old PGo-CalcaBotaBotaCalca logcat, clipboard or intent method still works.
+5. Determine which output method is actually available.
+6. Implement the verified method behind `ICalcyObservationProvider`.
+7. Store the exact raw output and parser version.
+8. Add a one-Pokémon verification command.
+9. The verification must compare screenshot hash, provider output and parsed values.
+10. Mark missing fields null.
+11. Mark inconsistent results Conflicting.
+12. Convert adapter exceptions to Failed without aborting the full evidence capture.
+13. Add parser fixtures that contain no personal inventory data.
+14. Add tests for supported output, malformed output, stale output, wrong-Pokémon output and provider timeout.
+15. Add a provider freshness check so output from the previous Pokémon cannot be attached to the next one.
+16. Update all handoff and validation documents.
 
 Hard boundaries:
 
 - no transfer
 - no evolve, power-up, purify, TM or resource use
 - no catch, spin, battle, raid or location change
-- no text input or tagging in this milestone
-- no arbitrary ADB shell exposure
-- no random timing, random taps, human imitation or detection avoidance
+- no tagging or text input yet
+- no arbitrary ADB shell exposed above the device layer
+- no random human imitation or detection avoidance
 - screen Unknown, popup, network error or profile mismatch means stop
 
 Acceptance criteria:
 
-- automatic bootstrap requires no per-image approval
-- fake bootstrap and fake Calcy path run in CI
-- no input beyond the existing four named actions
-- complete observation data is attached to all fake scan items
-- partial data remains nullable and clearly reported
-- checkpoints remain atomic and resumable
-- all tests and CI steps are green
+- the real provider is proven on the fixed phone
+- a single Pokémon can be observed repeatedly without stale data
+- complete results require species, CP and all three IV values
+- partial and conflicting results remain explicit
+- fake CI path remains deterministic
+- all tests are green
 
 ---

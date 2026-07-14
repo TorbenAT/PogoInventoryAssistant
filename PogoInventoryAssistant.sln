@@ -4,11 +4,15 @@ VisualStudioVersion = 17.0.31903.59
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PogoInventory.Automation", "src\PogoInventory.Automation\PogoInventory.Automation.csproj", "{3D8EAF74-0B5D-4D86-AF2B-71624B8C9A01}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PogoInventory.Bootstrap", "src\PogoInventory.Bootstrap\PogoInventory.Bootstrap.csproj", "{A4E3D57D-193C-4FF0-90A8-6846BC9EC3FD}"
+EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PogoInventory.Calibration", "src\PogoInventory.Calibration\PogoInventory.Calibration.csproj", "{E2A481BB-6B14-49AB-9BF4-0E8845A77B69}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PogoInventory.Core", "src\PogoInventory.Core\PogoInventory.Core.csproj", "{A9D8628E-419A-4EFA-A14D-DF6D442C1A0A}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PogoInventory.Device", "src\PogoInventory.Device\PogoInventory.Device.csproj", "{C67A1E56-00B2-4D20-9A58-4517070EEA12}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PogoInventory.Observations", "src\PogoInventory.Observations\PogoInventory.Observations.csproj", "{6C54D35F-34B7-4B19-9A9E-9850E554BC70}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PogoInventory.Vision", "src\PogoInventory.Vision\PogoInventory.Vision.csproj", "{5E1A789B-98F0-44DA-9E16-63310AC6DDB2}"
 EndProject
@@ -26,6 +30,10 @@ Global
 		{3D8EAF74-0B5D-4D86-AF2B-71624B8C9A01}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{3D8EAF74-0B5D-4D86-AF2B-71624B8C9A01}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{3D8EAF74-0B5D-4D86-AF2B-71624B8C9A01}.Release|Any CPU.Build.0 = Release|Any CPU
+		{A4E3D57D-193C-4FF0-90A8-6846BC9EC3FD}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{A4E3D57D-193C-4FF0-90A8-6846BC9EC3FD}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{A4E3D57D-193C-4FF0-90A8-6846BC9EC3FD}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{A4E3D57D-193C-4FF0-90A8-6846BC9EC3FD}.Release|Any CPU.Build.0 = Release|Any CPU
 		{E2A481BB-6B14-49AB-9BF4-0E8845A77B69}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{E2A481BB-6B14-49AB-9BF4-0E8845A77B69}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{E2A481BB-6B14-49AB-9BF4-0E8845A77B69}.Release|Any CPU.ActiveCfg = Release|Any CPU
@@ -38,6 +46,10 @@ Global
 		{C67A1E56-00B2-4D20-9A58-4517070EEA12}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{C67A1E56-00B2-4D20-9A58-4517070EEA12}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{C67A1E56-00B2-4D20-9A58-4517070EEA12}.Release|Any CPU.Build.0 = Release|Any CPU
+		{6C54D35F-34B7-4B19-9A9E-9850E554BC70}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{6C54D35F-34B7-4B19-9A9E-9850E554BC70}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{6C54D35F-34B7-4B19-9A9E-9850E554BC70}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{6C54D35F-34B7-4B19-9A9E-9850E554BC70}.Release|Any CPU.Build.0 = Release|Any CPU
 		{5E1A789B-98F0-44DA-9E16-63310AC6DDB2}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{5E1A789B-98F0-44DA-9E16-63310AC6DDB2}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{5E1A789B-98F0-44DA-9E16-63310AC6DDB2}.Release|Any CPU.ActiveCfg = Release|Any CPU

@@ -4,6 +4,7 @@ using System.Text.Json.Serialization;
 using PogoInventory.Automation.Errors;
 using PogoInventory.Automation.Services;
 using PogoInventory.Automation.Transport;
+using PogoInventory.Bootstrap.Services;
 using PogoInventory.Calibration.Errors;
 using PogoInventory.Calibration.Models;
 using PogoInventory.Calibration.Reporting;
@@ -18,6 +19,8 @@ using PogoInventory.Device.Adb;
 using PogoInventory.Device.Errors;
 using PogoInventory.Device.Logging;
 using PogoInventory.Device.Transport;
+using PogoInventory.Observations.Models;
+using PogoInventory.Observations.Providers;
 using PogoInventory.Vision.Errors;
 using PogoInventory.Vision.Imaging;
 using PogoInventory.Vision.Models;
@@ -49,6 +52,9 @@ static async Task<int> MainAsync(string[] args)
         {
             "analyze" => await AnalyzeAsync(args.Skip(1).ToArray(), cancellationSource.Token),
             "inventory-scan" => await RunInventoryScanAsync(
+                args.Skip(1).ToArray(),
+                cancellationSource.Token),
+            "profile-bootstrap" => await RunProfileBootstrapAsync(
                 args.Skip(1).ToArray(),
                 cancellationSource.Token),
             "device-snapshot" => await CaptureDeviceSnapshotAsync(
@@ -178,32 +184,12 @@ static async Task<int> RunInventoryScanAsync(
         automationProfile.DefaultMaximumItems);
 
     IAndroidAutomationTransport transport;
-    if (options.ContainsKey("fake"))
+    var useFake = options.ContainsKey("fake");
+    if (useFake)
     {
         var fixtures = Optional(options, "fixtures") ??
             Path.Combine("data", "screen-fixtures");
-        var screens = new Dictionary<ScreenState, byte[]>
-        {
-            [ScreenState.InventoryList] = await File.ReadAllBytesAsync(
-                Path.Combine(fixtures, "InventoryList.png"),
-                cancellationToken),
-            [ScreenState.PokemonDetails] = await File.ReadAllBytesAsync(
-                Path.Combine(fixtures, "PokemonDetails.png"),
-                cancellationToken),
-            [ScreenState.PokemonMenuOpen] = await File.ReadAllBytesAsync(
-                Path.Combine(fixtures, "PokemonMenuOpen.png"),
-                cancellationToken)
-        };
-        var appraisalScreens = new[]
-        {
-            "AppraisalOpen.png",
-            "AppraisalOpenItem2.png",
-            "AppraisalOpenItem3.png"
-        }.Select(file => File.ReadAllBytes(
-            Path.Combine(fixtures, file))).ToArray();
-        transport = new ScriptedAndroidAutomationTransport(
-            screens,
-            appraisalScreens);
+        transport = await CreateScriptedTransportAsync(fixtures, cancellationToken);
         Console.WriteLine("Using the deterministic scripted Android transport.");
     }
     else
@@ -211,10 +197,27 @@ static async Task<int> RunInventoryScanAsync(
         transport = CreateRealAndroidTransport(options);
     }
 
+    var providerMode = (Optional(options, "observation-provider") ??
+        (useFake ? "fake" : "none")).ToLowerInvariant();
+    if (!useFake && providerMode == "fake")
+    {
+        throw new ArgumentException(
+            "The fake observation provider can only be used with the fake Android transport.");
+    }
+
+    ICalcyObservationProvider observationProvider = providerMode switch
+    {
+        "fake" => new FakeCalcyObservationProvider(),
+        "none" => new UnavailableCalcyObservationProvider(),
+        _ => throw new ArgumentException(
+            "Observation provider must be either 'fake' or 'none'.")
+    };
+
     var runner = new InventoryAutomationRunner(
         transport,
         new ScreenStateDetector(),
-        new ConsoleDeviceLog());
+        new ConsoleDeviceLog(),
+        observationProvider);
     var result = await runner.RunAsync(
         outputDirectory,
         automationProfile,
@@ -228,6 +231,13 @@ static async Task<int> RunInventoryScanAsync(
     Console.WriteLine($"Status: {result.Checkpoint.Status}");
     Console.WriteLine($"Stop reason: {result.Checkpoint.StopReason}");
     Console.WriteLine($"Items captured: {result.Checkpoint.Items.Count}");
+    foreach (var group in result.Checkpoint.Items
+                 .GroupBy(item => item.Observation.Status)
+                 .OrderBy(group => group.Key))
+    {
+        Console.WriteLine($"Observations {group.Key}: {group.Count()}");
+    }
+    Console.WriteLine($"Checkpoint schema: {result.Checkpoint.SchemaVersion}");
     Console.WriteLine($"Checkpoint: {result.CheckpointPath}");
     Console.WriteLine($"Captures: {result.CaptureDirectory}");
     if (!string.IsNullOrWhiteSpace(result.Checkpoint.StopDetail))
@@ -238,6 +248,50 @@ static async Task<int> RunInventoryScanAsync(
     return result.Checkpoint.Status == PogoInventory.Automation.Models.AutomationRunStatus.Completed
         ? 0
         : 5;
+}
+
+static async Task<int> RunProfileBootstrapAsync(
+    string[] args,
+    CancellationToken cancellationToken)
+{
+    var options = ParseOptions(args, "fake");
+    var outputDirectory = Require(options, "out");
+    var automationProfile = await AutomationProfileLoader.LoadAsync(
+        Require(options, "profile"),
+        cancellationToken);
+    var anchorPlan = await AnchorPlanLoader.LoadAsync(
+        Require(options, "anchors"),
+        cancellationToken);
+
+    IAndroidAutomationTransport transport;
+    if (options.ContainsKey("fake"))
+    {
+        var fixtures = Optional(options, "fixtures") ??
+            Path.Combine("data", "screen-fixtures");
+        transport = await CreateScriptedTransportAsync(fixtures, cancellationToken);
+        Console.WriteLine("Using the deterministic scripted Android transport.");
+    }
+    else
+    {
+        transport = CreateRealAndroidTransport(options);
+    }
+
+    var result = await new CoreProfileBootstrapRunner(transport).RunAsync(
+        outputDirectory,
+        automationProfile,
+        anchorPlan,
+        Optional(options, "serial"),
+        cancellationToken);
+
+    Console.WriteLine();
+    Console.WriteLine("Automatic core profile bootstrap finished.");
+    Console.WriteLine($"Accepted: {result.Acceptance.Accepted}");
+    Console.WriteLine($"Captures: {result.CapturedFiles.Count}");
+    Console.WriteLine($"False positives: {result.Acceptance.FalsePositiveCount}");
+    Console.WriteLine($"Misclassifications: {result.Acceptance.MisclassificationCount}");
+    Console.WriteLine($"Profile: {result.ProfilePath}");
+    Console.WriteLine($"Acceptance report: {result.AcceptanceDirectory}");
+    return result.Acceptance.Accepted ? 0 : 6;
 }
 
 static async Task<int> CaptureDeviceSnapshotAsync(
@@ -720,6 +774,32 @@ static async Task<int> ApproveCalibrationCaptureAsync(
     return 0;
 }
 
+static async Task<ScriptedAndroidAutomationTransport> CreateScriptedTransportAsync(
+    string fixtures,
+    CancellationToken cancellationToken)
+{
+    var screens = new Dictionary<ScreenState, byte[]>
+    {
+        [ScreenState.InventoryList] = await File.ReadAllBytesAsync(
+            Path.Combine(fixtures, "InventoryList.png"),
+            cancellationToken),
+        [ScreenState.PokemonDetails] = await File.ReadAllBytesAsync(
+            Path.Combine(fixtures, "PokemonDetails.png"),
+            cancellationToken),
+        [ScreenState.PokemonMenuOpen] = await File.ReadAllBytesAsync(
+            Path.Combine(fixtures, "PokemonMenuOpen.png"),
+            cancellationToken)
+    };
+    var appraisalScreens = new[]
+    {
+        "AppraisalOpen.png",
+        "AppraisalOpenItem2.png",
+        "AppraisalOpenItem3.png"
+    }.Select(file => File.ReadAllBytes(
+        Path.Combine(fixtures, file))).ToArray();
+    return new ScriptedAndroidAutomationTransport(screens, appraisalScreens);
+}
+
 static IAndroidAutomationTransport CreateRealAndroidTransport(
     IReadOnlyDictionary<string, string> options)
 {
@@ -930,8 +1010,15 @@ static void PrintHelp()
     Console.WriteLine();
     Console.WriteLine("  inventory-scan --profile <automation.json> --screen-profile <screen-profile.json> --out <directory>");
     Console.WriteLine("                 [--adb <adb.exe>] [--serial <serial>] [--max-items <n>]");
+    Console.WriteLine("                 [--observation-provider <none|fake>]");
     Console.WriteLine("  inventory-scan --fake --profile <automation.json> --screen-profile <screen-profile.json>");
     Console.WriteLine("                 --out <directory> [--fixtures <directory>] [--max-items <n>]");
+    Console.WriteLine("                 [--observation-provider <fake|none>]");
+    Console.WriteLine();
+    Console.WriteLine("  profile-bootstrap --profile <automation.json> --anchors <anchor-plan.json> --out <directory>");
+    Console.WriteLine("                    [--adb <adb.exe>] [--serial <serial>]");
+    Console.WriteLine("  profile-bootstrap --fake --profile <automation.json> --anchors <anchor-plan.json>");
+    Console.WriteLine("                    --out <directory> [--fixtures <directory>]");
     Console.WriteLine();
     Console.WriteLine("  device-snapshot --out <directory> [--adb <adb.exe>] [--serial <serial>] [--timeout-seconds <n>]");
     Console.WriteLine("  device-snapshot --fake --out <directory>");

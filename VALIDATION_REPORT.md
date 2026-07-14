@@ -2,78 +2,53 @@
 
 ## Version
 
-0.6.2
+0.7.0
 
-## Reported CI result
+## Environment limitation
 
-The 0.6.1 solution compiled successfully. GitHub Actions then ran all 52 self-tests.
-
-Result:
-
-```text
-51/52 tests passed.
-```
-
-The only failure was:
-
-```text
-Fake snapshot writes PNG, metadata and manifest:
-Expected harness version to be '0.2.0', got '0.6.1'.
-```
-
-## Root cause
-
-The production path already used `DeviceHarnessOptions.CurrentVersion` when writing the manifest. The self-test still contained a historical literal from the original device-harness release:
-
-```csharp
-AssertEqual("0.2.0", ...);
-```
-
-The application output was correct. The assertion was stale.
-
-## Fix
-
-The self-test now compares the manifest value with the same version constant used by the product:
-
-```csharp
-AssertEqual(
-    DeviceHarnessOptions.CurrentVersion,
-    root.GetProperty("harnessVersion").GetString(),
-    "harness version");
-```
-
-`DeviceHarnessOptions.CurrentVersion` and the deterministic fake build fingerprints are bumped to `0.6.2`.
-
-## Behaviour impact
-
-None outside version metadata. The following remain unchanged:
-
-- automatic inventory navigation
-- input action whitelist
-- screen-state checks
-- evidence capture
-- checkpoint and resume logic
-- end-of-inventory detection
-- no transfer automation
+The packaging environment does not contain the .NET SDK or ADB. GitHub Actions remains the authoritative compile and runtime validation.
 
 ## Static validation completed
 
-- complete 0.6.1 repository unpacked
-- failing assertion located from the GitHub Actions log
-- assertion changed to the shared version constant
-- all JSON files parse successfully
-- all project XML files parse successfully
-- all project references resolve
-- self-test declaration count remains 52
-- ZIP contains no private captures, inventory data, `bin`, `obj` or `.git` content
+- 130 C# files parsed successfully with the tree-sitter C# grammar
+- no syntax-error or missing nodes found
+- all JSON files parsed successfully
+- all project XML files parsed successfully
+- every project reference resolves
+- solution contains nine projects
+- expected self-test declaration count is 58
+- synthetic core anchor regions were independently checked against all six bootstrap images
+- each required state matched only its own expected fixtures at the configured threshold
+- all required release files are present
+- no `bin`, `obj`, `.git`, local captures or private inventory data are included
 
-## Required CI result
+## Synthetic anchor check
 
-GitHub Actions must now:
+At threshold 0.98:
 
-1. build all seven projects
-2. pass all 52 self-tests
-3. complete the deterministic three-item fake inventory scan
-4. complete the synthetic vision and calibration checks
+- InventoryList anchor matched only InventoryList
+- PokemonDetails anchor matched only PokemonDetails
+- PokemonMenuOpen anchor matched only PokemonMenuOpen
+- AppraisalOpen anchor matched all three appraisal examples and no other core state
 
-Do not begin the next milestone until 0.6.2 is green.
+## Expected GitHub Actions validation
+
+1. restore and build nine projects
+2. run 58 self-tests
+3. run the fake device snapshot
+4. run the fake inventory scan
+5. verify checkpoint schema 2.0
+6. verify all three fake observations are Complete
+7. verify species order Pikachu, Machop, Eevee
+8. run the automatic core profile bootstrap
+9. verify bootstrap acceptance with zero false positives and misclassifications
+10. run the existing screen and calibration checks
+11. upload validation output
+
+## Known limitation
+
+No real Calcy IV output mechanism has been proven yet. The real provider remains Unavailable by design. Version 0.7.0 must not be described as ready to extract a real 10,000-item inventory until the real-device adapter is implemented and tested.
+
+## Release gate
+
+Do not run the full real inventory scan for data extraction until version 0.7.0 is green and the next real-Calcy milestone is complete.

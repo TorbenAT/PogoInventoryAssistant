@@ -92,4 +92,10 @@ Timing is deterministic and correctness-driven:
 
 ## Current data output
 
-Version 0.6.2 records ordered evidence. The next layer will turn each evidence item into a structured Pokémon observation using Calcy and visual extraction.
+Version 0.7.0 records ordered evidence and attaches a structured provider observation to every item. The real Calcy adapter remains the next device-specific step.
+
+## Structured observations in version 0.7.0
+
+After each appraisal screenshot is saved, the configured `ICalcyObservationProvider` is called. Its result is attached to the same sequence item before the atomic checkpoint is written.
+
+A provider exception is recorded as a Failed observation. It does not silently create Pokémon data.
