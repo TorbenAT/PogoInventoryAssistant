@@ -165,6 +165,15 @@ public sealed class FakeAndroidDeviceTransport : IAndroidAutomationTransport
         return Task.CompletedTask;
     }
 
+    public Task PressBackAsync(
+        string serial,
+        CancellationToken cancellationToken = default)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        EnsureKnownDevice(serial);
+        return Task.CompletedTask;
+    }
+
     public Task SwipeAsync(
         string serial,
         int startX,

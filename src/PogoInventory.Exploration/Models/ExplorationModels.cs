@@ -39,6 +39,7 @@ public sealed record ScreenObservation
     public required string ScreenshotPath { get; init; }
     public required string ScreenshotSha256 { get; init; }
     public string? PerceptualHash { get; init; }
+    public string? ClusterId { get; init; }
     public required int ScreenWidth { get; init; }
     public required int ScreenHeight { get; init; }
     public string? ForegroundPackage { get; init; }

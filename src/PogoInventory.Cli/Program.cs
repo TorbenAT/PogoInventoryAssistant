@@ -33,6 +33,7 @@ using PogoInventory.Device.Models;
 using PogoInventory.Device.Transport;
 using PogoInventory.ImagePretest.Models;
 using PogoInventory.ImagePretest.Services;
+using PogoInventory.Exploration.Services;
 using PogoInventory.Observations.Models;
 using PogoInventory.Observations.Parsing;
 using PogoInventory.Observations.Providers;
@@ -119,6 +120,18 @@ static async Task<int> MainAsync(string[] args)
                 args.Skip(1).ToArray(),
                 cancellationSource.Token),
             "device-open-inventory" => await OpenInventoryAsync(
+                args.Skip(1).ToArray(),
+                cancellationSource.Token),
+            "device-press-back" => await PressBackAsync(
+                args.Skip(1).ToArray(),
+                cancellationSource.Token),
+            "device-open-main-menu" => await OpenPokemonGoMainMenuAsync(
+                args.Skip(1).ToArray(),
+                cancellationSource.Token),
+            "device-open-pokemon-inventory" => await OpenPokemonInventoryFromMainMenuAsync(
+                args.Skip(1).ToArray(),
+                cancellationSource.Token),
+            "device-open-appraisal" => await OpenAppraisalFromInventoryAsync(
                 args.Skip(1).ToArray(),
                 cancellationSource.Token),
             "device-snapshot" => await CaptureDeviceSnapshotAsync(
@@ -322,16 +335,19 @@ static async Task<int> RunInventoryScanAsync(
             "The fake observation provider can only be used with the fake Android transport.");
     }
 
+    var appraisalProfile = providerMode == "appraisal"
+        ? await AppraisalProfileLoader.LoadAsync(
+            appraisalProfilePath ??
+                throw new ArgumentException(
+                    "The appraisal observation provider requires --appraisal-profile."),
+            cancellationToken)
+        : null;
+
     IPokemonObservationProvider observationProvider = providerMode switch
     {
         "fake" => new FakeCalcyObservationProvider(),
         "none" => new UnavailableCalcyObservationProvider(),
-        "appraisal" => new AppraisalProfileObservationProvider(
-            await AppraisalProfileLoader.LoadAsync(
-                appraisalProfilePath ??
-                    throw new ArgumentException(
-                        "The appraisal observation provider requires --appraisal-profile."),
-                cancellationToken)),
+        "appraisal" => new AppraisalProfileObservationProvider(appraisalProfile!),
         _ => throw new ArgumentException(
             "Observation provider must be either 'fake', 'none' or 'appraisal'.")
     };
@@ -340,7 +356,8 @@ static async Task<int> RunInventoryScanAsync(
         transport,
         new ScreenStateDetector(),
         new ConsoleDeviceLog(),
-        observationProvider);
+        observationProvider,
+        appraisalProfile);
     var result = await runner.RunAsync(
         outputDirectory,
         automationProfile,
@@ -1725,6 +1742,153 @@ static async Task<int> OpenInventoryAsync(
     return 0;
 }
 
+static async Task<int> PressBackAsync(
+    string[] args,
+    CancellationToken cancellationToken)
+{
+    var options = ParseOptions(args);
+    var transport = CreateRealAndroidTransport(options);
+    var devices = await transport.ListDevicesAsync(cancellationToken);
+    var selected = DeviceSnapshotService.SelectDevice(devices, Optional(options, "serial"));
+    await transport.PressBackAsync(selected.Serial, cancellationToken);
+    Console.WriteLine($"Pressed Back once on {selected.Serial}.");
+    return 0;
+}
+
+static async Task<int> OpenPokemonGoMainMenuAsync(
+    string[] args,
+    CancellationToken cancellationToken)
+{
+    var options = ParseOptions(args);
+    var transport = CreateRealAndroidTransport(options);
+    var devices = await transport.ListDevicesAsync(cancellationToken);
+    var selected = DeviceSnapshotService.SelectDevice(devices, Optional(options, "serial"));
+    var screenshot = await transport.CaptureScreenshotPngAsync(selected.Serial, cancellationToken);
+    var control = new VisualControlLocator().LocateMainMenuPokeball(screenshot) ??
+        throw new InvalidOperationException("The Pokémon GO main-menu Poké Ball was not visually verified; no action was taken.");
+    var image = PngDecoder.Decode(screenshot);
+    var (x, y) = control.Target.ToPixels(image.Width, image.Height);
+    await transport.TapAsync(selected.Serial, x, y, cancellationToken);
+    Console.WriteLine($"Opened the Pokémon GO main menu at visually detected ({x},{y}), confidence {control.Confidence:F3}.");
+    return 0;
+}
+
+static async Task<int> OpenPokemonInventoryFromMainMenuAsync(
+    string[] args,
+    CancellationToken cancellationToken)
+{
+    var options = ParseOptions(args);
+    var transport = CreateRealAndroidTransport(options);
+    var devices = await transport.ListDevicesAsync(cancellationToken);
+    var selected = DeviceSnapshotService.SelectDevice(devices, Optional(options, "serial"));
+    var screenshot = await transport.CaptureScreenshotPngAsync(selected.Serial, cancellationToken);
+    var control = new VisualControlLocator().LocatePokemonInventory(screenshot) ??
+        throw new InvalidOperationException("The Pokémon inventory control was not visually verified; no action was taken.");
+    var image = PngDecoder.Decode(screenshot);
+    var (x, y) = control.Target.ToPixels(image.Width, image.Height);
+    await transport.TapAsync(selected.Serial, x, y, cancellationToken);
+    Console.WriteLine($"Opened Pokémon inventory at visually detected ({x},{y}), confidence {control.Confidence:F3}.");
+    return 0;
+}
+
+static async Task<int> OpenAppraisalFromInventoryAsync(
+    string[] args,
+    CancellationToken cancellationToken)
+{
+    var options = ParseOptions(args);
+    var output = Require(options, "out");
+    var profile = await AutomationProfileLoader.LoadAsync(Require(options, "profile"), cancellationToken);
+    var appraisalProfile = await AppraisalProfileLoader.LoadAsync(
+        Require(options, "appraisal-profile"),
+        cancellationToken);
+    var transport = CreateRealAndroidTransport(options);
+    var devices = await transport.ListDevicesAsync(cancellationToken);
+    var selected = DeviceSnapshotService.SelectDevice(devices, Optional(options, "serial"));
+    var metadata = await transport.ReadMetadataAsync(selected.Serial, cancellationToken);
+    var width = metadata.Screen.EffectiveWidth ?? throw new InvalidOperationException("Screen width unavailable.");
+    var height = metadata.Screen.EffectiveHeight ?? throw new InvalidOperationException("Screen height unavailable.");
+    var snapshotService = new DeviceSnapshotService(transport, DeviceHarnessOptions.CurrentVersion);
+
+    var locator = new VisualControlLocator();
+    var analyzer = new AppraisalAnalyzer();
+    var inventory = await WaitForControlAsync(
+        locator.LocateInventoryCard,
+        "InventoryList");
+    await snapshotService.CaptureAsync(Path.Combine(output, "01-inventory"), selected.Serial, cancellationToken);
+    await TapControlAsync(inventory, "visible inventory card");
+
+    var details = await WaitForControlAsync(
+        locator.LocateDetailsMenu,
+        "PokemonDetails");
+    await snapshotService.CaptureAsync(Path.Combine(output, "02-details"), selected.Serial, cancellationToken);
+    await TapControlAsync(details, "details menu");
+
+    var appraise = await WaitForControlAsync(
+        locator.LocateAppraiseMenuItem,
+        "PokemonMenuOpen");
+    await snapshotService.CaptureAsync(Path.Combine(output, "03-menu"), selected.Serial, cancellationToken);
+    await TapControlAsync(appraise, "appraise");
+
+    var introAdvanced = false;
+    var deadline = DateTimeOffset.UtcNow.AddSeconds(profile.StateTimeoutSeconds);
+    double appraisalConfidence = 0;
+    while (DateTimeOffset.UtcNow < deadline)
+    {
+        var screenshot = await transport.CaptureScreenshotPngAsync(selected.Serial, cancellationToken);
+        var appraisal = analyzer.Analyze(PngDecoder.Decode(screenshot), appraisalProfile);
+        if (appraisal.IsAppraisal && appraisal.Confidence >= 0.90)
+        {
+            appraisalConfidence = appraisal.Confidence;
+            break;
+        }
+
+        var continueControl = locator.LocateAppraisalIntroContinue(screenshot);
+        if (!introAdvanced && continueControl is not null)
+        {
+            await TapControlAsync(continueControl, "appraisal intro continue");
+            introAdvanced = true;
+        }
+        await Task.Delay(Math.Max(250, profile.StatePollMilliseconds), cancellationToken);
+    }
+    if (appraisalConfidence < 0.90)
+    {
+        throw new InvalidOperationException(
+            "The GAME navigation skill did not reach semantically verified AppraisalOpen.");
+    }
+
+    await snapshotService.CaptureAsync(Path.Combine(output, "04-appraisal"), selected.Serial, cancellationToken);
+    Console.WriteLine($"Verified Inventory→Details→Menu→Appraisal at semantic confidence {appraisalConfidence:F3}.");
+    return 0;
+
+    async Task<LocatedControl> WaitForControlAsync(
+        Func<byte[], LocatedControl?> locate,
+        string expectedState)
+    {
+        var deadline = DateTimeOffset.UtcNow.AddSeconds(profile.StateTimeoutSeconds);
+        while (DateTimeOffset.UtcNow < deadline)
+        {
+            var current = await transport.CaptureScreenshotPngAsync(selected.Serial, cancellationToken);
+            var control = locate(current);
+            if (control is not null && control.Confidence >= 0.80)
+            {
+                return control;
+            }
+            await Task.Delay(Math.Max(250, profile.StatePollMilliseconds), cancellationToken);
+        }
+
+        throw new InvalidOperationException(
+            $"Expected GAME state {expectedState} was not visually verified; skill stopped.");
+    }
+
+    async Task TapControlAsync(LocatedControl control, string name)
+    {
+        var (x, y) = control.Target.ToPixels(width, height);
+        await transport.TapAsync(selected.Serial, x, y, cancellationToken);
+        Console.WriteLine(
+            $"Executed visually grounded {name} at ({x},{y}), confidence {control.Confidence:F3}.");
+    }
+}
+
 static async Task<int> CaptureDeviceUiSnapshotAsync(
     string[] args,
     CancellationToken cancellationToken)
@@ -1809,7 +1973,7 @@ static async Task<int> LaunchPokemonGoAsync(
     await transport.TapAsync(
         selected.Serial,
         left + ((right - left) / 2),
-        top + ((bottom - top) / 3),
+        top + 80,
         cancellationToken);
 
     Console.WriteLine("Clicked the exact visible Pokémon GO launcher control.");
@@ -2032,6 +2196,11 @@ static void PrintHelp()
     Console.WriteLine("                   [--copy-screenshots <true|false>] [--generate-checkpoint-evidence <true|false>]");
     Console.WriteLine("  device-stop-known-app --app calcy [--adb <adb.exe>] [--serial <serial>]");
     Console.WriteLine("  device-open-inventory [--adb <adb.exe>] [--serial <serial>]");
+    Console.WriteLine("  device-press-back [--adb <adb.exe>] [--serial <serial>]");
+    Console.WriteLine("  device-open-main-menu [--adb <adb.exe>] [--serial <serial>]");
+    Console.WriteLine("  device-open-pokemon-inventory [--adb <adb.exe>] [--serial <serial>]");
+    Console.WriteLine("  device-open-appraisal --profile <automation.json> --appraisal-profile <appraisal.json> --out <directory>");
+    Console.WriteLine("                        [--adb <adb.exe>] [--serial <serial>]");
     Console.WriteLine("  inventory-db-init [--db <pogo-inventory.db>]");
     Console.WriteLine("  inventory-db-summary [--db <pogo-inventory.db>]");
     Console.WriteLine("  inventory-scan --fake --profile <automation.json> --screen-profile <screen-profile.json>");

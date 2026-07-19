@@ -23,7 +23,8 @@ public sealed record KnownPokemonGoModal
             throw new InvalidOperationException("Modal evidence requires a before screenshot hash.");
         }
 
-        if (DismissalAllowed && Id != KnownPokemonGoModalId.NewMegaLevelAvailable)
+        if (DismissalAllowed && Id is not
+            (KnownPokemonGoModalId.NewMegaLevelAvailable or KnownPokemonGoModalId.AdventureSyncProgress))
         {
             throw new InvalidOperationException("Only explicitly allow-listed informational modals may be dismissed.");
         }

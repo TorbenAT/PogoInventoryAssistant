@@ -1,6 +1,8 @@
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
+using PogoInventory.Appraisal.Models;
+using PogoInventory.Appraisal.Services;
 using PogoInventory.Automation.Errors;
 using PogoInventory.Automation.Models;
 using PogoInventory.Device;
@@ -21,18 +23,23 @@ public sealed class InventoryAutomationRunner
     private readonly ScreenStateDetector _detector;
     private readonly IDeviceLog _log;
     private readonly IPokemonObservationProvider _observationProvider;
+    private readonly AppraisalVisualProfile? _appraisalProfile;
+    private readonly AppraisalAnalyzer _appraisalAnalyzer = new();
 
     public InventoryAutomationRunner(
         IAndroidAutomationTransport transport,
         ScreenStateDetector? detector = null,
         IDeviceLog? log = null,
-        IPokemonObservationProvider? observationProvider = null)
+        IPokemonObservationProvider? observationProvider = null,
+        AppraisalVisualProfile? appraisalProfile = null)
     {
         _transport = transport ?? throw new ArgumentNullException(nameof(transport));
         _detector = detector ?? new ScreenStateDetector();
         _log = log ?? NullDeviceLog.Instance;
         _observationProvider = observationProvider ??
             new UnavailableCalcyObservationProvider();
+        _appraisalProfile = appraisalProfile;
+        _appraisalProfile?.Validate();
     }
 
     public async Task<InventoryAutomationResult> RunAsync(
@@ -711,6 +718,21 @@ public sealed class InventoryAutomationRunner
         var png = await _transport.CaptureScreenshotPngAsync(serial, cancellationToken);
         var image = PngDecoder.Decode(png);
         var detection = _detector.Detect(image, screenProfile, capturedAt);
+        if (detection.State == ScreenState.Unknown && _appraisalProfile is not null)
+        {
+            var appraisal = _appraisalAnalyzer.Analyze(image, _appraisalProfile);
+            if (appraisal.IsAppraisal && appraisal.Confidence >= 0.90)
+            {
+                detection = detection with
+                {
+                    State = ScreenState.AppraisalOpen,
+                    Confidence = appraisal.Confidence,
+                    Reasons = detection.Reasons
+                        .Append("Semantic appraisal-bar fallback matched all three IV regions.")
+                        .ToArray()
+                };
+            }
+        }
         var identity = FingerprintExtractor.Extract(
             image,
             automationProfile.IdentityRegion,

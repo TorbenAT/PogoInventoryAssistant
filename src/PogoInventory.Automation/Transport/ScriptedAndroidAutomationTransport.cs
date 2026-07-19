@@ -157,6 +157,16 @@ public sealed class ScriptedAndroidAutomationTransport : IAndroidAutomationTrans
         return Task.CompletedTask;
     }
 
+    public Task PressBackAsync(
+        string serial,
+        CancellationToken cancellationToken = default)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        EnsureSerial(serial);
+        _actions.Add("press-back");
+        return Task.CompletedTask;
+    }
+
     public Task SwipeAsync(
         string serial,
         int startX,

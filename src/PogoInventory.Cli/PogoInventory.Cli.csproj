@@ -21,5 +21,6 @@
     <ProjectReference Include="..\PogoInventory.CropAtlas\PogoInventory.CropAtlas.csproj" />
     <ProjectReference Include="..\PogoInventory.Appraisal\PogoInventory.Appraisal.csproj" />
     <ProjectReference Include="..\PogoInventory.Application\PogoInventory.Application.csproj" />
+    <ProjectReference Include="..\PogoInventory.Exploration\PogoInventory.Exploration.csproj" />
   </ItemGroup>
 </Project>
