@@ -93,3 +93,47 @@ The green workflow must show:
 
 Candidate IV estimates are diagnostics. Version 0.14.0 does not yet provide a
 verified IV observation provider.
+
+## Runtime validation on 2026-07-19
+
+Executed successfully:
+
+- `dotnet build .\PogoInventoryAssistant.sln --configuration Release`
+- `powershell -ExecutionPolicy Bypass -File .\scripts\test.ps1`
+- `powershell -ExecutionPolicy Bypass -File .\scripts\run-demo.ps1`
+- `powershell -ExecutionPolicy Bypass -File .\scripts\run-fake-device.ps1`
+- `powershell -ExecutionPolicy Bypass -File .\scripts\run-fake-core-profile-bootstrap.ps1`
+- `powershell -ExecutionPolicy Bypass -File .\scripts\run-fake-inventory-scan.ps1`
+- `powershell -ExecutionPolicy Bypass -File .\scripts\run-fake-calcy-probe.ps1`
+- `powershell -ExecutionPolicy Bypass -File .\scripts\run-fake-calcy-live-check.ps1`
+- `powershell -ExecutionPolicy Bypass -File .\scripts\parse-synthetic-calcy-output.ps1`
+- `powershell -ExecutionPolicy Bypass -File .\scripts\detect-synthetic-screen.ps1`
+- `powershell -ExecutionPolicy Bypass -File .\scripts\build-synthetic-calibration-profile.ps1`
+- `powershell -ExecutionPolicy Bypass -File .\scripts\validate-synthetic-calibration.ps1`
+- `powershell -ExecutionPolicy Bypass -File .\scripts\run-iphone-image-pretest.ps1`
+- `powershell -ExecutionPolicy Bypass -File .\scripts\run-iphone-region-discovery.ps1`
+- `powershell -ExecutionPolicy Bypass -File .\scripts\run-appraisal-pretest.ps1`
+- `powershell -ExecutionPolicy Bypass -File .\scripts\prepare-android-phone.ps1 -Adb .\tools\platform-tools\adb.exe`
+
+Key results:
+
+- build succeeded with 0 warnings and 0 errors
+- self-test suite passed: 138/138
+- fake device snapshot completed
+- fake core profile bootstrap accepted
+- fake inventory scan captured 3 items
+- fake Calcy probe reported `CandidateEvidenceFound`
+- fake Calcy live check parsed a `Complete` observation
+- synthetic Calcy parsing produced `Pikachu`, CP 501, IV `15/14/13`
+- synthetic screen detection classified `InventoryList`
+- synthetic calibration profile built and validated successfully
+- iPhone image pretest decoded 23/24 screenshots and retained the unsupported PNG diagnostic
+- iPhone region discovery accepted 23 decoded images, 4 visual clusters and a 12x24 grid
+- appraisal pretest found 10 candidates, 0 Complete observations, and a 90.0 percent dominant cluster
+- Android phone preparation succeeded with repo-local ADB and a real device at `192.168.1.185:5555`
+
+Limitations observed during validation:
+
+- `run-appraisal-pretest` required the region-discovery report, so `run-iphone-region-discovery` had to be run first.
+- `prepare-android-phone` failed with the default `adb` path because ADB was not on PATH in this environment.
+- The real phone preparation run confirmed `Verified IV extraction ready: False`, so verified IV extraction is still not available.
