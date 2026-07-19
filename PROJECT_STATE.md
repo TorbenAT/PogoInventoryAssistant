@@ -161,13 +161,19 @@ generate phone-specific definitions automatically.
 ## Required checkpoint after push
 
 1. Build all 15 projects.
-2. Confirm 134 of 134 self-tests pass.
+2. Confirm 135 of 135 self-tests pass.
 3. Confirm the existing iPhone evidence stages remain green.
 4. Confirm appraisal pretest finds at least five candidates.
 5. Confirm candidates are concentrated at least 70 percent in one cluster.
 6. Confirm the unverified profile produces zero Complete observations.
 7. Confirm `appraisal-review-pack.zip` is created.
 8. Preserve zero new phone actions.
+
+The M1 real-phone hardening is now implemented and pushed. WiFi ADB and wall
+charging were stable during the controlled run, which captured 125 unique
+appraisal frames. The run stopped safely at `UnknownScreen` when the current
+inventory position was exhausted, so the 30-minute appraisal acceptance test
+is still open and must not be reported as passed.
 
 ## Next recommended milestone
 
