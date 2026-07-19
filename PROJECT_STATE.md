@@ -136,6 +136,7 @@ generate phone-specific definitions automatically.
 - verified Complete visual IV provider
 - real Calcy evidence and provider selection
 - species and CP extraction
+- caught-on location/origin persistence for later tagging
 - SQLite inventory database
 - final tagging plan
 - transfer remains manual
@@ -143,7 +144,7 @@ generate phone-specific definitions automatically.
 ## Required checkpoint after push
 
 1. Build all 15 projects.
-2. Confirm 112 of 112 self-tests pass.
+2. Confirm 113 of 113 self-tests pass.
 3. Confirm the existing iPhone evidence stages remain green.
 4. Confirm appraisal pretest finds at least five candidates.
 5. Confirm candidates are concentrated at least 70 percent in one cluster.

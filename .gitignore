@@ -11,6 +11,7 @@ out/
 captures/
 local-data/
 private/
+tools/platform-tools/
 *.db
 *.db-*
 *.sqlite
