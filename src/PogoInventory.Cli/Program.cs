@@ -123,6 +123,9 @@ static async Task<int> MainAsync(string[] args)
             "device-snapshot" => await CaptureDeviceSnapshotAsync(
                 args.Skip(1).ToArray(),
                 cancellationSource.Token),
+            "device-ui-snapshot" => await CaptureDeviceUiSnapshotAsync(
+                args.Skip(1).ToArray(),
+                cancellationSource.Token),
             "inventory-db-init" => await InitializeInventoryDbAsync(
                 args.Skip(1).ToArray(),
                 cancellationSource.Token),
@@ -1718,6 +1721,53 @@ static async Task<int> OpenInventoryAsync(
     return 0;
 }
 
+static async Task<int> CaptureDeviceUiSnapshotAsync(
+    string[] args,
+    CancellationToken cancellationToken)
+{
+    var options = ParseOptions(args);
+    var outputDirectory = Require(options, "out");
+    var transport = CreateRealAndroidTransport(options);
+    var snapshot = await new DeviceSnapshotService(
+        transport,
+        DeviceHarnessOptions.CurrentVersion,
+        new ConsoleDeviceLog()).CaptureAsync(
+            outputDirectory,
+            Optional(options, "serial"),
+            cancellationToken);
+
+    var hierarchy = await transport.CaptureUiHierarchyAsync(
+        snapshot.Device.Serial,
+        cancellationToken);
+    var fullOutputDirectory = Path.GetFullPath(outputDirectory);
+    var hierarchyPath = Path.Combine(fullOutputDirectory, "ui-hierarchy.xml");
+    var manifestPath = Path.Combine(fullOutputDirectory, "ui-snapshot.json");
+    await File.WriteAllTextAsync(hierarchyPath, hierarchy, cancellationToken);
+
+    var manifest = new
+    {
+        schemaVersion = "1.0",
+        capturedAtUtc = DateTimeOffset.UtcNow,
+        deviceSerial = snapshot.Device.Serial,
+        model = snapshot.Metadata.Model,
+        screenshot = Path.GetFileName(snapshot.ScreenshotPath),
+        screenshotSha256 = snapshot.ScreenshotSha256,
+        uiHierarchy = Path.GetFileName(hierarchyPath),
+        uiHierarchySha256 = Convert.ToHexString(
+            System.Security.Cryptography.SHA256.HashData(
+                System.Text.Encoding.UTF8.GetBytes(hierarchy))).ToLowerInvariant()
+    };
+    await File.WriteAllTextAsync(
+        manifestPath,
+        JsonSerializer.Serialize(manifest, new JsonSerializerOptions { WriteIndented = true }),
+        cancellationToken);
+
+    Console.WriteLine($"Read-only UI snapshot written to: {fullOutputDirectory}");
+    Console.WriteLine($"Device: {snapshot.Device.Serial} ({snapshot.Metadata.Model ?? "unknown"})");
+    Console.WriteLine($"Screenshot SHA-256: {snapshot.ScreenshotSha256}");
+    return 0;
+}
+
 static int? ParseOptionalPositiveInt(
     IReadOnlyDictionary<string, string> options,
     string key)
@@ -1980,6 +2030,7 @@ static void PrintHelp()
     Console.WriteLine();
     Console.WriteLine("  device-snapshot --out <directory> [--adb <adb.exe>] [--serial <serial>] [--timeout-seconds <n>]");
     Console.WriteLine("  device-snapshot --fake --out <directory>");
+    Console.WriteLine("  device-ui-snapshot --out <directory> [--adb <adb.exe>] [--serial <serial>] [--timeout-seconds <n>]");
     Console.WriteLine();
     Console.WriteLine("  screen-detect --image <screen.png> --profile <profile.json> --out <evidence.json>");
     Console.WriteLine("  screen-fingerprint --image <screen.png> --region <x,y,w,h> --out <fingerprint.json>");
