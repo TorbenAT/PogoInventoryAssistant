@@ -116,6 +116,15 @@ public sealed class FakeAndroidDeviceTransport : IAndroidAutomationTransport
 
         return Task.FromResult(_screenshotPng.ToArray());
     }
+
+    public Task<string> CaptureUiHierarchyAsync(
+        string serial,
+        CancellationToken cancellationToken = default)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        EnsureKnownDevice(serial);
+        return Task.FromResult("<hierarchy rotation=\"0\"><node class=\"fake\" /></hierarchy>");
+    }
     public Task TapAsync(
         string serial,
         int x,

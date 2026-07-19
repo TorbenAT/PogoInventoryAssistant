@@ -80,6 +80,16 @@ public sealed class ScriptedAndroidAppInspectionTransport : IAndroidAppInspectio
         return Task.FromResult(_screenshot.ToArray());
     }
 
+    public Task<string> CaptureUiHierarchyAsync(
+        string serial,
+        CancellationToken cancellationToken = default)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        EnsureSerial(serial);
+        Operations.Add("ui-hierarchy");
+        return Task.FromResult("<hierarchy rotation=\"0\"><node class=\"scripted\" /></hierarchy>");
+    }
+
     public Task<string> ReadPackageDumpAsync(
         string serial,
         string packageName,

@@ -101,6 +101,15 @@ public sealed class ScriptedAndroidAutomationTransport : IAndroidAutomationTrans
         return Task.FromResult(bytes.ToArray());
     }
 
+    public Task<string> CaptureUiHierarchyAsync(
+        string serial,
+        CancellationToken cancellationToken = default)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        EnsureSerial(serial);
+        return Task.FromResult("<hierarchy rotation=\"0\"><node class=\"scripted\" /></hierarchy>");
+    }
+
     public Task TapAsync(
         string serial,
         int x,

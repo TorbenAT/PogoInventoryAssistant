@@ -108,6 +108,22 @@ public sealed class AdbAndroidDeviceTransport : IAndroidAutomationTransport, IAn
         return result.StandardOutput;
     }
 
+    public async Task<string> CaptureUiHierarchyAsync(
+        string serial,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(serial);
+        await RunAsync(
+            ForDevice(serial, "shell", "uiautomator", "dump", "/sdcard/window.xml"),
+            "capture Android UI hierarchy",
+            cancellationToken);
+        var result = await RunAsync(
+            ForDevice(serial, "exec-out", "cat", "/sdcard/window.xml"),
+            "read Android UI hierarchy",
+            cancellationToken);
+        return result.StandardOutputText;
+    }
+
 
     public async Task<string> ReadPackageDumpAsync(
         string serial,

@@ -14,4 +14,8 @@ public interface IAndroidDeviceTransport
     Task<byte[]> CaptureScreenshotPngAsync(
         string serial,
         CancellationToken cancellationToken = default);
+
+    Task<string> CaptureUiHierarchyAsync(
+        string serial,
+        CancellationToken cancellationToken = default);
 }
