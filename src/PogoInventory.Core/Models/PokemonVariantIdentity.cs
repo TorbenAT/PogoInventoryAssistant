@@ -49,10 +49,13 @@ public sealed record PokemonVariantIdentity
         }
     }
 
-    public string? VariantKey =>
-        VariantIdentityConfidence == IdentityConfidence.Exact &&
-        MissingVariantFields.Count == 0
-            ? string.Join('|',
+    public string? VariantKey
+    {
+        get
+        {
+            Validate();
+            return VariantIdentityConfidence == IdentityConfidence.Exact
+                ? string.Join('|',
                 SpeciesId!.Value.ToString(System.Globalization.CultureInfo.InvariantCulture),
                 Normalize(FormId),
                 Normalize(CostumeId),
@@ -62,7 +65,40 @@ public sealed record PokemonVariantIdentity
                 Normalize(ShadowState),
                 Normalize(DynamaxState),
                 Normalize(SpecialVariantId))
-            : null;
+                : null;
+        }
+    }
+
+    public void Validate()
+    {
+        if (SchemaVersion != CurrentSchemaVersion)
+        {
+            throw new InvalidOperationException(
+                $"Unsupported variant identity schema '{SchemaVersion}'.");
+        }
+
+        if (VariantIdentityConfidence != IdentityConfidence.Exact)
+        {
+            return;
+        }
+
+        if (MissingVariantFields.Count > 0)
+        {
+            throw new InvalidOperationException(
+                "Exact variant identity is missing: " +
+                string.Join(", ", MissingVariantFields));
+        }
+
+        if (SpeciesId <= 0)
+        {
+            throw new InvalidOperationException(
+                "Exact variant identity requires a positive SpeciesId.");
+        }
+
+        ValidateAbsentPair(CostumeId!, CostumeName!, "costume");
+        ValidateAbsentPair(BackgroundId!, BackgroundName!, "background");
+        ValidateAbsentPair(SpecialVariantId!, SpecialVariantName!, "special variant");
+    }
 
     private static void AddMissing<T>(ICollection<string> missing, T? value, string name)
         where T : struct
@@ -83,4 +119,15 @@ public sealed record PokemonVariantIdentity
 
     private static string Normalize(string? value) =>
         value!.Trim().ToLowerInvariant();
+
+    private static void ValidateAbsentPair(string id, string name, string field)
+    {
+        var idIsNone = id.Equals("none", StringComparison.OrdinalIgnoreCase);
+        var nameIsNone = name.Equals("none", StringComparison.OrdinalIgnoreCase);
+        if (idIsNone != nameIsNone)
+        {
+            throw new InvalidOperationException(
+                $"Exact {field} identity has contradictory ID and name values.");
+        }
+    }
 }

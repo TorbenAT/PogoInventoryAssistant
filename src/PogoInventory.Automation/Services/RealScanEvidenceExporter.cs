@@ -13,15 +13,17 @@ namespace PogoInventory.Automation.Services;
 
 public static class RealScanEvidenceExporter
 {
-    private const int RequiredItemCount = 20;
 
     public static async Task<RealScanExportResult> ExportAsync(
         string checkpointPath,
         string appraisalProfilePath,
         string outputDirectory,
         string calibrationDirectory,
+        RealScanExportOptions? exportOptions = null,
         CancellationToken cancellationToken = default)
     {
+        var options = exportOptions ?? new RealScanExportOptions();
+        options.Validate();
         var fullCheckpointPath = Path.GetFullPath(checkpointPath);
         var sourceDirectory = Path.GetDirectoryName(fullCheckpointPath) ??
             throw new InvalidOperationException("Checkpoint path has no parent directory.");
@@ -36,7 +38,7 @@ public static class RealScanEvidenceExporter
                 $"Checkpoint must be named {InventoryScanCheckpointRepository.FileName}.");
         }
 
-        ValidateRun(checkpoint);
+        var captureStates = ValidateRun(checkpoint, options);
         var profile = await AppraisalProfileLoader.LoadAsync(
             appraisalProfilePath,
             cancellationToken);
@@ -51,9 +53,19 @@ public static class RealScanEvidenceExporter
         var screenshotsDirectory = Path.Combine(fullOutputDirectory, "screenshots");
         var overlaysDirectory = Path.Combine(fullOutputDirectory, "overlays");
         var checkpointsDirectory = Path.Combine(fullOutputDirectory, "checkpoints");
-        Directory.CreateDirectory(screenshotsDirectory);
-        Directory.CreateDirectory(overlaysDirectory);
-        Directory.CreateDirectory(checkpointsDirectory);
+        Directory.CreateDirectory(fullOutputDirectory);
+        if (options.CopyScreenshots)
+        {
+            Directory.CreateDirectory(screenshotsDirectory);
+        }
+        if (options.GenerateOverlays)
+        {
+            Directory.CreateDirectory(overlaysDirectory);
+        }
+        if (options.GenerateCheckpointEvidence)
+        {
+            Directory.CreateDirectory(checkpointsDirectory);
+        }
         Directory.CreateDirectory(fullCalibrationDirectory);
 
         var checkpointHash = await HashFileAsync(fullCheckpointPath, cancellationToken);
@@ -82,15 +94,28 @@ public static class RealScanEvidenceExporter
             analyses.Add((item, analysis));
 
             var fileName = $"{item.SequenceNumber:D6}.png";
-            File.Copy(sourceScreenshot, Path.Combine(screenshotsDirectory, fileName), overwrite: true);
-            var overlay = AppraisalImageDiagnostics.DrawOverlay(image, analysis);
-            await File.WriteAllBytesAsync(
-                Path.Combine(overlaysDirectory, $"{item.SequenceNumber:D6}-overlay.png"),
-                PngEncoder.Encode(overlay),
-                cancellationToken);
+            if (options.CopyScreenshots)
+            {
+                File.Copy(sourceScreenshot, Path.Combine(screenshotsDirectory, fileName), overwrite: true);
+            }
+            if (options.GenerateOverlays)
+            {
+                var overlay = AppraisalImageDiagnostics.DrawOverlay(image, analysis);
+                await File.WriteAllBytesAsync(
+                    Path.Combine(overlaysDirectory, $"{item.SequenceNumber:D6}-overlay.png"),
+                    PngEncoder.Encode(overlay),
+                    cancellationToken);
+            }
         }
 
-        var observations = BuildObservations(checkpoint, analyses, deviceProfileHash);
+        var observations = BuildObservations(
+            checkpoint,
+            analyses,
+            deviceProfileHash,
+            captureStates,
+            sourceDirectory,
+            fullOutputDirectory,
+            options);
         var decisions = observations.Select(BuildReviewDecision).ToArray();
         var auditPath = Path.Combine(fullOutputDirectory, "navigation-audit.jsonl");
         await WriteJsonLinesAsync(auditPath, checkpoint.Actions, cancellationToken);
@@ -108,16 +133,20 @@ public static class RealScanEvidenceExporter
             cancellationToken);
         var decisionPlanPath = Path.Combine(fullOutputDirectory, "decision-plan.md");
         await WriteDecisionMarkdownAsync(decisionPlanPath, decisions, cancellationToken);
-        await WriteCheckpointEvidenceAsync(
-            checkpointsDirectory,
-            checkpoint,
-            checkpointHash,
-            cancellationToken);
+        if (options.GenerateCheckpointEvidence)
+        {
+            await WriteCheckpointEvidenceAsync(
+                checkpointsDirectory,
+                checkpoint,
+                checkpointHash,
+                cancellationToken);
+        }
 
         var calibration = await WriteCalibrationAsync(
             analyses,
             fullCalibrationDirectory,
             overlaysDirectory,
+            options.GenerateOverlays,
             cancellationToken);
         var swipes = checkpoint.Actions.Count(action =>
             action.Kind == AutomationActionKind.SwipeNextPokemon &&
@@ -138,25 +167,35 @@ public static class RealScanEvidenceExporter
             .Select(item => item.IdentityFingerprintSha256)
             .Distinct(StringComparer.OrdinalIgnoreCase)
             .Count();
+        var expectedCount = options.ExpectedItems ?? checkpoint.Items.Count;
         var passed =
-            checkpoint.Items.Count == RequiredItemCount &&
-            uniqueFrames == RequiredItemCount &&
-            uniqueFingerprints == RequiredItemCount &&
-            swipes == RequiredItemCount - 1 &&
+            checkpoint.Items.Count == expectedCount &&
+            uniqueFrames == checkpoint.Items.Count &&
+            uniqueFingerprints == checkpoint.Items.Count &&
+            swipes == Math.Max(0, checkpoint.Items.Count - 1) &&
             unknownStops == 0 &&
-            candidateCount == RequiredItemCount &&
+            candidateCount + incompleteCount == checkpoint.Items.Count &&
             calibration.Stable;
 
         var manifest = new RealScanRunManifest
         {
             RunId = checkpoint.RunId,
             GeneratedAtUtc = DateTimeOffset.UtcNow,
+            StartedAtUtc = checkpoint.StartedAtUtc,
+            EndedAtUtc = checkpoint.CompletedAtUtc ?? checkpoint.UpdatedAtUtc,
+            Duration = ((checkpoint.CompletedAtUtc ?? checkpoint.UpdatedAtUtc) -
+                checkpoint.StartedAtUtc).ToString("c", CultureInfo.InvariantCulture),
             SourceCheckpointSha256 = checkpointHash,
             DeviceSerial = checkpoint.DeviceSerial,
             DeviceProfileHash = deviceProfileHash,
+            AppraisalProfileHash = deviceProfileHash,
             AutomationProfileHash = checkpoint.AutomationProfileSha256,
             ScreenProfileHash = checkpoint.ScreenProfileSha256,
             Scanned = observations.Count,
+            RequestedMaximumItems = options.RequestedMaximumItems ?? options.ExpectedItems,
+            ActualItemCount = observations.Count,
+            UniqueScreenshotCount = uniqueFrames,
+            UniqueFingerprintCount = uniqueFingerprints,
             UniqueChangedFrames = Math.Min(uniqueFrames, uniqueFingerprints),
             SwipesSucceeded = swipes,
             UnknownStops = unknownStops,
@@ -164,6 +203,9 @@ public static class RealScanEvidenceExporter
             IncompleteObservations = incompleteCount,
             CompleteObservations = analyses.Count(item => item.Analysis.IsComplete),
             TransferActions = 0,
+            StopReason = checkpoint.StopReason.ToString(),
+            OutputByteCount = 0,
+            SafeEvidenceOnlyOutput = true,
             VariantSchemaReady = true,
             ExactVariantIdentities = observations.Count(item =>
                 item.VariantIdentity.VariantKey is not null),
@@ -172,9 +214,17 @@ public static class RealScanEvidenceExporter
             Delete = decisions.Count(item => item.Recommendation == DecisionCategory.Delete),
             RealPhoneDemoPassed = passed
         };
+        manifest = manifest with
+        {
+            OutputByteCount = Directory.EnumerateFiles(
+                    fullOutputDirectory,
+                    "*",
+                    SearchOption.AllDirectories)
+                .Sum(path => new FileInfo(path).Length)
+        };
         var manifestPath = Path.Combine(fullOutputDirectory, "run-manifest.json");
         await WriteJsonAsync(manifestPath, manifest, cancellationToken);
-        var reportPath = Path.Combine(fullOutputDirectory, "scan-report.md");
+        var reportPath = Path.Combine(fullOutputDirectory, "night-report.md");
         await WriteReportAsync(
             reportPath,
             checkpoint,
@@ -195,40 +245,75 @@ public static class RealScanEvidenceExporter
         };
     }
 
-    private static void ValidateRun(InventoryScanCheckpoint checkpoint)
+    private static IReadOnlyDictionary<int, ScreenState> ValidateRun(
+        InventoryScanCheckpoint checkpoint,
+        RealScanExportOptions options)
     {
-        if (checkpoint.Items.Count != RequiredItemCount ||
-            checkpoint.Status != AutomationRunStatus.Completed ||
-            checkpoint.StopReason != AutomationStopReason.MaximumItemsReached)
+        var itemCountAccepted = options.ExpectedItems is { } expected
+            ? checkpoint.Items.Count == expected
+            : checkpoint.Items.Count >= (options.MinimumItems ?? 1);
+        if (!itemCountAccepted ||
+            checkpoint.Status == AutomationRunStatus.Running)
         {
             throw new InvalidOperationException(
-                "Evidence export requires a completed 20-item MaximumItemsReached checkpoint.");
+                "Evidence export requires a finished checkpoint with the configured item count.");
+        }
+
+        var ordered = checkpoint.Items.OrderBy(item => item.SequenceNumber).ToArray();
+        if (ordered.Select(item => item.SequenceNumber)
+            .SequenceEqual(Enumerable.Range(1, ordered.Length)) is false)
+        {
+            throw new InvalidOperationException(
+                "Checkpoint item sequences must be continuous and unique.");
         }
 
         if (checkpoint.Items.Select(item => item.ScreenshotSha256)
-                .Distinct(StringComparer.OrdinalIgnoreCase).Count() != RequiredItemCount ||
+                .Distinct(StringComparer.OrdinalIgnoreCase).Count() != checkpoint.Items.Count ||
             checkpoint.Items.Select(item => item.IdentityFingerprintSha256)
-                .Distinct(StringComparer.OrdinalIgnoreCase).Count() != RequiredItemCount)
+                .Distinct(StringComparer.OrdinalIgnoreCase).Count() != checkpoint.Items.Count)
         {
             throw new InvalidOperationException(
-                "All 20 screenshot and identity fingerprint hashes must be unique.");
+                "All screenshot and identity fingerprint hashes must be unique.");
         }
 
         var swipes = checkpoint.Actions.Where(action =>
             action.Kind == AutomationActionKind.SwipeNextPokemon).ToArray();
-        if (swipes.Length != RequiredItemCount - 1 || swipes.Any(action =>
+        if (swipes.Length != Math.Max(0, checkpoint.Items.Count - 1) || swipes.Any(action =>
                 action.StateBefore != ScreenState.AppraisalOpen ||
                 action.StateAfter != ScreenState.AppraisalOpen))
         {
             throw new InvalidOperationException(
-                "The checkpoint must contain 19 verified AppraisalOpen-to-AppraisalOpen swipes.");
+                "The checkpoint must contain one verified AppraisalOpen swipe between each item.");
         }
+
+        var states = new Dictionary<int, ScreenState>();
+        foreach (var item in ordered)
+        {
+            var captures = checkpoint.Actions.Where(action =>
+                action.Kind == AutomationActionKind.CaptureEvidence &&
+                string.Equals(action.Detail, item.ScreenshotFileName, StringComparison.OrdinalIgnoreCase))
+                .ToArray();
+            if (captures.Length != 1 ||
+                captures[0].StateBefore != ScreenState.AppraisalOpen ||
+                captures[0].StateAfter != ScreenState.AppraisalOpen)
+            {
+                throw new InvalidOperationException(
+                    $"Sequence {item.SequenceNumber} requires exactly one proven AppraisalOpen capture action.");
+            }
+            states[item.SequenceNumber] = captures[0].StateAfter!.Value;
+        }
+
+        return states;
     }
 
     private static IReadOnlyList<RealScanObservationRecord> BuildObservations(
         InventoryScanCheckpoint checkpoint,
         IReadOnlyList<(InventoryScanItem Item, AppraisalAnalysisResult Analysis)> analyses,
-        string deviceProfileHash)
+        string deviceProfileHash,
+        IReadOnlyDictionary<int, ScreenState> captureStates,
+        string sourceDirectory,
+        string outputDirectory,
+        RealScanExportOptions options)
     {
         var ordered = analyses.OrderBy(value => value.Item.SequenceNumber).ToArray();
         return ordered.Select((value, index) =>
@@ -238,11 +323,11 @@ public static class RealScanEvidenceExporter
             var variant = new PokemonVariantIdentity
             {
                 VariantIdentityConfidence = IdentityConfidence.Unknown,
-                EvidenceReferences = new[]
-                {
-                    $"screenshots/{item.SequenceNumber:D6}.png",
-                    $"overlays/{item.SequenceNumber:D6}-overlay.png"
-                }
+                EvidenceReferences = EvidenceReferences(
+                    item,
+                    sourceDirectory,
+                    outputDirectory,
+                    options)
             };
             var instanceKey = $"{checkpoint.RunId}:{item.SequenceNumber:D6}:{item.ScreenshotSha256[..12]}";
             var captureAction = checkpoint.Actions.Single(action =>
@@ -274,7 +359,7 @@ public static class RealScanEvidenceExporter
             {
                 Sequence = item.SequenceNumber,
                 TimestampUtc = item.CapturedAtUtc,
-                DetectedState = ScreenState.AppraisalOpen,
+                DetectedState = captureStates[item.SequenceNumber],
                 StateConfidence = item.ScreenStateConfidence,
                 ScreenshotSha256 = item.ScreenshotSha256,
                 IdentityFingerprintSha256 = item.IdentityFingerprintSha256,
@@ -343,14 +428,15 @@ public static class RealScanEvidenceExporter
         IReadOnlyList<(InventoryScanItem Item, AppraisalAnalysisResult Analysis)> analyses,
         string calibrationDirectory,
         string overlayDirectory,
+        bool overlaysGenerated,
         CancellationToken cancellationToken)
     {
-        var selected = analyses
+        var candidates = analyses
             .Where(item =>
                 item.Analysis.Status == AppraisalAnalysisStatus.Candidate &&
                 item.Analysis.Bars.All(bar => bar.TrackDetected))
-            .Take(3)
             .ToArray();
+        var selected = SelectDiverseCalibrationCases(candidates, 3);
         var scales = selected.Select(item => item.Analysis.Transform.Scale).ToArray();
         var xOffsets = selected.Select(item => item.Analysis.Transform.XOffset).ToArray();
         var yOffsets = selected.Select(item => item.Analysis.Transform.YOffset).ToArray();
@@ -366,7 +452,7 @@ public static class RealScanEvidenceExporter
             translationSpread <= 0.015 &&
             selected.All(item => !item.Analysis.IsComplete);
 
-        for (var index = 0; index < selected.Length; index++)
+        for (var index = 0; overlaysGenerated && index < selected.Length; index++)
         {
             File.Copy(
                 Path.Combine(overlayDirectory, $"{selected[index].Item.SequenceNumber:D6}-overlay.png"),
@@ -395,7 +481,10 @@ public static class RealScanEvidenceExporter
                 defenseIv = item.Analysis.DefenseIv,
                 hpIv = item.Analysis.HpIv,
                 bars = item.Analysis.Bars,
-                overlayFile = $"case-{index + 1:D2}-overlay.png"
+                overlayFile = overlaysGenerated
+                    ? $"case-{index + 1:D2}-overlay.png"
+                    : null,
+                selectionReason = "Greedy maximum minimum Euclidean distance between IV vectors."
             })
         };
         var jsonPath = Path.Combine(calibrationDirectory, "phone-calibration-stability.json");
@@ -409,6 +498,7 @@ public static class RealScanEvidenceExporter
             .AppendLine($"- Scale spread: {scaleSpread:P2}")
             .AppendLine($"- Normalized translation spread: {translationSpread:P2}")
             .AppendLine("- Complete results: 0")
+            .AppendLine("- Selection: distinct IV triplets chosen by maximum-distance sampling")
             .AppendLine()
             .AppendLine("| Case | Source sequence | Attack | Defense | HP | Confidence |")
             .AppendLine("|---:|---:|---:|---:|---:|---:|");
@@ -422,6 +512,51 @@ public static class RealScanEvidenceExporter
         }
         await File.WriteAllTextAsync(markdownPath, markdown.ToString(), cancellationToken);
         return new CalibrationResult(selected.Length, stable, jsonPath, markdownPath);
+    }
+
+    private static (InventoryScanItem Item, AppraisalAnalysisResult Analysis)[]
+        SelectDiverseCalibrationCases(
+            IReadOnlyCollection<(InventoryScanItem Item, AppraisalAnalysisResult Analysis)> candidates,
+            int count)
+    {
+        var unique = candidates
+            .GroupBy(item => (
+                item.Analysis.AttackIv,
+                item.Analysis.DefenseIv,
+                item.Analysis.HpIv))
+            .Select(group => group.OrderBy(item => item.Item.SequenceNumber).First())
+            .OrderBy(item => item.Item.SequenceNumber)
+            .ToList();
+        if (unique.Count <= count)
+        {
+            return unique.ToArray();
+        }
+
+        var selected = new List<(InventoryScanItem Item, AppraisalAnalysisResult Analysis)>
+        {
+            unique[0]
+        };
+        while (selected.Count < count)
+        {
+            var next = unique
+                .Where(candidate => !selected.Contains(candidate))
+                .OrderByDescending(candidate => selected.Min(chosen =>
+                    IvDistance(candidate.Analysis, chosen.Analysis)))
+                .ThenBy(candidate => candidate.Item.SequenceNumber)
+                .First();
+            selected.Add(next);
+        }
+        return selected.ToArray();
+    }
+
+    private static double IvDistance(
+        AppraisalAnalysisResult left,
+        AppraisalAnalysisResult right)
+    {
+        var attack = left.AttackIv!.Value - right.AttackIv!.Value;
+        var defense = left.DefenseIv!.Value - right.DefenseIv!.Value;
+        var hp = left.HpIv!.Value - right.HpIv!.Value;
+        return Math.Sqrt(attack * attack + defense * defense + hp * hp);
     }
 
     private static async Task WriteCheckpointEvidenceAsync(
@@ -561,9 +696,9 @@ public static class RealScanEvidenceExporter
             .AppendLine()
             .AppendLine($"- Run: {manifest.RunId}")
             .AppendLine($"- Source status: {checkpoint.Status} / {checkpoint.StopReason}")
-            .AppendLine($"- Items: {manifest.Scanned}/20")
-            .AppendLine($"- Unique changed frames: {manifest.UniqueChangedFrames}/20")
-            .AppendLine($"- Verified swipes: {manifest.SwipesSucceeded}/19")
+            .AppendLine($"- Items: {manifest.Scanned}/{manifest.RequestedMaximumItems?.ToString(CultureInfo.InvariantCulture) ?? "unbounded"}")
+            .AppendLine($"- Unique changed frames: {manifest.UniqueChangedFrames}/{manifest.Scanned}")
+            .AppendLine($"- Verified swipes: {manifest.SwipesSucceeded}/{Math.Max(0, manifest.Scanned - 1)}")
             .AppendLine($"- Unknown states: {manifest.UnknownStops}")
             .AppendLine($"- Candidate observations: {manifest.CandidateObservations}")
             .AppendLine($"- Incomplete observations: {manifest.IncompleteObservations}")
@@ -595,6 +730,29 @@ public static class RealScanEvidenceExporter
             path,
             JsonSerializer.Serialize(value, AutomationJson.CreateOptions(writeIndented: true)),
             cancellationToken);
+
+    private static IReadOnlyCollection<string> EvidenceReferences(
+        InventoryScanItem item,
+        string sourceDirectory,
+        string outputDirectory,
+        RealScanExportOptions options)
+    {
+        var references = new List<string>();
+        if (options.CopyScreenshots)
+        {
+            references.Add($"screenshots/{item.SequenceNumber:D6}.png");
+        }
+        else
+        {
+            var source = ResolveEvidencePath(sourceDirectory, item.ScreenshotFileName);
+            references.Add(Path.GetRelativePath(outputDirectory, source).Replace('\\', '/'));
+        }
+        if (options.GenerateOverlays)
+        {
+            references.Add($"overlays/{item.SequenceNumber:D6}-overlay.png");
+        }
+        return references;
+    }
 
     private static string ResolveEvidencePath(string root, string relativePath)
     {

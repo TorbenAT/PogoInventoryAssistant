@@ -106,7 +106,7 @@ Version 0.14.0 adds:
 - read-only `phone-prepare`
 - local device-adjusted profile generation
 - Android readiness report
-- 127 expected self-tests
+- 134 expected self-tests
 
 ### Real Android navigation and variant-safe evidence
 
@@ -121,6 +121,10 @@ The connected OnePlus 6T has completed a fresh 20-item appraisal scan with:
 
 Unknown form, costume, background and special state values remain Unknown. They
 cannot share an ordinary duplicate group or authorize DELETE.
+
+`scripts/start-night-evidence-scan.ps1` runs the same conservative appraisal
+evidence path with profile hashes, heartbeat, battery/disk/device safety checks,
+an item limit and a wall-clock limit. It performs no transfer or tagging action.
 
 ## Input boundary
 
@@ -157,7 +161,7 @@ generate phone-specific definitions automatically.
 ## Required checkpoint after push
 
 1. Build all 15 projects.
-2. Confirm 127 of 127 self-tests pass.
+2. Confirm 134 of 134 self-tests pass.
 3. Confirm the existing iPhone evidence stages remain green.
 4. Confirm appraisal pretest finds at least five candidates.
 5. Confirm candidates are concentrated at least 70 percent in one cluster.

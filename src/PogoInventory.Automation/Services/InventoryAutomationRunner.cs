@@ -41,7 +41,8 @@ public sealed class InventoryAutomationRunner
         ScreenDetectionProfile screenProfile,
         string? requestedSerial = null,
         int? maximumItems = null,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken = default,
+        TimeSpan? maximumRuntime = null)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(outputDirectory);
         ArgumentNullException.ThrowIfNull(automationProfile);
@@ -65,6 +66,25 @@ public sealed class InventoryAutomationRunner
                 nameof(maximumItems),
                 "Maximum items must be between 1 and 50000.");
         }
+
+        if (maximumRuntime is not null &&
+            (maximumRuntime <= TimeSpan.Zero || maximumRuntime > TimeSpan.FromDays(1)))
+        {
+            throw new ArgumentOutOfRangeException(
+                nameof(maximumRuntime),
+                "Maximum runtime must be between zero and 24 hours.");
+        }
+
+        var callerCancellationToken = cancellationToken;
+        using var runtimeCancellation = maximumRuntime is null
+            ? null
+            : new CancellationTokenSource(maximumRuntime.Value);
+        using var linkedCancellation = runtimeCancellation is null
+            ? null
+            : CancellationTokenSource.CreateLinkedTokenSource(
+                callerCancellationToken,
+                runtimeCancellation.Token);
+        cancellationToken = linkedCancellation?.Token ?? callerCancellationToken;
 
         var fullOutputDirectory = Path.GetFullPath(outputDirectory);
         var captureDirectory = Path.Combine(fullOutputDirectory, "captures");
@@ -323,6 +343,21 @@ public sealed class InventoryAutomationRunner
             }
 
             throw new InvalidOperationException("Inventory scan loop ended unexpectedly.");
+        }
+        catch (OperationCanceledException) when (
+            runtimeCancellation?.IsCancellationRequested is true &&
+            !callerCancellationToken.IsCancellationRequested)
+        {
+            return await FinishAsync(
+                fullOutputDirectory,
+                captureDirectory,
+                checkpoint,
+                items,
+                actions,
+                AutomationRunStatus.Stopped,
+                AutomationStopReason.MaximumRuntimeReached,
+                $"Configured maximum runtime of {maximumRuntime} reached.",
+                CancellationToken.None);
         }
         catch (OperationCanceledException)
         {

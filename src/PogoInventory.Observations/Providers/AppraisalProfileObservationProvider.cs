@@ -48,6 +48,10 @@ public sealed class AppraisalProfileObservationProvider : ICalcyObservationProvi
             observation.Validate();
             return Task.FromResult(CalcyObservation.WithRawOutput(observation));
         }
+        catch (OperationCanceledException)
+        {
+            throw;
+        }
         catch (Exception exception)
         {
             var observation = new CalcyObservation

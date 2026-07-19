@@ -94,12 +94,20 @@ public sealed record RealScanRunManifest
     public string SchemaVersion { get; init; } = CurrentSchemaVersion;
     public required string RunId { get; init; }
     public required DateTimeOffset GeneratedAtUtc { get; init; }
+    public required DateTimeOffset StartedAtUtc { get; init; }
+    public required DateTimeOffset EndedAtUtc { get; init; }
+    public required string Duration { get; init; }
     public required string SourceCheckpointSha256 { get; init; }
     public required string DeviceSerial { get; init; }
     public required string DeviceProfileHash { get; init; }
+    public required string AppraisalProfileHash { get; init; }
     public required string AutomationProfileHash { get; init; }
     public required string ScreenProfileHash { get; init; }
     public required int Scanned { get; init; }
+    public int? RequestedMaximumItems { get; init; }
+    public required int ActualItemCount { get; init; }
+    public required int UniqueScreenshotCount { get; init; }
+    public required int UniqueFingerprintCount { get; init; }
     public required int UniqueChangedFrames { get; init; }
     public required int SwipesSucceeded { get; init; }
     public required int UnknownStops { get; init; }
@@ -107,12 +115,39 @@ public sealed record RealScanRunManifest
     public required int IncompleteObservations { get; init; }
     public required int CompleteObservations { get; init; }
     public required int TransferActions { get; init; }
+    public required string StopReason { get; init; }
+    public required long OutputByteCount { get; init; }
+    public required bool SafeEvidenceOnlyOutput { get; init; }
     public required bool VariantSchemaReady { get; init; }
     public required int ExactVariantIdentities { get; init; }
     public required int Keep { get; init; }
     public required int Review { get; init; }
     public required int Delete { get; init; }
     public required bool RealPhoneDemoPassed { get; init; }
+}
+
+public sealed record RealScanExportOptions
+{
+    public int? ExpectedItems { get; init; } = 20;
+    public int? MinimumItems { get; init; }
+    public int? RequestedMaximumItems { get; init; }
+    public bool GenerateOverlays { get; init; } = true;
+    public bool CopyScreenshots { get; init; } = true;
+    public bool GenerateCheckpointEvidence { get; init; } = true;
+
+    public void Validate()
+    {
+        if (ExpectedItems <= 0 || MinimumItems <= 0 || RequestedMaximumItems <= 0)
+        {
+            throw new InvalidOperationException("Export item limits must be positive when supplied.");
+        }
+
+        if (ExpectedItems is not null && MinimumItems is not null)
+        {
+            throw new InvalidOperationException(
+                "Use either ExpectedItems or MinimumItems, not both.");
+        }
+    }
 }
 
 public sealed record RealScanExportResult

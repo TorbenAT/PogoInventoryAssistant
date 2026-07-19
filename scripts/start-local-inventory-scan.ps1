@@ -12,6 +12,8 @@ param(
 
     [int]$MaximumItems = 12000,
 
+    [int]$MaximumRuntimeMinutes = 0,
+
     [string]$OutputDirectory = ""
 )
 
@@ -34,6 +36,10 @@ $arguments = @(
     "--max-items", $MaximumItems,
     "--out", $OutputDirectory
 )
+
+if ($MaximumRuntimeMinutes -gt 0) {
+    $arguments += @("--max-runtime-minutes", $MaximumRuntimeMinutes)
+}
 
 if (-not [string]::IsNullOrWhiteSpace($AppraisalProfile)) {
     $arguments += @("--observation-provider", "appraisal", "--appraisal-profile", $AppraisalProfile)

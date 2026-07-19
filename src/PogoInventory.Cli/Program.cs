@@ -4,6 +4,7 @@ using System.Text.Json.Serialization;
 using PogoInventory.Appraisal.Models;
 using PogoInventory.Appraisal.Services;
 using PogoInventory.Automation.Errors;
+using PogoInventory.Automation.Models;
 using PogoInventory.Automation.Services;
 using PogoInventory.Automation.Transport;
 using PogoInventory.Bootstrap.Services;
@@ -236,6 +237,9 @@ static async Task<int> RunInventoryScanAsync(
         options,
         "max-items",
         automationProfile.DefaultMaximumItems);
+    var maximumRuntimeMinutes = ParseOptionalPositiveInt(
+        options,
+        "max-runtime-minutes");
     var appraisalProfilePath = Optional(options, "appraisal-profile");
 
     IAndroidAutomationTransport transport;
@@ -286,7 +290,10 @@ static async Task<int> RunInventoryScanAsync(
         screenProfile,
         Optional(options, "serial"),
         maximumItems,
-        cancellationToken);
+        cancellationToken,
+        maximumRuntimeMinutes is null
+            ? null
+            : TimeSpan.FromMinutes(maximumRuntimeMinutes.Value));
 
     Console.WriteLine();
     Console.WriteLine("Automatic inventory navigation finished.");
@@ -317,17 +324,41 @@ static async Task<int> ExportRealScanAsync(
     CancellationToken cancellationToken)
 {
     var options = ParseOptions(args);
+    var minimumItems = ParseOptionalPositiveInt(options, "minimum-items");
+    var expectedItems = ParseOptionalPositiveInt(options, "expected-items");
+    if (minimumItems is null && expectedItems is null)
+    {
+        expectedItems = 20;
+    }
+    var generateOverlays = ParseBoolean(
+        options,
+        "generate-overlays",
+        minimumItems is null);
     var result = await RealScanEvidenceExporter.ExportAsync(
         Require(options, "checkpoint"),
         Require(options, "appraisal-profile"),
         Require(options, "out"),
         Require(options, "calibration-out"),
+        new RealScanExportOptions
+        {
+            ExpectedItems = expectedItems,
+            MinimumItems = minimumItems,
+            RequestedMaximumItems = ParseOptionalPositiveInt(options, "requested-maximum-items"),
+            GenerateOverlays = generateOverlays,
+            CopyScreenshots = ParseBoolean(options, "copy-screenshots", minimumItems is null),
+            GenerateCheckpointEvidence = ParseBoolean(
+                options,
+                "generate-checkpoint-evidence",
+                minimumItems is null)
+        },
         cancellationToken);
 
     Console.WriteLine($"Real phone demo: {(result.Manifest.RealPhoneDemoPassed ? "PASS" : "FAIL")}");
-    Console.WriteLine($"Scanned: {result.Manifest.Scanned}/20");
-    Console.WriteLine($"Unique changed frames: {result.Manifest.UniqueChangedFrames}/20");
-    Console.WriteLine($"Swipes: {result.Manifest.SwipesSucceeded}/19");
+    var requestedCount = result.Manifest.RequestedMaximumItems?.ToString(
+        CultureInfo.InvariantCulture) ?? "unbounded";
+    Console.WriteLine($"Scanned: {result.Manifest.Scanned}/{requestedCount}");
+    Console.WriteLine($"Unique changed frames: {result.Manifest.UniqueChangedFrames}/{result.Manifest.Scanned}");
+    Console.WriteLine($"Swipes: {result.Manifest.SwipesSucceeded}/{Math.Max(0, result.Manifest.Scanned - 1)}");
     Console.WriteLine($"Calibration: {result.CalibrationCases}/3; stable={result.CalibrationStable}");
     Console.WriteLine($"Decisions: KEEP {result.Manifest.Keep}, REVIEW {result.Manifest.Review}, DELETE {result.Manifest.Delete}");
     Console.WriteLine($"Report: {result.ReportPath}");
@@ -1600,6 +1631,38 @@ static int ParsePositiveInt(
     return value;
 }
 
+static int? ParseOptionalPositiveInt(
+    IReadOnlyDictionary<string, string> options,
+    string key)
+{
+    if (!options.TryGetValue(key, out var raw))
+    {
+        return null;
+    }
+    if (!int.TryParse(raw, NumberStyles.Integer, CultureInfo.InvariantCulture, out var value) ||
+        value <= 0)
+    {
+        throw new ArgumentException($"--{key} must be a positive integer.");
+    }
+    return value;
+}
+
+static bool ParseBoolean(
+    IReadOnlyDictionary<string, string> options,
+    string key,
+    bool defaultValue)
+{
+    if (!options.TryGetValue(key, out var raw))
+    {
+        return defaultValue;
+    }
+    if (!bool.TryParse(raw, out var value))
+    {
+        throw new ArgumentException($"--{key} must be true or false.");
+    }
+    return value;
+}
+
 static int ParseNonNegativeInt(
     IReadOnlyDictionary<string, string> options,
     string key,
@@ -1773,11 +1836,15 @@ static void PrintHelp()
     Console.WriteLine();
     Console.WriteLine("  inventory-scan --profile <automation.json> --screen-profile <screen-profile.json> --out <directory>");
     Console.WriteLine("                 [--adb <adb.exe>] [--serial <serial>] [--max-items <n>]");
+    Console.WriteLine("                 [--max-runtime-minutes <n>]");
     Console.WriteLine("                 [--observation-provider <none|fake|appraisal>]");
     Console.WriteLine("                 [--appraisal-profile <appraisal.json>]");
     Console.WriteLine("  real-scan-export --checkpoint <inventory-scan-checkpoint.json>");
     Console.WriteLine("                   --appraisal-profile <appraisal.json> --out <directory>");
     Console.WriteLine("                   --calibration-out <directory>");
+    Console.WriteLine("                   [--expected-items <n> | --minimum-items <n>]");
+    Console.WriteLine("                   [--requested-maximum-items <n>] [--generate-overlays <true|false>]");
+    Console.WriteLine("                   [--copy-screenshots <true|false>] [--generate-checkpoint-evidence <true|false>]");
     Console.WriteLine("  inventory-scan --fake --profile <automation.json> --screen-profile <screen-profile.json>");
     Console.WriteLine("                 --out <directory> [--fixtures <directory>] [--max-items <n>]");
     Console.WriteLine("                 [--observation-provider <fake|none|appraisal>]");

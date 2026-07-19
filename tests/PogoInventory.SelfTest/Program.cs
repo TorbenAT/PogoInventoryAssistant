@@ -60,6 +60,7 @@ var tests = new (string Name, Func<Task> Run)[]
     ("Unknown costume is not confirmed none", Sync(UnknownCostumeIsNotConfirmedNone)),
     ("Unknown background is not confirmed none", Sync(UnknownBackgroundIsNotConfirmedNone)),
     ("Unknown variant fields forbid delete", Sync(UnknownVariantFieldsForbidDelete)),
+    ("Contradictory exact variant markers are rejected", Sync(ContradictoryExactVariantMarkersAreRejected)),
     ("Exact same variant can be evaluated as duplicates", Sync(ExactSameVariantCanBeEvaluatedAsDuplicates)),
     ("Shiny and non-shiny do not collapse", Sync(ShinyAndNonShinyDoNotCollapse)),
     ("Instance fingerprint cannot replace variant identity", Sync(InstanceFingerprintCannotReplaceVariantIdentity)),
@@ -116,7 +117,13 @@ var tests = new (string Name, Func<Task> Run)[]
     ("Partial observation stays partial", PartialObservationStaysPartialAsync),
     ("Conflicting observation stays conflicting", ConflictingObservationStaysConflictingAsync),
     ("Observation provider failure is recorded", ObservationProviderFailureIsRecordedAsync),
+    ("Appraisal provider propagates cancellation", AppraisalProviderPropagatesCancellationAsync),
     ("Legacy checkpoint migrates to schema 2", Sync(LegacyCheckpointMigratesToSchema2)),
+    ("Real scan exporter accepts valid twenty item evidence", RealScanExporterAcceptsValidTwentyItemEvidenceAsync),
+    ("Real scan exporter rejects wrong capture state", RealScanExporterRejectsWrongCaptureStateAsync),
+    ("Real scan exporter rejects noncontinuous sequences", RealScanExporterRejectsNoncontinuousSequencesAsync),
+    ("Real scan exporter rejects screenshot hash mismatch", RealScanExporterRejectsScreenshotHashMismatchAsync),
+    ("Real scan calibration selects diverse cases", RealScanCalibrationSelectsDiverseCasesAsync),
     ("Automatic core bootstrap builds accepted profile", AutomaticCoreBootstrapBuildsAcceptedProfileAsync),
     ("Calcy probe writes local evidence and report", CalcyProbeWritesEvidenceAsync),
     ("Automatic Calcy live check reaches appraisal and parses output", CalcyLiveCheckNavigatesAndParsesAsync),
@@ -325,14 +332,24 @@ static void ExactBackgroundIdentityRemainsKeepProtected()
 
 static void UnknownCostumeIsNotConfirmedNone()
 {
-    var unknown = Variant(25, "Pikachu") with { CostumeId = null, CostumeName = null };
+    var unknown = Variant(25, "Pikachu") with
+    {
+        CostumeId = null,
+        CostumeName = null,
+        VariantIdentityConfidence = IdentityConfidence.Unknown
+    };
     AssertEqual((string?)null, unknown.VariantKey, "unknown costume variant key");
     AssertTrue(unknown.MissingVariantFields.Contains("CostumeId"), "costume ID must be missing");
 }
 
 static void UnknownBackgroundIsNotConfirmedNone()
 {
-    var unknown = Variant(25, "Pikachu") with { BackgroundId = null, BackgroundName = null };
+    var unknown = Variant(25, "Pikachu") with
+    {
+        BackgroundId = null,
+        BackgroundName = null,
+        VariantIdentityConfidence = IdentityConfidence.Unknown
+    };
     AssertEqual((string?)null, unknown.VariantKey, "unknown background variant key");
     AssertTrue(unknown.MissingVariantFields.Contains("BackgroundId"), "background ID must be missing");
 }
@@ -347,10 +364,20 @@ static void UnknownVariantFieldsForbidDelete()
             VariantIdentity = Variant(25, "Pikachu") with
             {
                 CostumeId = null,
-                CostumeName = null
+                CostumeName = null,
+                VariantIdentityConfidence = IdentityConfidence.Unknown
             }
         });
     AssertCategory(result, "B", DecisionCategory.Review);
+}
+
+static void ContradictoryExactVariantMarkersAreRejected()
+{
+    var costume = Variant(25, "Pikachu") with { CostumeName = "Party Hat" };
+    var background = Variant(25, "Pikachu") with { BackgroundName = "Sendai 2024" };
+
+    AssertThrowsInvalidOperation(() => costume.Validate(), "contradictory costume");
+    AssertThrowsInvalidOperation(() => background.Validate(), "contradictory background");
 }
 
 static void ExactSameVariantCanBeEvaluatedAsDuplicates()
@@ -2016,6 +2043,291 @@ static async Task ObservationProviderFailureIsRecordedAsync()
         result.ErrorDetail?.Contains("simulated provider failure", StringComparison.Ordinal) == true,
         "provider failure detail");
 }
+
+static async Task AppraisalProviderPropagatesCancellationAsync()
+{
+    var provider = new AppraisalProfileObservationProvider(TestAppraisalProfile());
+    using var cancellation = new CancellationTokenSource();
+    cancellation.Cancel();
+    try
+    {
+        await provider.ObserveAsync(
+            new CalcyObservationRequest
+            {
+                SequenceNumber = 1,
+                DeviceSerial = "SELFTEST",
+                CapturedAtUtc = DateTimeOffset.UtcNow,
+                ScreenshotPng = Array.Empty<byte>(),
+                ScreenshotSha256 = new string('0', 64)
+            },
+            cancellation.Token);
+        throw new InvalidOperationException("Expected OperationCanceledException.");
+    }
+    catch (OperationCanceledException)
+    {
+    }
+}
+
+static async Task RealScanExporterAcceptsValidTwentyItemEvidenceAsync()
+{
+    var fixture = await CreateRealScanExportFixtureAsync();
+    try
+    {
+        var result = await ExportRealScanFixtureAsync(fixture);
+        AssertTrue(result.Manifest.RealPhoneDemoPassed, "valid evidence export should pass");
+        AssertEqual(20, result.Manifest.ActualItemCount, "exported item count");
+        AssertEqual(20, result.Manifest.UniqueScreenshotCount, "unique screenshot count");
+        AssertEqual(20, result.Manifest.UniqueFingerprintCount, "unique fingerprint count");
+        AssertEqual(0, result.Manifest.CompleteObservations, "complete appraisal count");
+        AssertEqual(0, result.Manifest.Delete, "delete recommendation count");
+        AssertEqual(20, result.Manifest.Review, "review recommendation count");
+        AssertTrue(File.Exists(result.ReportPath), "night report should exist");
+    }
+    finally
+    {
+        DeleteDirectory(fixture.Root);
+    }
+}
+
+static async Task RealScanExporterRejectsWrongCaptureStateAsync()
+{
+    var fixture = await CreateRealScanExportFixtureAsync();
+    try
+    {
+        var actions = fixture.Checkpoint.Actions.ToArray();
+        var captureIndex = Array.FindIndex(
+            actions,
+            action => action.Kind == AutomationActionKind.CaptureEvidence);
+        actions[captureIndex] = actions[captureIndex] with
+        {
+            StateAfter = ScreenState.PokemonDetails
+        };
+        await InventoryScanCheckpointRepository.SaveAsync(
+            fixture.Source,
+            fixture.Checkpoint with { Actions = actions });
+
+        await ExpectInvalidOperationAsync(async () =>
+            await ExportRealScanFixtureAsync(fixture));
+    }
+    finally
+    {
+        DeleteDirectory(fixture.Root);
+    }
+}
+
+static async Task RealScanExporterRejectsNoncontinuousSequencesAsync()
+{
+    var fixture = await CreateRealScanExportFixtureAsync();
+    try
+    {
+        var items = fixture.Checkpoint.Items.ToArray();
+        items[1] = items[1] with { SequenceNumber = 1 };
+        var invalid = fixture.Checkpoint with { Items = items };
+        await File.WriteAllTextAsync(
+            fixture.CheckpointPath,
+            JsonSerializer.Serialize(
+                invalid,
+                AutomationJson.CreateOptions(writeIndented: true)));
+
+        await ExpectAnyFailureAsync(async () =>
+            await ExportRealScanFixtureAsync(fixture));
+    }
+    finally
+    {
+        DeleteDirectory(fixture.Root);
+    }
+}
+
+static async Task RealScanExporterRejectsScreenshotHashMismatchAsync()
+{
+    var fixture = await CreateRealScanExportFixtureAsync();
+    try
+    {
+        var screenshot = Path.Combine(fixture.Source, "captures", "000001.png");
+        await using (var stream = new FileStream(
+            screenshot,
+            FileMode.Append,
+            FileAccess.Write,
+            FileShare.None))
+        {
+            await stream.WriteAsync(new byte[] { 1 });
+        }
+        await ExpectInvalidOperationAsync(async () =>
+            await ExportRealScanFixtureAsync(fixture));
+    }
+    finally
+    {
+        DeleteDirectory(fixture.Root);
+    }
+}
+
+static async Task RealScanCalibrationSelectsDiverseCasesAsync()
+{
+    var fixture = await CreateRealScanExportFixtureAsync();
+    try
+    {
+        var result = await ExportRealScanFixtureAsync(fixture);
+        using var document = JsonDocument.Parse(
+            await File.ReadAllTextAsync(result.CalibrationJsonPath));
+        var cases = document.RootElement.GetProperty("cases")
+            .EnumerateArray()
+            .Select(item => new[]
+            {
+                item.GetProperty("attackIv").GetInt32(),
+                item.GetProperty("defenseIv").GetInt32(),
+                item.GetProperty("hpIv").GetInt32()
+            })
+            .ToArray();
+        AssertEqual(3, cases.Length, "calibration case count");
+        AssertEqual(3, cases.Select(item => string.Join('/', item)).Distinct().Count(),
+            "distinct calibration IV triplets");
+        var largestDistance = cases
+            .SelectMany((left, index) => cases.Skip(index + 1).Select(right =>
+                Math.Sqrt(left.Zip(right).Sum(pair => Math.Pow(pair.First - pair.Second, 2)))))
+            .Max();
+        AssertTrue(largestDistance >= 10, "calibration cases should span diverse IV values");
+    }
+    finally
+    {
+        DeleteDirectory(fixture.Root);
+    }
+}
+
+static async Task<(
+    string Root,
+    string Source,
+    string CheckpointPath,
+    string ProfilePath,
+    string Output,
+    string Calibration,
+    InventoryScanCheckpoint Checkpoint)> CreateRealScanExportFixtureAsync()
+{
+    var root = CreateTemporaryDirectory();
+    var source = Path.Combine(root, "source");
+    var captures = Path.Combine(source, "captures");
+    var output = Path.Combine(root, "export");
+    var calibration = Path.Combine(root, "calibration");
+    var profilePath = Path.Combine(root, "appraisal-profile.json");
+    Directory.CreateDirectory(captures);
+    var profile = TestAppraisalProfile();
+    await AppraisalProfileLoader.WriteAsync(profile, profilePath);
+
+    var started = new DateTimeOffset(2026, 7, 19, 0, 0, 0, TimeSpan.Zero);
+    var items = new List<InventoryScanItem>();
+    var actions = new List<AutomationActionRecord>();
+    var actionSequence = 1;
+    for (var sequence = 1; sequence <= 20; sequence++)
+    {
+        var attack = 1 + ((sequence - 1) * 7 % 15);
+        var defense = 1 + ((sequence - 1) * 11 % 15);
+        var hp = 1 + ((sequence - 1) * 13 % 15);
+        var image = CreateSyntheticAppraisalImage(
+            profile,
+            new AppraisalLayoutTransform(),
+            attack,
+            defense,
+            hp);
+        var pixels = image.RgbaBytes.ToArray();
+        pixels[(sequence - 1) * 4] = (byte)sequence;
+        var png = PngEncoder.Encode(new PixelImage(image.Width, image.Height, pixels));
+        var relativePath = $"captures/{sequence:D6}.png";
+        await File.WriteAllBytesAsync(
+            Path.Combine(captures, $"{sequence:D6}.png"),
+            png);
+        var fingerprint = BitConverter.GetBytes(sequence * 104729);
+        var timestamp = started.AddSeconds(sequence);
+        items.Add(new InventoryScanItem
+        {
+            SequenceNumber = sequence,
+            CapturedAtUtc = timestamp,
+            ScreenshotFileName = relativePath,
+            ScreenshotSha256 = Sha256(png),
+            IdentityFingerprintBase64 = Convert.ToBase64String(fingerprint),
+            IdentityFingerprintSha256 = Sha256(fingerprint),
+            ScreenStateConfidence = 0.99,
+            Observation = new CalcyObservation
+            {
+                ProviderName = "AppraisalProfile:self-test",
+                ProviderVersion = profile.ProfileId,
+                Status = CalcyObservationStatus.Partial,
+                Confidence = 0.95,
+                AttackIv = attack,
+                DefenseIv = defense,
+                HpIv = hp
+            }
+        });
+        actions.Add(new AutomationActionRecord
+        {
+            SequenceNumber = actionSequence++,
+            Kind = AutomationActionKind.CaptureEvidence,
+            StartedAtUtc = timestamp.AddMilliseconds(-20),
+            CompletedAtUtc = timestamp,
+            StateBefore = ScreenState.AppraisalOpen,
+            StateAfter = ScreenState.AppraisalOpen,
+            Detail = relativePath
+        });
+        if (sequence < 20)
+        {
+            actions.Add(new AutomationActionRecord
+            {
+                SequenceNumber = actionSequence++,
+                Kind = AutomationActionKind.SwipeNextPokemon,
+                StartedAtUtc = timestamp.AddMilliseconds(10),
+                CompletedAtUtc = timestamp.AddMilliseconds(30),
+                StateBefore = ScreenState.AppraisalOpen,
+                StateAfter = ScreenState.AppraisalOpen,
+                Detail = $"item {sequence} to {sequence + 1}"
+            });
+        }
+    }
+
+    var completed = started.AddSeconds(21);
+    var checkpoint = new InventoryScanCheckpoint
+    {
+        RunId = "self-test-real-scan",
+        AutomationProfileName = "self-test",
+        AutomationProfileSha256 = new string('a', 64),
+        ScreenProfileSha256 = new string('b', 64),
+        DeviceSerial = "SELFTEST",
+        ScreenWidth = 400,
+        ScreenHeight = 800,
+        StartedAtUtc = started,
+        UpdatedAtUtc = completed,
+        CompletedAtUtc = completed,
+        Status = AutomationRunStatus.Completed,
+        StopReason = AutomationStopReason.MaximumItemsReached,
+        Items = items,
+        Actions = actions
+    };
+    var checkpointPath = await InventoryScanCheckpointRepository.SaveAsync(source, checkpoint);
+    return (root, source, checkpointPath, profilePath, output, calibration, checkpoint);
+}
+
+static Task<RealScanExportResult> ExportRealScanFixtureAsync((
+    string Root,
+    string Source,
+    string CheckpointPath,
+    string ProfilePath,
+    string Output,
+    string Calibration,
+    InventoryScanCheckpoint Checkpoint) fixture) =>
+    RealScanEvidenceExporter.ExportAsync(
+        fixture.CheckpointPath,
+        fixture.ProfilePath,
+        fixture.Output,
+        fixture.Calibration,
+        new RealScanExportOptions
+        {
+            ExpectedItems = 20,
+            RequestedMaximumItems = 20,
+            GenerateOverlays = false,
+            CopyScreenshots = false,
+            GenerateCheckpointEvidence = false
+        });
+
+static string Sha256(byte[] bytes) =>
+    Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(bytes))
+        .ToLowerInvariant();
 
 static void LegacyCheckpointMigratesToSchema2()
 {
@@ -4310,6 +4622,31 @@ static async Task ExpectInvalidOperationAsync(Func<Task> action)
     }
     catch (InvalidOperationException exception) when (
         exception.Message != "Expected InvalidOperationException.")
+    {
+    }
+}
+
+static async Task ExpectAnyFailureAsync(Func<Task> action)
+{
+    try
+    {
+        await action();
+        throw new InvalidOperationException("Expected failure.");
+    }
+    catch (Exception exception) when (exception.Message != "Expected failure.")
+    {
+    }
+}
+
+static void AssertThrowsInvalidOperation(Action action, string description)
+{
+    try
+    {
+        action();
+        throw new InvalidOperationException($"Expected {description} to fail.");
+    }
+    catch (InvalidOperationException exception) when (
+        exception.Message != $"Expected {description} to fail.")
     {
     }
 }

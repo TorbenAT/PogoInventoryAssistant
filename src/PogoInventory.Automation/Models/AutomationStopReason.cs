@@ -4,6 +4,7 @@ public enum AutomationStopReason
 {
     None,
     MaximumItemsReached,
+    MaximumRuntimeReached,
     EndOfInventoryDetected,
     Cancelled,
     UnknownScreen,
