@@ -5,4 +5,8 @@
     <Nullable>enable</Nullable>
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
   </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\PogoInventory.Appraisal\PogoInventory.Appraisal.csproj" />
+    <ProjectReference Include="..\PogoInventory.Vision\PogoInventory.Vision.csproj" />
+  </ItemGroup>
 </Project>

@@ -233,6 +233,7 @@ static async Task<int> RunInventoryScanAsync(
         options,
         "max-items",
         automationProfile.DefaultMaximumItems);
+    var appraisalProfilePath = Optional(options, "appraisal-profile");
 
     IAndroidAutomationTransport transport;
     var useFake = options.ContainsKey("fake");
@@ -249,7 +250,8 @@ static async Task<int> RunInventoryScanAsync(
     }
 
     var providerMode = (Optional(options, "observation-provider") ??
-        (useFake ? "fake" : "none")).ToLowerInvariant();
+        (appraisalProfilePath is not null ? "appraisal" : useFake ? "fake" : "none"))
+        .ToLowerInvariant();
     if (!useFake && providerMode == "fake")
     {
         throw new ArgumentException(
@@ -260,8 +262,14 @@ static async Task<int> RunInventoryScanAsync(
     {
         "fake" => new FakeCalcyObservationProvider(),
         "none" => new UnavailableCalcyObservationProvider(),
+        "appraisal" => new AppraisalProfileObservationProvider(
+            await AppraisalProfileLoader.LoadAsync(
+                appraisalProfilePath ??
+                    throw new ArgumentException(
+                        "The appraisal observation provider requires --appraisal-profile."),
+                cancellationToken)),
         _ => throw new ArgumentException(
-            "Observation provider must be either 'fake' or 'none'.")
+            "Observation provider must be either 'fake', 'none' or 'appraisal'.")
     };
 
     var runner = new InventoryAutomationRunner(
@@ -1740,10 +1748,12 @@ static void PrintHelp()
     Console.WriteLine();
     Console.WriteLine("  inventory-scan --profile <automation.json> --screen-profile <screen-profile.json> --out <directory>");
     Console.WriteLine("                 [--adb <adb.exe>] [--serial <serial>] [--max-items <n>]");
-    Console.WriteLine("                 [--observation-provider <none|fake>]");
+    Console.WriteLine("                 [--observation-provider <none|fake|appraisal>]");
+    Console.WriteLine("                 [--appraisal-profile <appraisal.json>]");
     Console.WriteLine("  inventory-scan --fake --profile <automation.json> --screen-profile <screen-profile.json>");
     Console.WriteLine("                 --out <directory> [--fixtures <directory>] [--max-items <n>]");
-    Console.WriteLine("                 [--observation-provider <fake|none>]");
+    Console.WriteLine("                 [--observation-provider <fake|none|appraisal>]");
+    Console.WriteLine("                 [--appraisal-profile <appraisal.json>]");
     Console.WriteLine();
     Console.WriteLine("  profile-bootstrap --profile <automation.json> --anchors <anchor-plan.json> --out <directory>");
     Console.WriteLine("                    [--adb <adb.exe>] [--serial <serial>]");

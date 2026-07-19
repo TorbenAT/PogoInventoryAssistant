@@ -2,11 +2,11 @@ param(
     [Parameter(Mandatory = $true)]
     [string]$AdbPath,
 
-    [Parameter(Mandatory = $true)]
-    [string]$AutomationProfile,
+    [string]$AutomationProfile = ".\local-data\automation-profile.local.json",
 
-    [Parameter(Mandatory = $true)]
-    [string]$ScreenProfile,
+    [string]$ScreenProfile = ".\local-data\screen-profile.local.json",
+
+    [string]$AppraisalProfile = ".\local-data\phone-preparation\appraisal-profile.device.generated.json",
 
     [string]$Serial,
 
@@ -34,6 +34,10 @@ $arguments = @(
     "--max-items", $MaximumItems,
     "--out", $OutputDirectory
 )
+
+if (-not [string]::IsNullOrWhiteSpace($AppraisalProfile)) {
+    $arguments += @("--observation-provider", "appraisal", "--appraisal-profile", $AppraisalProfile)
+}
 
 if (-not [string]::IsNullOrWhiteSpace($Serial)) {
     $arguments += @("--serial", $Serial)
