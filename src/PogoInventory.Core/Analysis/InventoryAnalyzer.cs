@@ -79,7 +79,7 @@ public sealed class InventoryAnalyzer
     {
         var ranked = candidates
             .OrderByDescending(x => x.TotalIv ?? -1)
-            .ThenByDescending(x => x.Cp)
+            .ThenByDescending(x => x.Cp ?? -1)
             .ThenBy(x => x.SequenceNumber)
             .ToList();
 
@@ -186,8 +186,18 @@ public sealed class InventoryAnalyzer
         }
 
         AddIfTrue(reasons, pokemon.IsShiny, "KEEP_SHINY", "Shiny Pokémon.");
+        AddIfKnownVariantState(
+            reasons,
+            pokemon.VariantIdentity?.IsShiny is true,
+            "KEEP_SHINY",
+            "Shiny Pokémon.");
         AddIfTrue(reasons, pokemon.IsMythical, "KEEP_MYTHICAL", "Mythical Pokémon.");
         AddIfTrue(reasons, pokemon.IsBackground, "KEEP_BACKGROUND", "Background or location-card Pokémon.");
+        AddIfKnownVariantState(
+            reasons,
+            IsNamedVariant(pokemon.VariantIdentity?.BackgroundId),
+            "KEEP_BACKGROUND",
+            "Background or location-card Pokémon.");
         AddIfTrue(reasons, pokemon.IsFavorite, "KEEP_FAVORITE", "Marked as favorite.");
 
         if (pokemon.CatchDate is not null && pokemon.CatchDate <= policy.OldPokemonCutoff)
@@ -235,11 +245,46 @@ public sealed class InventoryAnalyzer
         AddIfTrue(reasons, pokemon.IsLegendary, "REVIEW_LEGENDARY", "Legendary Pokémon.");
         AddIfTrue(reasons, pokemon.IsUltraBeast, "REVIEW_ULTRA_BEAST", "Ultra Beast.");
         AddIfTrue(reasons, pokemon.IsShadow, "REVIEW_SHADOW", "Shadow Pokémon.");
+        AddIfKnownVariantState(
+            reasons,
+            IsState(pokemon.VariantIdentity?.ShadowState, "shadow"),
+            "REVIEW_SHADOW",
+            "Shadow Pokémon.");
         AddIfTrue(reasons, pokemon.IsPurified, "REVIEW_PURIFIED", "Purified Pokémon.");
+        AddIfKnownVariantState(
+            reasons,
+            IsState(pokemon.VariantIdentity?.ShadowState, "purified"),
+            "REVIEW_PURIFIED",
+            "Purified Pokémon.");
         AddIfTrue(reasons, pokemon.IsLucky, "REVIEW_LUCKY", "Lucky Pokémon.");
+        AddIfKnownVariantState(
+            reasons,
+            IsState(pokemon.VariantIdentity?.LuckyState, "lucky"),
+            "REVIEW_LUCKY",
+            "Lucky Pokémon.");
         AddIfTrue(reasons, pokemon.IsCostume, "REVIEW_COSTUME", "Costume Pokémon.");
+        AddIfKnownVariantState(
+            reasons,
+            IsNamedVariant(pokemon.VariantIdentity?.CostumeId),
+            "REVIEW_COSTUME",
+            "Costume Pokémon.");
         AddIfTrue(reasons, pokemon.IsDynamax, "REVIEW_DYNAMAX", "Dynamax Pokémon.");
+        AddIfKnownVariantState(
+            reasons,
+            IsState(pokemon.VariantIdentity?.DynamaxState, "dynamax"),
+            "REVIEW_DYNAMAX",
+            "Dynamax Pokémon.");
         AddIfTrue(reasons, pokemon.IsGigantamax, "REVIEW_GIGANTAMAX", "Gigantamax Pokémon.");
+        AddIfKnownVariantState(
+            reasons,
+            IsState(pokemon.VariantIdentity?.DynamaxState, "gigantamax"),
+            "REVIEW_GIGANTAMAX",
+            "Gigantamax Pokémon.");
+        AddIfKnownVariantState(
+            reasons,
+            IsNamedVariant(pokemon.VariantIdentity?.SpecialVariantId),
+            "REVIEW_SPECIAL_VARIANT",
+            "Special visual or event variant.");
         AddIfTrue(reasons, pokemon.HasSpecialMove, "REVIEW_SPECIAL_MOVE", "Has a special or legacy move.");
         AddIfTrue(reasons, pokemon.IsXxl, "REVIEW_XXL", "XXL Pokémon.");
         AddIfTrue(reasons, pokemon.IsXxs, "REVIEW_XXS", "XXS Pokémon.");
@@ -267,7 +312,8 @@ public sealed class InventoryAnalyzer
         var targetIv = target.TotalIv ?? -1;
 
         return candidateIv > targetIv ||
-               (candidateIv == targetIv && candidate.Cp > target.Cp);
+               (candidateIv == targetIv &&
+                (candidate.Cp ?? -1) > (target.Cp ?? -1));
     }
 
     private static PokemonDecision Decision(
@@ -299,6 +345,25 @@ public sealed class InventoryAnalyzer
             reasons.Add(new(code, message));
         }
     }
+
+    private static void AddIfKnownVariantState(
+        ICollection<DecisionReason> reasons,
+        bool condition,
+        string code,
+        string message)
+    {
+        if (condition && reasons.All(reason => reason.Code != code))
+        {
+            reasons.Add(new(code, message));
+        }
+    }
+
+    private static bool IsNamedVariant(string? value) =>
+        !string.IsNullOrWhiteSpace(value) &&
+        !value.Equals("none", StringComparison.OrdinalIgnoreCase);
+
+    private static bool IsState(string? value, string expected) =>
+        value?.Equals(expected, StringComparison.OrdinalIgnoreCase) is true;
 
     private static void ValidatePolicy(RulePolicy policy)
     {

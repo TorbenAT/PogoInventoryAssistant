@@ -51,6 +51,18 @@ var tests = new (string Name, Func<Task> Run)[]
     ("Inferior duplicate is deleted", Sync(InferiorDuplicateIsDeleted)),
     ("Preliminary PvP candidate is reviewed", Sync(PvpCandidateIsReviewed)),
     ("Non-exact identity cannot be deleted", Sync(NonExactIdentityCannotBeDeleted)),
+    ("Normal and party-hat Pikachu are distinct variants", Sync(NormalAndPartyHatPikachuAreDistinctVariants)),
+    ("Different Pikachu costumes are distinct variants", Sync(DifferentPikachuCostumesAreDistinctVariants)),
+    ("Ordinary and background Pikachu are distinct variants", Sync(OrdinaryAndBackgroundPikachuAreDistinctVariants)),
+    ("Named backgrounds are distinct variants", Sync(NamedBackgroundsAreDistinctVariants)),
+    ("Exact costume identity remains review protected", Sync(ExactCostumeIdentityRemainsReviewProtected)),
+    ("Exact background identity remains keep protected", Sync(ExactBackgroundIdentityRemainsKeepProtected)),
+    ("Unknown costume is not confirmed none", Sync(UnknownCostumeIsNotConfirmedNone)),
+    ("Unknown background is not confirmed none", Sync(UnknownBackgroundIsNotConfirmedNone)),
+    ("Unknown variant fields forbid delete", Sync(UnknownVariantFieldsForbidDelete)),
+    ("Exact same variant can be evaluated as duplicates", Sync(ExactSameVariantCanBeEvaluatedAsDuplicates)),
+    ("Shiny and non-shiny do not collapse", Sync(ShinyAndNonShinyDoNotCollapse)),
+    ("Instance fingerprint cannot replace variant identity", Sync(InstanceFingerprintCannotReplaceVariantIdentity)),
     ("ADB device list parser recognises states", Sync(AdbDeviceListParserRecognisesStates)),
     ("ADB metadata parsers read screen and battery", Sync(AdbMetadataParsersReadScreenAndBattery)),
     ("ADB transport uses only expected read-only commands", AdbTransportUsesExpectedCommandsAsync),
@@ -148,6 +160,7 @@ var tests = new (string Name, Func<Task> Run)[]
     ("Semantic evidence rejects atlas path traversal", SemanticEvidenceRejectsAtlasPathTraversalAsync),
     ("Semantic evidence identifies cluster coverage gaps", SemanticEvidenceIdentifiesClusterCoverageGapsAsync),
     ("Appraisal analyzer estimates synthetic bars", Sync(AppraisalAnalyzerEstimatesSyntheticBars)),
+    ("Appraisal analyzer accepts three zero IV tracks", Sync(AppraisalAnalyzerAcceptsThreeZeroIvTracks)),
     ("Appraisal analyzer auto fits shifted layout", Sync(AppraisalAnalyzerAutoFitsShiftedLayout)),
     ("Unverified appraisal profile never completes", Sync(UnverifiedAppraisalProfileNeverCompletes)),
     ("Verified appraisal profile can complete", Sync(VerifiedAppraisalProfileCanComplete)),
@@ -254,6 +267,122 @@ static void NonExactIdentityCannotBeDeleted()
             IdentityConfidence = IdentityConfidence.HighConfidence
         });
     AssertCategory(result, "B", DecisionCategory.Review);
+}
+
+static void NormalAndPartyHatPikachuAreDistinctVariants()
+{
+    var normal = Variant(25, "Pikachu");
+    var partyHat = Variant(25, "Pikachu", costumeId: "party-hat", costumeName: "Party Hat");
+    AssertTrue(normal.VariantKey != partyHat.VariantKey, "normal and party-hat keys must differ");
+}
+
+static void DifferentPikachuCostumesAreDistinctVariants()
+{
+    var detective = Variant(25, "Pikachu", "detective-hat", "Detective Hat");
+    var holiday = Variant(25, "Pikachu", "holiday", "Holiday");
+    AssertTrue(detective.VariantKey != holiday.VariantKey, "costume keys must differ");
+}
+
+static void OrdinaryAndBackgroundPikachuAreDistinctVariants()
+{
+    var ordinary = Variant(25, "Pikachu");
+    var background = Variant(
+        25,
+        "Pikachu",
+        backgroundId: "location-card-2026",
+        backgroundName: "Location Card 2026");
+    AssertTrue(ordinary.VariantKey != background.VariantKey, "background key must be distinct");
+}
+
+static void NamedBackgroundsAreDistinctVariants()
+{
+    var sendai = Variant(25, "Pikachu", backgroundId: "sendai-2024", backgroundName: "Sendai 2024");
+    var madrid = Variant(25, "Pikachu", backgroundId: "madrid-2024", backgroundName: "Madrid 2024");
+    AssertTrue(sendai.VariantKey != madrid.VariantKey, "named background keys must differ");
+}
+
+static void ExactCostumeIdentityRemainsReviewProtected()
+{
+    var result = Analyze(P("A", "Pikachu", 500, 8, 8, 8) with
+    {
+        VariantIdentity = Variant(25, "Pikachu", "party-hat", "Party Hat")
+    });
+    AssertCategory(result, "A", DecisionCategory.Review);
+}
+
+static void ExactBackgroundIdentityRemainsKeepProtected()
+{
+    var result = Analyze(P("A", "Pikachu", 500, 8, 8, 8) with
+    {
+        VariantIdentity = Variant(
+            25,
+            "Pikachu",
+            backgroundId: "sendai-2024",
+            backgroundName: "Sendai 2024")
+    });
+    AssertCategory(result, "A", DecisionCategory.Keep);
+}
+
+static void UnknownCostumeIsNotConfirmedNone()
+{
+    var unknown = Variant(25, "Pikachu") with { CostumeId = null, CostumeName = null };
+    AssertEqual((string?)null, unknown.VariantKey, "unknown costume variant key");
+    AssertTrue(unknown.MissingVariantFields.Contains("CostumeId"), "costume ID must be missing");
+}
+
+static void UnknownBackgroundIsNotConfirmedNone()
+{
+    var unknown = Variant(25, "Pikachu") with { BackgroundId = null, BackgroundName = null };
+    AssertEqual((string?)null, unknown.VariantKey, "unknown background variant key");
+    AssertTrue(unknown.MissingVariantFields.Contains("BackgroundId"), "background ID must be missing");
+}
+
+static void UnknownVariantFieldsForbidDelete()
+{
+    var result = Analyze(
+        P("A", "Pikachu", 900, 14, 14, 14),
+        P("B", "Pikachu", 500, 8, 8, 8) with
+        {
+            SequenceNumber = 2,
+            VariantIdentity = Variant(25, "Pikachu") with
+            {
+                CostumeId = null,
+                CostumeName = null
+            }
+        });
+    AssertCategory(result, "B", DecisionCategory.Review);
+}
+
+static void ExactSameVariantCanBeEvaluatedAsDuplicates()
+{
+    var result = Analyze(
+        P("A", "Pikachu", 900, 14, 14, 14),
+        P("B", "Pikachu", 500, 8, 8, 8) with { SequenceNumber = 2 });
+    AssertCategory(result, "B", DecisionCategory.Delete);
+}
+
+static void ShinyAndNonShinyDoNotCollapse()
+{
+    var normal = Variant(25, "Pikachu", isShiny: false);
+    var shiny = Variant(25, "Pikachu", isShiny: true);
+    AssertTrue(normal.VariantKey != shiny.VariantKey, "shiny state must be part of the key");
+}
+
+static void InstanceFingerprintCannotReplaceVariantIdentity()
+{
+    var first = P("same-fingerprint-A", "Pikachu", 900, 14, 14, 14) with
+    {
+        VariantIdentity = new PokemonVariantIdentity()
+    };
+    var second = P("same-fingerprint-B", "Pikachu", 500, 8, 8, 8) with
+    {
+        SequenceNumber = 2,
+        VariantIdentity = new PokemonVariantIdentity()
+    };
+    var result = Analyze(first, second);
+    AssertCategory(result, "same-fingerprint-A", DecisionCategory.Review);
+    AssertCategory(result, "same-fingerprint-B", DecisionCategory.Review);
+    AssertTrue(first.GroupKey != second.GroupKey, "unknown variants must not share a duplicate group");
 }
 
 static void AdbDeviceListParserRecognisesStates()
@@ -2900,6 +3029,24 @@ static void AppraisalAnalyzerEstimatesSyntheticBars()
     AssertWithin(5, result.HpIv, 1, "HP IV");
 }
 
+static void AppraisalAnalyzerAcceptsThreeZeroIvTracks()
+{
+    var profile = TestAppraisalProfile();
+    var result = new AppraisalAnalyzer().Analyze(
+        CreateSyntheticAppraisalImage(
+            profile,
+            new AppraisalLayoutTransform(),
+            0,
+            0,
+            0),
+        profile);
+
+    AssertEqual(AppraisalAnalysisStatus.Candidate, result.Status, "zero IV appraisal status");
+    AssertEqual((int?)0, result.AttackIv, "zero attack IV");
+    AssertEqual((int?)0, result.DefenseIv, "zero defense IV");
+    AssertEqual((int?)0, result.HpIv, "zero HP IV");
+}
+
 static void AppraisalAnalyzerAutoFitsShiftedLayout()
 {
     var profile = TestAppraisalProfile();
@@ -4179,6 +4326,8 @@ static PokemonObservation P(
         ExternalKey = key,
         SequenceNumber = 1,
         Species = species,
+        Form = "Normal",
+        Costume = "None",
         Cp = cp,
         AttackIv = attack,
         DefenseIv = defense,
@@ -4200,7 +4349,42 @@ static PokemonObservation P(
         HasSpecialMove = false,
         IsXxl = false,
         IsXxs = false,
-        IdentityConfidence = IdentityConfidence.Exact
+        IdentityConfidence = IdentityConfidence.Exact,
+        VariantIdentity = Variant(
+            species.Equals("Pikachu", StringComparison.OrdinalIgnoreCase) ? 25 :
+            species.Equals("Eevee", StringComparison.OrdinalIgnoreCase) ? 133 :
+            species.Equals("Machop", StringComparison.OrdinalIgnoreCase) ? 66 :
+            species.Equals("Rattata", StringComparison.OrdinalIgnoreCase) ? 19 :
+            species.Equals("Bidoof", StringComparison.OrdinalIgnoreCase) ? 399 : 1,
+            species)
+    };
+
+static PokemonVariantIdentity Variant(
+    int speciesId,
+    string speciesName,
+    string costumeId = "none",
+    string costumeName = "None",
+    string backgroundId = "none",
+    string backgroundName = "None",
+    bool isShiny = false) =>
+    new()
+    {
+        SpeciesId = speciesId,
+        SpeciesName = speciesName,
+        FormId = "normal",
+        FormName = "Normal",
+        CostumeId = costumeId,
+        CostumeName = costumeName,
+        BackgroundId = backgroundId,
+        BackgroundName = backgroundName,
+        GenderVariant = "not-variant-relevant",
+        IsShiny = isShiny,
+        ShadowState = "normal",
+        LuckyState = "not-lucky",
+        DynamaxState = "none",
+        SpecialVariantId = "none",
+        SpecialVariantName = "None",
+        VariantIdentityConfidence = IdentityConfidence.Exact
     };
 
 static void AssertCategory(

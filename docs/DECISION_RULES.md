@@ -47,6 +47,15 @@ Eligible duplicate with exact identity, no protection and a documented better al
 
 ## Living-dex preservation
 
+Ordinary unprotected Pokemon are grouped only by an exact semantic VariantKey.
+The key includes species ID, form ID, costume ID, named background ID, relevant
+gender variant, shiny state, shadow state, Dynamax state and any known special
+visual variant ID. Exact confirmed absence is represented explicitly; missing
+values remain Unknown.
+
+An identity-region image fingerprint is run evidence only. It never substitutes
+for semantic variant identity.
+
 For ordinary unprotected Pokémon grouped by species, form and costume, the policy preserves at least the configured minimum number of copies.
 
 The first retained ordinary copy is selected by:
@@ -80,5 +89,10 @@ All of the following must be true:
 - the Pokémon is not the selected preliminary PvP candidate
 - a strictly better ordinary duplicate exists
 - critical values are known
+- form, costume and named background identity are exact, including confirmed absence
+
+Unknown form, costume or background identity always produces REVIEW. Different
+named costumes, backgrounds or shiny states never share an ordinary duplicate
+group.
 
 Equal-quality duplicates are REVIEW in this version. This is intentional because visually identical duplicates can be difficult to distinguish during later execution.

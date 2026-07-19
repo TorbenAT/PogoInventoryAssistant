@@ -5,10 +5,10 @@ public sealed record PokemonObservation
     public required string ExternalKey { get; init; }
     public required int SequenceNumber { get; init; }
     public required string Species { get; init; }
-    public string Form { get; init; } = "Normal";
-    public string Costume { get; init; } = "None";
+    public string? Form { get; init; }
+    public string? Costume { get; init; }
     public string? Nickname { get; init; }
-    public int Cp { get; init; }
+    public int? Cp { get; init; }
     public int? Hp { get; init; }
     public decimal? Level { get; init; }
     public int? AttackIv { get; init; }
@@ -34,6 +34,7 @@ public sealed record PokemonObservation
     public bool? IsXxs { get; init; }
 
     public IdentityConfidence IdentityConfidence { get; init; } = IdentityConfidence.Unknown;
+    public PokemonVariantIdentity? VariantIdentity { get; init; }
     public IReadOnlyCollection<string> Tags { get; init; } = Array.Empty<string>();
 
     public int? TotalIv => AttackIv is null || DefenseIv is null || HpIv is null
@@ -42,13 +43,12 @@ public sealed record PokemonObservation
 
     public bool IsPerfect => TotalIv == 45;
 
-    public string GroupKey => string.Join('|',
-        Normalize(Species),
-        Normalize(Form),
-        Normalize(Costume));
+    public string GroupKey => VariantIdentity?.VariantKey ??
+        $"unknown-variant|{Normalize(ExternalKey)}";
 
     public bool HasKnownCriticalValues =>
         !string.IsNullOrWhiteSpace(Species) &&
+        Cp is not null &&
         AttackIv is not null &&
         DefenseIv is not null &&
         HpIv is not null &&
@@ -67,7 +67,8 @@ public sealed record PokemonObservation
         IsGigantamax is not null &&
         HasSpecialMove is not null &&
         IsXxl is not null &&
-        IsXxs is not null;
+        IsXxs is not null &&
+        VariantIdentity?.VariantKey is not null;
 
     private static string Normalize(string? value) =>
         string.IsNullOrWhiteSpace(value) ? "unknown" : value.Trim().ToLowerInvariant();

@@ -21,6 +21,7 @@ public sealed record AppraisalVisualProfile
     public double CandidateScoreMinimum { get; init; } = 0.82;
     public int MinimumOrangeBars { get; init; } = 2;
     public int MinimumTrackBars { get; init; } = 2;
+    public double TrackOnlyCandidateScoreFactor { get; init; } = 0.75;
     public double CompleteBarConfidenceMinimum { get; init; } = 0.72;
 
     public bool Verified { get; init; }
@@ -80,6 +81,8 @@ public sealed record AppraisalVisualProfile
             CandidateScoreMinimum is < 0 or > 2 ||
             MinimumOrangeBars is < 0 or > 3 ||
             MinimumTrackBars is < 0 or > 3 ||
+            !double.IsFinite(TrackOnlyCandidateScoreFactor) ||
+            TrackOnlyCandidateScoreFactor is < 0 or > 1 ||
             !double.IsFinite(CompleteBarConfidenceMinimum) ||
             CompleteBarConfidenceMinimum is < 0 or > 1)
         {

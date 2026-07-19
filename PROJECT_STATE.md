@@ -106,7 +106,21 @@ Version 0.14.0 adds:
 - read-only `phone-prepare`
 - local device-adjusted profile generation
 - Android readiness report
-- 114 expected self-tests
+- 127 expected self-tests
+
+### Real Android navigation and variant-safe evidence
+
+The connected OnePlus 6T has completed a fresh 20-item appraisal scan with:
+
+- 20 persisted captures and unique screenshot/fingerprint hashes
+- 19 verified `SwipeNextPokemon` actions
+- 3/3 stable phone calibration cases
+- 20 Candidate-only appraisal observations and zero Complete observations
+- 20 conservative REVIEW decisions and zero DELETE decisions
+- schema-versioned semantic variant identity and per-run instance evidence
+
+Unknown form, costume, background and special state values remain Unknown. They
+cannot share an ordinary duplicate group or authorize DELETE.
 
 ## Input boundary
 
@@ -130,8 +144,7 @@ generate phone-specific definitions automatically.
 
 ## Not completed
 
-- real Android phone preparation run
-- three-screen Android profile stability check
+- extraction of exact semantic variant identity from Android screenshots
 - twenty-case appraisal truth verification
 - verified Complete visual IV provider
 - real Calcy evidence and provider selection
@@ -144,7 +157,7 @@ generate phone-specific definitions automatically.
 ## Required checkpoint after push
 
 1. Build all 15 projects.
-2. Confirm 114 of 114 self-tests pass.
+2. Confirm 127 of 127 self-tests pass.
 3. Confirm the existing iPhone evidence stages remain green.
 4. Confirm appraisal pretest finds at least five candidates.
 5. Confirm candidates are concentrated at least 70 percent in one cluster.

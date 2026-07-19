@@ -41,6 +41,11 @@ The automation profile therefore defines a separate identity region. The runner 
 
 The identity fingerprint is only a navigation key. It is not yet the final exact Pokémon identity model.
 
+The real-scan evidence export preserves that distinction. It stores a
+schema-versioned `PokemonInstanceEvidence` record for the run fingerprint and a
+separate `PokemonVariantIdentity` record for semantic collection identity.
+Unknown semantic fields remain null and force REVIEW.
+
 ## Checkpointing
 
 After every captured Pokémon the program atomically writes:

@@ -69,6 +69,9 @@ static async Task<int> MainAsync(string[] args)
             "inventory-scan" => await RunInventoryScanAsync(
                 args.Skip(1).ToArray(),
                 cancellationSource.Token),
+            "real-scan-export" => await ExportRealScanAsync(
+                args.Skip(1).ToArray(),
+                cancellationSource.Token),
             "profile-bootstrap" => await RunProfileBootstrapAsync(
                 args.Skip(1).ToArray(),
                 cancellationSource.Token),
@@ -307,6 +310,28 @@ static async Task<int> RunInventoryScanAsync(
     return result.Checkpoint.Status == PogoInventory.Automation.Models.AutomationRunStatus.Completed
         ? 0
         : 5;
+}
+
+static async Task<int> ExportRealScanAsync(
+    string[] args,
+    CancellationToken cancellationToken)
+{
+    var options = ParseOptions(args);
+    var result = await RealScanEvidenceExporter.ExportAsync(
+        Require(options, "checkpoint"),
+        Require(options, "appraisal-profile"),
+        Require(options, "out"),
+        Require(options, "calibration-out"),
+        cancellationToken);
+
+    Console.WriteLine($"Real phone demo: {(result.Manifest.RealPhoneDemoPassed ? "PASS" : "FAIL")}");
+    Console.WriteLine($"Scanned: {result.Manifest.Scanned}/20");
+    Console.WriteLine($"Unique changed frames: {result.Manifest.UniqueChangedFrames}/20");
+    Console.WriteLine($"Swipes: {result.Manifest.SwipesSucceeded}/19");
+    Console.WriteLine($"Calibration: {result.CalibrationCases}/3; stable={result.CalibrationStable}");
+    Console.WriteLine($"Decisions: KEEP {result.Manifest.Keep}, REVIEW {result.Manifest.Review}, DELETE {result.Manifest.Delete}");
+    Console.WriteLine($"Report: {result.ReportPath}");
+    return result.Manifest.RealPhoneDemoPassed ? 0 : 1;
 }
 
 static async Task<int> RunProfileBootstrapAsync(
@@ -1750,6 +1775,9 @@ static void PrintHelp()
     Console.WriteLine("                 [--adb <adb.exe>] [--serial <serial>] [--max-items <n>]");
     Console.WriteLine("                 [--observation-provider <none|fake|appraisal>]");
     Console.WriteLine("                 [--appraisal-profile <appraisal.json>]");
+    Console.WriteLine("  real-scan-export --checkpoint <inventory-scan-checkpoint.json>");
+    Console.WriteLine("                   --appraisal-profile <appraisal.json> --out <directory>");
+    Console.WriteLine("                   --calibration-out <directory>");
     Console.WriteLine("  inventory-scan --fake --profile <automation.json> --screen-profile <screen-profile.json>");
     Console.WriteLine("                 --out <directory> [--fixtures <directory>] [--max-items <n>]");
     Console.WriteLine("                 [--observation-provider <fake|none|appraisal>]");

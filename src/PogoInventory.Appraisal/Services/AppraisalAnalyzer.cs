@@ -73,10 +73,15 @@ public sealed class AppraisalAnalyzer
                 "Appraisal profile did not contain any usable transforms.");
         }
 
-        var isCandidate =
+        var ordinaryCandidate =
             best.Score >= profile.CandidateScoreMinimum &&
             best.OrangeBars >= profile.MinimumOrangeBars &&
             best.TrackBars >= profile.MinimumTrackBars;
+        var zeroIvCandidate =
+            best.TrackBars == 3 &&
+            best.Score >= profile.CandidateScoreMinimum *
+                profile.TrackOnlyCandidateScoreFactor;
+        var isCandidate = ordinaryCandidate || zeroIvCandidate;
 
         var allBarsConfident = best.Measurements.All(item =>
             item.TrackDetected &&
@@ -350,12 +355,28 @@ public sealed class AppraisalAnalyzer
     private static bool IsOrange(
         Rgba32 pixel,
         AppraisalColorProfile colors) =>
+        IsOrangeFill(pixel, colors) || IsFullBarFill(pixel, colors);
+
+    private static bool IsOrangeFill(
+        Rgba32 pixel,
+        AppraisalColorProfile colors) =>
         pixel.R >= colors.OrangeRedMinimum &&
         pixel.G >= colors.OrangeGreenMinimum &&
         pixel.G <= colors.OrangeGreenMaximum &&
         pixel.B <= colors.OrangeBlueMaximum &&
         pixel.R - pixel.G >= colors.OrangeRedGreenDeltaMinimum &&
         pixel.G - pixel.B >= colors.OrangeGreenBlueDeltaMinimum;
+
+    private static bool IsFullBarFill(
+        Rgba32 pixel,
+        AppraisalColorProfile colors) =>
+        pixel.R >= colors.FullBarRedMinimum &&
+        pixel.G >= colors.FullBarGreenMinimum &&
+        pixel.G <= colors.FullBarGreenMaximum &&
+        pixel.B >= colors.FullBarBlueMinimum &&
+        pixel.B <= colors.FullBarBlueMaximum &&
+        pixel.R - pixel.G >= colors.FullBarRedGreenDeltaMinimum &&
+        Math.Abs(pixel.G - pixel.B) <= colors.FullBarGreenBlueDeltaMaximum;
 
     private static bool IsTrack(
         Rgba32 pixel,
