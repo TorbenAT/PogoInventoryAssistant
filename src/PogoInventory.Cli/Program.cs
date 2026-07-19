@@ -1809,7 +1809,7 @@ static async Task<int> LaunchPokemonGoAsync(
     await transport.TapAsync(
         selected.Serial,
         left + ((right - left) / 2),
-        top + ((bottom - top) / 2),
+        top + ((bottom - top) / 3),
         cancellationToken);
 
     Console.WriteLine("Clicked the exact visible Pokémon GO launcher control.");
