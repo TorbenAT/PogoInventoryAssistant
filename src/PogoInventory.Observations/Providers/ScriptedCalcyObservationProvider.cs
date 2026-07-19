@@ -2,7 +2,7 @@ using PogoInventory.Observations.Models;
 
 namespace PogoInventory.Observations.Providers;
 
-public sealed class ScriptedCalcyObservationProvider : ICalcyObservationProvider
+public sealed class ScriptedCalcyObservationProvider : IPokemonObservationProvider
 {
     private readonly IReadOnlyDictionary<int, CalcyObservation> _observations;
     private readonly IReadOnlyDictionary<int, Exception> _exceptions;

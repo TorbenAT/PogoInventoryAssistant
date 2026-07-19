@@ -5,7 +5,7 @@ using PogoInventory.Vision.Imaging;
 
 namespace PogoInventory.Observations.Providers;
 
-public sealed class AppraisalProfileObservationProvider : ICalcyObservationProvider
+public sealed class AppraisalProfileObservationProvider : IPokemonObservationProvider
 {
     private readonly AppraisalVisualProfile _profile;
     private readonly AppraisalAnalyzer _analyzer;

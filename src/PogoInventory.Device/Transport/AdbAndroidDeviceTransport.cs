@@ -122,6 +122,19 @@ public sealed class AdbAndroidDeviceTransport : IAndroidAutomationTransport, IAn
         return result.StandardOutputText;
     }
 
+    public async Task StopKnownAppAsync(
+        string serial,
+        KnownAndroidPackage app,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(serial);
+        var packageName = KnownAndroidPackageNames.GetPackageName(app);
+        await RunAsync(
+            ForDevice(serial, "shell", "am", "force-stop", packageName),
+            $"stop known Android app '{packageName}'",
+            cancellationToken);
+    }
+
     public async Task<string> ReadPackagePathAsync(
         string serial,
         string packageName,

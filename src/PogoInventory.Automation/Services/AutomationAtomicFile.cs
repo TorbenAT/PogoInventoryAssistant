@@ -50,7 +50,26 @@ internal static class AutomationAtomicFile
         {
             await writer(temporary);
             cancellationToken.ThrowIfCancellationRequested();
-            File.Move(temporary, fullPath, overwrite: true);
+            IOException? lastMoveException = null;
+            for (var attempt = 0; attempt < 5; attempt++)
+            {
+                try
+                {
+                    File.Move(temporary, fullPath, overwrite: true);
+                    lastMoveException = null;
+                    break;
+                }
+                catch (IOException exception) when (attempt < 4)
+                {
+                    lastMoveException = exception;
+                    await Task.Delay(TimeSpan.FromMilliseconds(50), cancellationToken);
+                }
+            }
+
+            if (lastMoveException is not null)
+            {
+                throw lastMoveException;
+            }
         }
         catch (Exception exception) when (
             exception is IOException or UnauthorizedAccessException)

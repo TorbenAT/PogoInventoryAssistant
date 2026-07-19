@@ -2,11 +2,7 @@ using PogoInventory.Observations.Models;
 
 namespace PogoInventory.Observations.Providers;
 
-public interface ICalcyObservationProvider
+[Obsolete("Use IPokemonObservationProvider.")]
+public interface ICalcyObservationProvider : IPokemonObservationProvider
 {
-    string Name { get; }
-
-    Task<CalcyObservation> ObserveAsync(
-        CalcyObservationRequest request,
-        CancellationToken cancellationToken = default);
 }

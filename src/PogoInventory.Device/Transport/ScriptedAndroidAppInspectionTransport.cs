@@ -41,6 +41,17 @@ public sealed class ScriptedAndroidAppInspectionTransport : IAndroidAppInspectio
 
     public List<string> Operations { get; } = new();
 
+    public Task StopKnownAppAsync(
+        string serial,
+        KnownAndroidPackage app,
+        CancellationToken cancellationToken = default)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        EnsureSerial(serial);
+        Operations.Add($"stop-known-app:{app}");
+        return Task.CompletedTask;
+    }
+
     public Task<IReadOnlyList<AndroidDeviceDescriptor>> ListDevicesAsync(
         CancellationToken cancellationToken = default)
     {

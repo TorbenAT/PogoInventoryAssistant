@@ -2,7 +2,7 @@ using PogoInventory.Observations.Models;
 
 namespace PogoInventory.Observations.Providers;
 
-public sealed class UnavailableCalcyObservationProvider : ICalcyObservationProvider
+public sealed class UnavailableCalcyObservationProvider : IPokemonObservationProvider
 {
     public const string ProviderName = "UnavailableCalcyProvider";
 

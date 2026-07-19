@@ -20,13 +20,13 @@ public sealed class InventoryAutomationRunner
     private readonly IAndroidAutomationTransport _transport;
     private readonly ScreenStateDetector _detector;
     private readonly IDeviceLog _log;
-    private readonly ICalcyObservationProvider _observationProvider;
+    private readonly IPokemonObservationProvider _observationProvider;
 
     public InventoryAutomationRunner(
         IAndroidAutomationTransport transport,
         ScreenStateDetector? detector = null,
         IDeviceLog? log = null,
-        ICalcyObservationProvider? observationProvider = null)
+        IPokemonObservationProvider? observationProvider = null)
     {
         _transport = transport ?? throw new ArgumentNullException(nameof(transport));
         _detector = detector ?? new ScreenStateDetector();

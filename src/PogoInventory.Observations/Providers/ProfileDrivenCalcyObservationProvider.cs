@@ -4,7 +4,7 @@ using PogoInventory.Observations.Sources;
 
 namespace PogoInventory.Observations.Providers;
 
-public sealed class ProfileDrivenCalcyObservationProvider : ICalcyObservationProvider
+public sealed class ProfileDrivenCalcyObservationProvider : IPokemonObservationProvider
 {
     private readonly ICalcyRawOutputSource _source;
     private readonly CalcyTextParserProfile _profile;

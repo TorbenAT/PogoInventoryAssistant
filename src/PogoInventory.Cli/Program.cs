@@ -27,6 +27,7 @@ using PogoInventory.Device;
 using PogoInventory.Device.Adb;
 using PogoInventory.Device.Errors;
 using PogoInventory.Device.Logging;
+using PogoInventory.Device.Models;
 using PogoInventory.Device.Transport;
 using PogoInventory.ImagePretest.Models;
 using PogoInventory.ImagePretest.Services;
@@ -110,6 +111,9 @@ static async Task<int> MainAsync(string[] args)
                 args.Skip(1).ToArray(),
                 cancellationSource.Token),
             "phone-prepare" => await PreparePhoneAsync(
+                args.Skip(1).ToArray(),
+                cancellationSource.Token),
+            "device-stop-known-app" => await StopKnownAppAsync(
                 args.Skip(1).ToArray(),
                 cancellationSource.Token),
             "device-snapshot" => await CaptureDeviceSnapshotAsync(
@@ -254,6 +258,18 @@ static async Task<int> RunInventoryScanAsync(
     else
     {
         transport = CreateRealAndroidTransport(options);
+        var inspectionTransport = transport as IAndroidAppInspectionTransport ??
+            throw new InvalidOperationException(
+                "The configured Android transport does not support known-app control.");
+        var devices = await inspectionTransport.ListDevicesAsync(cancellationToken);
+        var selectedDevice = DeviceSnapshotService.SelectDevice(
+            devices,
+            Optional(options, "serial"));
+        await inspectionTransport.StopKnownAppAsync(
+            selectedDevice.Serial,
+            KnownAndroidPackage.Calcy,
+            cancellationToken);
+        Console.WriteLine("Stopped the allow-listed Calcy package before the scan.");
     }
 
     var providerMode = (Optional(options, "observation-provider") ??
@@ -265,7 +281,7 @@ static async Task<int> RunInventoryScanAsync(
             "The fake observation provider can only be used with the fake Android transport.");
     }
 
-    ICalcyObservationProvider observationProvider = providerMode switch
+    IPokemonObservationProvider observationProvider = providerMode switch
     {
         "fake" => new FakeCalcyObservationProvider(),
         "none" => new UnavailableCalcyObservationProvider(),
@@ -1631,6 +1647,30 @@ static int ParsePositiveInt(
     return value;
 }
 
+static async Task<int> StopKnownAppAsync(
+    string[] args,
+    CancellationToken cancellationToken)
+{
+    var options = ParseOptions(args);
+    var app = Require(options, "app");
+    if (!app.Equals("calcy", StringComparison.OrdinalIgnoreCase))
+    {
+        throw new ArgumentException("Only --app calcy is allow-listed.");
+    }
+
+    var transport = CreateRealAndroidAppInspectionTransport(options);
+    var devices = await transport.ListDevicesAsync(cancellationToken);
+    var selected = DeviceSnapshotService.SelectDevice(
+        devices,
+        Optional(options, "serial"));
+    await transport.StopKnownAppAsync(
+        selected.Serial,
+        KnownAndroidPackage.Calcy,
+        cancellationToken);
+    Console.WriteLine($"Stopped Calcy on {selected.Serial}.");
+    return 0;
+}
+
 static int? ParseOptionalPositiveInt(
     IReadOnlyDictionary<string, string> options,
     string key)
@@ -1845,6 +1885,7 @@ static void PrintHelp()
     Console.WriteLine("                   [--expected-items <n> | --minimum-items <n>]");
     Console.WriteLine("                   [--requested-maximum-items <n>] [--generate-overlays <true|false>]");
     Console.WriteLine("                   [--copy-screenshots <true|false>] [--generate-checkpoint-evidence <true|false>]");
+    Console.WriteLine("  device-stop-known-app --app calcy [--adb <adb.exe>] [--serial <serial>]");
     Console.WriteLine("  inventory-scan --fake --profile <automation.json> --screen-profile <screen-profile.json>");
     Console.WriteLine("                 --out <directory> [--fixtures <directory>] [--max-items <n>]");
     Console.WriteLine("                 [--observation-provider <fake|none|appraisal>]");

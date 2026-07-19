@@ -18,6 +18,10 @@ $screenProfile = Join-Path $root "local-data\screen-profile.local.json"
 $appraisalProfile = Join-Path $root "local-data\phone-preparation\appraisal-profile.device.generated.json"
 $checkpointPath = ""
 $child = $null
+$stdoutStream = $null
+$stderrStream = $null
+$stdoutCopy = $null
+$stderrCopy = $null
 $safetyStop = $null
 
 function Write-AtomicJson {
@@ -32,6 +36,27 @@ function Get-FreeDiskGb {
     $resolved = [System.IO.Path]::GetFullPath($Path)
     $rootPath = [System.IO.Path]::GetPathRoot($resolved)
     return [Math]::Round((New-Object System.IO.DriveInfo($rootPath)).AvailableFreeSpace / 1GB, 3)
+}
+
+function Read-JsonFile {
+    param([string]$Path)
+    $stream = [System.IO.File]::Open(
+        $Path,
+        [System.IO.FileMode]::Open,
+        [System.IO.FileAccess]::Read,
+        [System.IO.FileShare]::ReadWrite -bor [System.IO.FileShare]::Delete)
+    try {
+        $reader = New-Object System.IO.StreamReader($stream)
+        try {
+            return $reader.ReadToEnd() | ConvertFrom-Json
+        }
+        finally {
+            $reader.Dispose()
+        }
+    }
+    finally {
+        $stream.Dispose()
+    }
 }
 
 function ConvertTo-ProcessArgument {
@@ -122,7 +147,7 @@ if ((Test-Path -LiteralPath $checkpointPath) -and -not $Resume) {
     throw "Output contains a checkpoint but Resume was not requested."
 }
 if ((Test-Path -LiteralPath $checkpointPath) -and $Resume) {
-    $resumeCheckpoint = Get-Content -LiteralPath $checkpointPath -Raw | ConvertFrom-Json
+    $resumeCheckpoint = Read-JsonFile $checkpointPath
     if ($resumeCheckpoint.status -ne "Running") {
         throw "Only a structurally running checkpoint can be resumed."
     }
@@ -169,6 +194,21 @@ if ((Get-FreeDiskGb $OutputDirectory) -lt $MinimumFreeDiskGb) {
     throw "Free disk space is below threshold."
 }
 
+$stopCalcyArguments = @(
+    "run", "--project", (Join-Path $root "src\PogoInventory.Cli"),
+    "--configuration", "Release", "--no-build", "--",
+    "device-stop-known-app",
+    "--adb", $AdbPath,
+    "--app", "calcy"
+)
+if (-not [string]::IsNullOrWhiteSpace($Serial)) {
+    $stopCalcyArguments += @("--serial", $Serial)
+}
+& dotnet @stopCalcyArguments | Out-Null
+if ($LASTEXITCODE -ne 0) {
+    throw "Could not stop the allow-listed Calcy package."
+}
+
 $screenEvidence = Join-Path $preflightDirectory "screen-detection.json"
 & dotnet run --project (Join-Path $root "src\PogoInventory.Cli") --configuration Release --no-build -- `
     screen-detect --image (Join-Path $preflightDirectory "screen.png") --profile $screenProfile --out $screenEvidence | Out-Null
@@ -205,10 +245,16 @@ $processStart.Arguments = ($scanArguments | ForEach-Object { ConvertTo-ProcessAr
 $processStart.WorkingDirectory = $root
 $processStart.UseShellExecute = $false
 $processStart.CreateNoWindow = $true
+$processStart.RedirectStandardOutput = $true
+$processStart.RedirectStandardError = $true
 $child = [System.Diagnostics.Process]::Start($processStart)
 if ($null -eq $child) {
     throw "Could not start the inventory scan process."
 }
+$stdoutStream = [System.IO.File]::Create((Join-Path $OutputDirectory "scan.stdout.log"))
+$stderrStream = [System.IO.File]::Create((Join-Path $OutputDirectory "scan.stderr.log"))
+$stdoutCopy = $child.StandardOutput.BaseStream.CopyToAsync($stdoutStream)
+$stderrCopy = $child.StandardError.BaseStream.CopyToAsync($stderrStream)
 
 $emptyCheckpoint = [pscustomobject]@{ runId = $null; items = @(); actions = @() }
 Write-Heartbeat -Status "Starting" -Checkpoint $emptyCheckpoint -Device $deviceSnapshot -StopReason "none"
@@ -220,7 +266,7 @@ try {
         Start-Sleep -Seconds 2
         $child.Refresh()
         $checkpoint = if (Test-Path -LiteralPath $checkpointPath) {
-            try { Get-Content -LiteralPath $checkpointPath -Raw | ConvertFrom-Json } catch { $null }
+            try { Read-JsonFile $checkpointPath } catch { $null }
         } else { $null }
         if ($null -ne $checkpoint -and @($checkpoint.items).Count -ne $lastCount) {
             $lastCount = @($checkpoint.items).Count
@@ -268,11 +314,19 @@ try {
     } else {
         $child.WaitForExit()
     }
+    if ($null -ne $stdoutCopy) { $stdoutCopy.GetAwaiter().GetResult() }
+    if ($null -ne $stderrCopy) { $stderrCopy.GetAwaiter().GetResult() }
+    if ($null -ne $stdoutStream) { $stdoutStream.Flush() }
+    if ($null -ne $stderrStream) { $stderrStream.Flush() }
 
     if (-not (Test-Path -LiteralPath $checkpointPath)) {
         throw "Scan process ended without a checkpoint."
     }
-    $finalCheckpoint = Get-Content -LiteralPath $checkpointPath -Raw | ConvertFrom-Json
+    $finalCheckpoint = Read-JsonFile $checkpointPath
+    if ($finalCheckpoint.status -eq "Running") {
+        Write-Heartbeat -Status "Failed" -Checkpoint $finalCheckpoint -Device $deviceSnapshot -StopReason "ScanProcessExitedWithRunningCheckpoint"
+        throw "Scan process exited while its checkpoint was still Running."
+    }
     if ($null -ne $safetyStop) {
         Write-Heartbeat -Status "Failed" -Checkpoint $finalCheckpoint -Device $deviceSnapshot -StopReason $safetyStop
         throw "Night scan safety stop: $safetyStop"
@@ -308,4 +362,6 @@ try {
     if ($null -ne $child -and -not $child.HasExited -and $null -ne $safetyStop) {
         Stop-Process -Id $child.Id -Force -ErrorAction SilentlyContinue
     }
+    if ($null -ne $stdoutStream) { $stdoutStream.Dispose() }
+    if ($null -ne $stderrStream) { $stderrStream.Dispose() }
 }

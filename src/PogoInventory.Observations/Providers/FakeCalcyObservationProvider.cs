@@ -3,7 +3,7 @@ using PogoInventory.Observations.Models;
 
 namespace PogoInventory.Observations.Providers;
 
-public sealed class FakeCalcyObservationProvider : ICalcyObservationProvider
+public sealed class FakeCalcyObservationProvider : IPokemonObservationProvider
 {
     private static readonly IReadOnlyDictionary<int, CalcyObservation> Observations =
         new Dictionary<int, CalcyObservation>

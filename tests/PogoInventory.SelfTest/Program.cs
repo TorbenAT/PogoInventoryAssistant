@@ -67,6 +67,7 @@ var tests = new (string Name, Func<Task> Run)[]
     ("ADB device list parser recognises states", Sync(AdbDeviceListParserRecognisesStates)),
     ("ADB metadata parsers read screen and battery", Sync(AdbMetadataParsersReadScreenAndBattery)),
     ("ADB transport uses only expected read-only commands", AdbTransportUsesExpectedCommandsAsync),
+    ("ADB known-app stop is allow-listed", AdbKnownAppStopIsAllowListedAsync),
     ("ADB automation transport uses only tap and swipe commands", AdbAutomationTransportUsesExpectedCommandsAsync),
     ("ADB app inspection uses only named read commands", AdbAppInspectionUsesExpectedCommandsAsync),
     ("Calcy package dump parser reads metadata", Sync(CalcyPackageDumpParserReadsMetadata)),
@@ -539,6 +540,33 @@ static async Task AdbAutomationTransportUsesExpectedCommandsAsync()
         "-s ABC shell input swipe 800 1200 200 1200 320",
         actual[1],
         "swipe command");
+}
+
+static async Task AdbKnownAppStopIsAllowListedAsync()
+{
+    var runner = new RecordingAdbProcessRunner(new[]
+    {
+        new AdbProcessResult
+        {
+            ExitCode = 0,
+            StandardOutput = Array.Empty<byte>(),
+            StandardError = string.Empty
+        }
+    });
+    var transport = new AdbAndroidDeviceTransport(
+        runner,
+        new DeviceHarnessOptions
+        {
+            CommandTimeout = TimeSpan.FromSeconds(2)
+        });
+
+    await transport.StopKnownAppAsync("ABC", KnownAndroidPackage.Calcy);
+
+    var actual = runner.Commands.Select(x => string.Join(" ", x)).Single();
+    AssertEqual(
+        "-s ABC shell am force-stop tesmath.calcy",
+        actual,
+        "allow-listed Calcy stop command");
 }
 
 static async Task RejectsNoAuthorisedDeviceAsync()
@@ -2370,7 +2398,7 @@ static void LegacyCheckpointMigratesToSchema2()
 }
 
 static async Task<CalcyObservation> RunOneItemWithProviderAsync(
-    ICalcyObservationProvider provider)
+    IPokemonObservationProvider provider)
 {
     var directory = CreateTemporaryDirectory();
     try

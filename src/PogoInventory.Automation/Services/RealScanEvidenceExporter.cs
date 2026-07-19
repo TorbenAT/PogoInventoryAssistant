@@ -278,9 +278,19 @@ public static class RealScanEvidenceExporter
 
         var swipes = checkpoint.Actions.Where(action =>
             action.Kind == AutomationActionKind.SwipeNextPokemon).ToArray();
-        if (swipes.Length != Math.Max(0, checkpoint.Items.Count - 1) || swipes.Any(action =>
-                action.StateBefore != ScreenState.AppraisalOpen ||
-                action.StateAfter != ScreenState.AppraisalOpen))
+        var verifiedSwipes = swipes.Where(action =>
+            action.StateBefore == ScreenState.AppraisalOpen &&
+            action.StateAfter == ScreenState.AppraisalOpen).ToArray();
+        var invalidSwipes = swipes.Except(verifiedSwipes).ToArray();
+        var terminalUnknown = checkpoint.StopReason == AutomationStopReason.UnknownScreen &&
+            invalidSwipes.Length == 1 &&
+            invalidSwipes[0] == swipes[^1] &&
+            invalidSwipes[0].StateAfter == ScreenState.Unknown;
+        var swipeCountValid = terminalUnknown
+            ? verifiedSwipes.Length >= Math.Max(0, checkpoint.Items.Count - 1)
+            : verifiedSwipes.Length == Math.Max(0, checkpoint.Items.Count - 1) &&
+              invalidSwipes.Length == 0;
+        if (!swipeCountValid)
         {
             throw new InvalidOperationException(
                 "The checkpoint must contain one verified AppraisalOpen swipe between each item.");

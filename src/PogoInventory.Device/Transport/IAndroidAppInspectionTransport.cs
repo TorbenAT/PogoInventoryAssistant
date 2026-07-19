@@ -1,7 +1,14 @@
+using PogoInventory.Device.Models;
+
 namespace PogoInventory.Device.Transport;
 
 public interface IAndroidAppInspectionTransport : IAndroidDeviceTransport
 {
+    Task StopKnownAppAsync(
+        string serial,
+        KnownAndroidPackage app,
+        CancellationToken cancellationToken = default);
+
     Task<string> ReadPackageDumpAsync(
         string serial,
         string packageName,
