@@ -11,5 +11,7 @@ public enum ScreenState
     SearchOpen,
     Loading,
     Popup,
-    NetworkError
+    NetworkError,
+    KnownInformationalPopup,
+    ExternalOverlay
 }

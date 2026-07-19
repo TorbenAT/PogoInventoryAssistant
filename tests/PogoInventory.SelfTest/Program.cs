@@ -83,6 +83,7 @@ var tests = new (string Name, Func<Task> Run)[]
     ("PNG decoder reads synthetic fixture", Sync(PngDecoderReadsSyntheticFixture)),
     ("PNG decoder reconstructs Paeth-filtered row", Sync(PngDecoderReconstructsPaethFilteredRow)),
     ("Known screen fixtures classify correctly", KnownScreenFixturesClassifyAsync),
+    ("Known modal requires allow-list and post-state", Sync(KnownModalRequiresAllowListAndPostState)),
     ("Incomplete screen returns Unknown", IncompleteScreenReturnsUnknownAsync),
     ("Conflicting screen returns Unknown", ConflictingScreenReturnsUnknownAsync),
     ("Landscape screen fails closed", LandscapeScreenFailsClosedAsync),
@@ -2071,6 +2072,29 @@ static async Task ObservationProviderFailureIsRecordedAsync()
     AssertTrue(
         result.ErrorDetail?.Contains("simulated provider failure", StringComparison.Ordinal) == true,
         "provider failure detail");
+}
+
+static void KnownModalRequiresAllowListAndPostState()
+{
+    var modal = new KnownPokemonGoModal
+    {
+        Id = KnownPokemonGoModalId.NewMegaLevelAvailable,
+        Confidence = 0.99,
+        BeforeScreenshotSha256 = "before",
+        DismissalAllowed = true,
+        StateAfter = ScreenState.AppraisalOpen
+    };
+    modal.Validate();
+
+    AssertThrowsInvalidOperation(
+        () => new KnownPokemonGoModal
+        {
+            Id = KnownPokemonGoModalId.NewMegaLevelAvailable,
+            Confidence = 0.99,
+            BeforeScreenshotSha256 = "before",
+            DismissalAllowed = true
+        }.Validate(),
+        "dismissible modal without expected state");
 }
 
 static Task CalcyRawParserPreservesCatchLocationAsync()

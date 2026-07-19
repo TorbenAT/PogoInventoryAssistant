@@ -8,5 +8,6 @@ public enum AutomationActionKind
     SwipeNextPokemon,
     CaptureEvidence,
     CaptureObservation,
-    WaitForState
+    WaitForState,
+    DismissKnownInformationalPopup
 }
