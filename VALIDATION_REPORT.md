@@ -115,7 +115,33 @@ Executed successfully:
 - `powershell -ExecutionPolicy Bypass -File .\scripts\run-appraisal-pretest.ps1`
 - `powershell -ExecutionPolicy Bypass -File .\scripts\prepare-android-phone.ps1 -Adb .\tools\platform-tools\adb.exe`
 
+## Real-phone follow-up on 2026-07-19
+
+Executed successfully:
+
+- `powershell -ExecutionPolicy Bypass -File .\scripts\start-night-evidence-scan.ps1 -AdbPath .\tools\platform-tools\adb.exe -MaximumItems 3 -MaximumRuntimeHours 0.5 -OutputDirectory .\local-data\night-scans\stability-3`
+- `powershell -ExecutionPolicy Bypass -File .\scripts\run-local-calcy-probe.ps1 -AdbPath .\tools\platform-tools\adb.exe -Serial 192.168.1.185:5555 -OutputDirectory .\local-data\calcy-probe-real-2`
+- `dotnet run --project .\src\PogoInventory.Cli --configuration Release -- calcy-live-check --adb .\tools\platform-tools\adb.exe --serial 192.168.1.185:5555 --profile .\local-data\automation-profile.local.json --screen-profile .\local-data\screen-profile.local.json --settle-ms 2000 --out .\local-data\calcy-live-check-real-2`
+
 Key results:
+
+- the real phone scan completed 3/3 items with 2/2 verified swipes
+- calibration stability was `True` with 0.00 percent scale spread and 0.00 percent normalized translation spread
+- all three calibration cases remained Candidate-only with zero Complete observations
+- the three selected IV triplets were `10/12/15`, `11/12/11` and `15/6/9`
+- the real Calcy probe reported `CandidateEvidenceFound`
+- the installed Calcy package was `tesmath.calcy` version `3.44`
+- the real Calcy live-check captured one navigation item and then completed the read-only probe path
+- no parser profile was supplied for the live-check, so no parsed observation was written
+
+Output locations:
+
+- `local-data/night-scans/stability-3/calibration/phone-calibration-stability.md`
+- `local-data/night-scans/stability-3/calibration/phone-calibration-stability.json`
+- `local-data/calcy-probe-real-2/calcy-probe-report.md`
+- `local-data/calcy-live-check-real-2`
+
+## Base validation results
 
 - build succeeded with 0 warnings and 0 errors
 - self-test suite passed: 138/138
@@ -131,9 +157,11 @@ Key results:
 - iPhone region discovery accepted 23 decoded images, 4 visual clusters and a 12x24 grid
 - appraisal pretest found 10 candidates, 0 Complete observations, and a 90.0 percent dominant cluster
 - Android phone preparation succeeded with repo-local ADB and a real device at `192.168.1.185:5555`
+- the real phone scan and real Calcy checks remained read-only and added no transfer actions
 
 Limitations observed during validation:
 
 - `run-appraisal-pretest` required the region-discovery report, so `run-iphone-region-discovery` had to be run first.
 - `prepare-android-phone` failed with the default `adb` path because ADB was not on PATH in this environment.
 - The real phone preparation run confirmed `Verified IV extraction ready: False`, so verified IV extraction is still not available.
+- the real Calcy live-check did not parse a local observation because no parser profile was supplied yet

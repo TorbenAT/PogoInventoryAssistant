@@ -126,6 +126,27 @@ cannot share an ordinary duplicate group or authorize DELETE.
 evidence path with profile hashes, heartbeat, battery/disk/device safety checks,
 an item limit and a wall-clock limit. It performs no transfer or tagging action.
 
+### Real phone validation update on 2026-07-19
+
+The connected OnePlus A6013 completed a fresh 3-item real-phone appraisal run
+with:
+
+- 3/3 calibration cases marked stable
+- zero Complete observations
+- 2/2 verified swipes
+- 3 candidate observations
+- real `phone-calibration-stability.md` and `phone-calibration-stability.json`
+- zero transfer actions
+
+Calcy evidence on the same device was also rechecked:
+
+- `calcy-probe` reported `CandidateEvidenceFound`
+- the installed package was `tesmath.calcy` version `3.44`
+- overlay permission was proven
+- accessibility and running-service surfaces remained non-observational
+- `calcy-live-check` completed one navigation item and the read-only probe path
+- no parsed observation was produced because no parser profile was supplied
+
 ## Input boundary
 
 ```text
@@ -151,7 +172,7 @@ generate phone-specific definitions automatically.
 - extraction of exact semantic variant identity from Android screenshots
 - twenty-case appraisal truth verification
 - verified Complete visual IV provider
-- real Calcy evidence and provider selection
+- real Calcy provider selection and verified parsed-observation extraction
 - species and CP extraction
 - caught-on location/origin persistence for later tagging
 - SQLite inventory database
@@ -160,8 +181,8 @@ generate phone-specific definitions automatically.
 
 ## Required checkpoint after push
 
-1. Build all 15 projects.
-2. Confirm 135 of 135 self-tests pass.
+1. Build all 18 projects.
+2. Confirm 138 of 138 self-tests pass.
 3. Confirm the existing iPhone evidence stages remain green.
 4. Confirm appraisal pretest finds at least five candidates.
 5. Confirm candidates are concentrated at least 70 percent in one cluster.
@@ -188,6 +209,7 @@ When the Android phone and PC are available:
 7. run Calcy probe and live check
 8. collect twenty real verification cases before allowing Complete IV output
 
-Until then, improve only diagnostics and verification scaffolding. Do not add
-location changes, transfer automation, anti-detection logic or arbitrary shell
-execution.
+The first three steps were completed on 2026-07-19 against the connected
+OnePlus A6013. Until the 20-case verification gate is passed, improve only
+diagnostics and verification scaffolding. Do not add location changes,
+transfer automation, anti-detection logic or arbitrary shell execution.

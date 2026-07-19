@@ -349,3 +349,19 @@ The appraisal pretest's recoverable decoder policy is unchanged. Version
 0.14.3 only corrects the C# syntax used to express the existing list of
 recoverable exception types.
 
+## 2026-07-19 real-phone validation update
+
+The connected OnePlus A6013 has now exercised the real validation path:
+
+- `phone-prepare` produced a device-adjusted appraisal profile from a live
+  appraisal screen.
+- `phone-calibration-stability.md` recorded three appraisal cases with
+  stable transforms, zero Complete observations and distinct IV triplets.
+- `calcy-probe` confirmed `tesmath.calcy` version 3.44 and the read-only
+  evidence surfaces used by the current probe boundary.
+- `calcy-live-check` completed a one-item appraisal capture and then ran the
+  same read-only probe path.
+
+This confirms that the architecture's current read-only boundaries still hold
+on a real phone while the verified provider gate remains closed.
+

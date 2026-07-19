@@ -7,6 +7,9 @@
 - Kept the SHA-256-guarded removal script for `IMG_7699.png`.
 - Kept the expected self-test total at 113.
 - Added no phone input action.
+- Confirmed a real-phone 3-item appraisal stability run on the connected OnePlus A6013 with zero Complete observations.
+- Confirmed a real Calcy probe on `tesmath.calcy` and a real Calcy live-check against the same device.
+- Kept the four named phone actions unchanged.
 
 ## 0.14.2
 

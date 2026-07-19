@@ -1,6 +1,6 @@
 # Continuation prompt
 
-Use this after version 0.14.3 is green.
+Use this after the 2026-07-19 real-phone validation run.
 
 I am building Pogo Inventory Assistant in C# and .NET 8.
 
@@ -18,24 +18,22 @@ Accepted:
 - four labelled visual clusters
 - normalised appraisal bar definitions
 - automatic translation and scale fitting
+- real phone 3-item appraisal stability with zero Complete observations
+- real Calcy probe on the connected OnePlus A6013
+- real Calcy live-check on the connected OnePlus A6013
 - candidate IV estimates only
 - zero Complete results from unverified profiles
 - read-only Android `phone-prepare`
-- 114 self-tests
+- 138 self-tests
 
-First verify that version 0.14.3 is green.
+First verify that the repository stays green after the real-phone validation update.
 
-Next milestone when the fixed Android phone is available:
+Next milestone on the fixed Android phone:
 
-1. Run `scripts/prepare-android-phone.ps1` while the phone is manually on an
-   appraisal screen.
-2. Inspect `phone-readiness.json`, `appraisal-overlay.png` and the generated
-   device profile.
-3. Repeat on at least three different Pokémon.
-4. Add a profile-stability report comparing fitted bar coordinates and values.
-5. Run `calcy-probe` and `calcy-live-check`.
-6. Build twenty real truth cases.
-7. Require zero false Complete observations before selecting the visual
+1. Collect twenty real appraisal truth cases on different Pokémon.
+2. Keep the generated device profile and stability report local.
+3. Verify a parser profile only after a real output format is proven.
+4. Require zero false Complete observations before selecting the visual
    appraisal provider.
-8. Add no new phone input action unless it is one of the existing four named
+5. Add no new phone input action unless it is one of the existing four named
    actions and remains state validated.
