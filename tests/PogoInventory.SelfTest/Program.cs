@@ -84,6 +84,7 @@ var tests = new (string Name, Func<Task> Run)[]
     ("PNG decoder reconstructs Paeth-filtered row", Sync(PngDecoderReconstructsPaethFilteredRow)),
     ("Known screen fixtures classify correctly", KnownScreenFixturesClassifyAsync),
     ("Known modal requires allow-list and post-state", Sync(KnownModalRequiresAllowListAndPostState)),
+    ("Inventory search query is safely validated", Sync(InventorySearchQueryIsSafelyValidated)),
     ("Incomplete screen returns Unknown", IncompleteScreenReturnsUnknownAsync),
     ("Conflicting screen returns Unknown", ConflictingScreenReturnsUnknownAsync),
     ("Landscape screen fails closed", LandscapeScreenFailsClosedAsync),
@@ -2095,6 +2096,19 @@ static void KnownModalRequiresAllowListAndPostState()
             DismissalAllowed = true
         }.Validate(),
         "dismissible modal without expected state");
+}
+
+static void InventorySearchQueryIsSafelyValidated()
+{
+    AssertEqual(InventorySearchQuery.Unindexed,
+        InventorySearchQuery.Validate(" !#AI-Indexed "),
+        "trimmed authoritative queue query");
+    AssertThrowsInvalidOperation(
+        () => InventorySearchQuery.Validate("!#AI-Indexed\n"),
+        "newline in search query");
+    AssertThrowsInvalidOperation(
+        () => InventorySearchQuery.Validate(new string('x', InventorySearchQuery.MaximumLength + 1)),
+        "oversized search query");
 }
 
 static Task CalcyRawParserPreservesCatchLocationAsync()

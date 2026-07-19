@@ -10,4 +10,15 @@ public enum AutomationActionKind
     CaptureObservation,
     WaitForState,
     DismissKnownInformationalPopup
+    ,OpenPokemonInventory
+    ,OpenInventorySearch
+    ,ClearInventorySearch
+    ,EnterInventorySearchText
+    ,ApplyInventorySearch
+    ,TapFirstSearchResult
+    ,CloseAppraisal
+    ,OpenPokemonTagMenu
+    ,SelectConfiguredTag
+    ,ConfirmConfiguredTag
+    ,BackToFilteredInventory
 }

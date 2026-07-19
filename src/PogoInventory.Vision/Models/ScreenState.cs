@@ -14,4 +14,10 @@ public enum ScreenState
     NetworkError,
     KnownInformationalPopup,
     ExternalOverlay
+    ,PokemonInventory
+    ,InventorySearchOpen
+    ,InventoryFiltered
+    ,InventoryEmptyResult
+    ,TagSelectionOpen
+    ,TagApplied
 }
