@@ -1,6 +1,7 @@
 using System.Globalization;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using System.Xml.Linq;
 using PogoInventory.Appraisal.Models;
 using PogoInventory.Appraisal.Services;
 using PogoInventory.Persistence;
@@ -124,6 +125,9 @@ static async Task<int> MainAsync(string[] args)
                 args.Skip(1).ToArray(),
                 cancellationSource.Token),
             "device-ui-snapshot" => await CaptureDeviceUiSnapshotAsync(
+                args.Skip(1).ToArray(),
+                cancellationSource.Token),
+            "device-launch-pokemon-go" => await LaunchPokemonGoAsync(
                 args.Skip(1).ToArray(),
                 cancellationSource.Token),
             "inventory-db-init" => await InitializeInventoryDbAsync(
@@ -1768,6 +1772,50 @@ static async Task<int> CaptureDeviceUiSnapshotAsync(
     return 0;
 }
 
+static async Task<int> LaunchPokemonGoAsync(
+    string[] args,
+    CancellationToken cancellationToken)
+{
+    var options = ParseOptions(args);
+    var outputDirectory = Require(options, "out");
+    var transport = CreateRealAndroidTransport(options);
+    var devices = await transport.ListDevicesAsync(cancellationToken);
+    var selected = DeviceSnapshotService.SelectDevice(devices, Optional(options, "serial"));
+    var hierarchy = await transport.CaptureUiHierarchyAsync(selected.Serial, cancellationToken);
+    var node = XDocument.Parse(hierarchy)
+        .Descendants("node")
+        .FirstOrDefault(item =>
+            string.Equals((string?)item.Attribute("text"), "Pokémon GO", StringComparison.Ordinal) ||
+            string.Equals((string?)item.Attribute("content-desc"), "Pokémon GO", StringComparison.Ordinal));
+    if (node is null)
+    {
+        throw new InvalidOperationException(
+            "Could not find the exact visible Pokémon GO launcher control; no action was taken.");
+    }
+
+    var bounds = (string?)node.Attribute("bounds") ??
+        throw new InvalidOperationException("The Pokémon GO control had no bounds; no action was taken.");
+    var match = System.Text.RegularExpressions.Regex.Match(
+        bounds, "^\\[(\\d+),(\\d+)\\]\\[(\\d+),(\\d+)\\]$");
+    if (!match.Success)
+    {
+        throw new InvalidOperationException("The Pokémon GO control bounds were invalid; no action was taken.");
+    }
+
+    var left = int.Parse(match.Groups[1].Value, CultureInfo.InvariantCulture);
+    var top = int.Parse(match.Groups[2].Value, CultureInfo.InvariantCulture);
+    var right = int.Parse(match.Groups[3].Value, CultureInfo.InvariantCulture);
+    var bottom = int.Parse(match.Groups[4].Value, CultureInfo.InvariantCulture);
+    await transport.TapAsync(
+        selected.Serial,
+        left + ((right - left) / 2),
+        top + ((bottom - top) / 2),
+        cancellationToken);
+
+    Console.WriteLine("Clicked the exact visible Pokémon GO launcher control.");
+    return await CaptureDeviceUiSnapshotAsync(args, cancellationToken);
+}
+
 static int? ParseOptionalPositiveInt(
     IReadOnlyDictionary<string, string> options,
     string key)
@@ -2031,6 +2079,7 @@ static void PrintHelp()
     Console.WriteLine("  device-snapshot --out <directory> [--adb <adb.exe>] [--serial <serial>] [--timeout-seconds <n>]");
     Console.WriteLine("  device-snapshot --fake --out <directory>");
     Console.WriteLine("  device-ui-snapshot --out <directory> [--adb <adb.exe>] [--serial <serial>] [--timeout-seconds <n>]");
+    Console.WriteLine("  device-launch-pokemon-go --out <directory> [--adb <adb.exe>] [--serial <serial>] [--timeout-seconds <n>]");
     Console.WriteLine();
     Console.WriteLine("  screen-detect --image <screen.png> --profile <profile.json> --out <evidence.json>");
     Console.WriteLine("  screen-fingerprint --image <screen.png> --region <x,y,w,h> --out <fingerprint.json>");
