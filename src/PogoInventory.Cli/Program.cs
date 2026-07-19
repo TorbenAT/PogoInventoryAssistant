@@ -3,6 +3,7 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 using PogoInventory.Appraisal.Models;
 using PogoInventory.Appraisal.Services;
+using PogoInventory.Persistence;
 using PogoInventory.Automation.Errors;
 using PogoInventory.Automation.Models;
 using PogoInventory.Automation.Services;
@@ -119,6 +120,12 @@ static async Task<int> MainAsync(string[] args)
             "device-snapshot" => await CaptureDeviceSnapshotAsync(
                 args.Skip(1).ToArray(),
                 cancellationSource.Token),
+            "inventory-db-init" => await InitializeInventoryDbAsync(
+                args.Skip(1).ToArray(),
+                cancellationSource.Token),
+            "inventory-db-summary" => await SummarizeInventoryDbAsync(
+                args.Skip(1).ToArray(),
+                cancellationSource.Token),
             "screen-detect" => await DetectScreenAsync(
                 args.Skip(1).ToArray(),
                 cancellationSource.Token),
@@ -186,6 +193,30 @@ static async Task<int> MainAsync(string[] args)
     {
         Console.CancelKeyPress -= cancelHandler;
     }
+}
+
+static async Task<int> InitializeInventoryDbAsync(
+    string[] args,
+    CancellationToken cancellationToken)
+{
+    var options = ParseOptions(args);
+    var path = Optional(options, "db") ?? Path.Combine("local-data", "inventory", "pogo-inventory.db");
+    await new InventoryPersistenceService(path).InitializeAsync(cancellationToken);
+    Console.WriteLine($"Inventory database initialized: {Path.GetFullPath(path)}");
+    return 0;
+}
+
+static async Task<int> SummarizeInventoryDbAsync(
+    string[] args,
+    CancellationToken cancellationToken)
+{
+    var options = ParseOptions(args);
+    var path = Optional(options, "db") ?? Path.Combine("local-data", "inventory", "pogo-inventory.db");
+    var service = new InventoryPersistenceService(path);
+    var count = await service.CountObservationsAsync(cancellationToken);
+    Console.WriteLine($"Database: {Path.GetFullPath(path)}");
+    Console.WriteLine($"Observations: {count}");
+    return 0;
 }
 
 static async Task<int> AnalyzeAsync(
@@ -1886,6 +1917,8 @@ static void PrintHelp()
     Console.WriteLine("                   [--requested-maximum-items <n>] [--generate-overlays <true|false>]");
     Console.WriteLine("                   [--copy-screenshots <true|false>] [--generate-checkpoint-evidence <true|false>]");
     Console.WriteLine("  device-stop-known-app --app calcy [--adb <adb.exe>] [--serial <serial>]");
+    Console.WriteLine("  inventory-db-init [--db <pogo-inventory.db>]");
+    Console.WriteLine("  inventory-db-summary [--db <pogo-inventory.db>]");
     Console.WriteLine("  inventory-scan --fake --profile <automation.json> --screen-profile <screen-profile.json>");
     Console.WriteLine("                 --out <directory> [--fixtures <directory>] [--max-items <n>]");
     Console.WriteLine("                 [--observation-provider <fake|none|appraisal>]");
