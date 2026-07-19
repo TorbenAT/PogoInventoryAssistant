@@ -267,6 +267,17 @@ public sealed class AdbAndroidDeviceTransport : IAndroidAutomationTransport, IAn
             cancellationToken);
     }
 
+    public async Task OpenPokemonInventoryAsync(
+        string serial,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(serial);
+        await RunAsync(
+            ForDevice(serial, "shell", "input", "keyevent", "KEYCODE_BACK"),
+            "return to the Pokémon GO inventory",
+            cancellationToken);
+    }
+
     public async Task SwipeAsync(
         string serial,
         int startX,

@@ -138,6 +138,16 @@ public sealed class ScriptedAndroidAutomationTransport : IAndroidAutomationTrans
         return Task.CompletedTask;
     }
 
+    public Task OpenPokemonInventoryAsync(
+        string serial,
+        CancellationToken cancellationToken = default)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        EnsureSerial(serial);
+        _actions.Add("open-inventory");
+        return Task.CompletedTask;
+    }
+
     public Task SwipeAsync(
         string serial,
         int startX,

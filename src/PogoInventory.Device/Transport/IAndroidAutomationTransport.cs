@@ -2,6 +2,10 @@ namespace PogoInventory.Device.Transport;
 
 public interface IAndroidAutomationTransport : IAndroidDeviceTransport
 {
+    Task OpenPokemonInventoryAsync(
+        string serial,
+        CancellationToken cancellationToken = default);
+
     Task EnterInventorySearchQueryAsync(
         string serial,
         string query,

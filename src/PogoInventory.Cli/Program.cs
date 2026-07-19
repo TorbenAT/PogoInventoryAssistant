@@ -117,6 +117,9 @@ static async Task<int> MainAsync(string[] args)
             "device-stop-known-app" => await StopKnownAppAsync(
                 args.Skip(1).ToArray(),
                 cancellationSource.Token),
+            "device-open-inventory" => await OpenInventoryAsync(
+                args.Skip(1).ToArray(),
+                cancellationSource.Token),
             "device-snapshot" => await CaptureDeviceSnapshotAsync(
                 args.Skip(1).ToArray(),
                 cancellationSource.Token),
@@ -1702,6 +1705,19 @@ static async Task<int> StopKnownAppAsync(
     return 0;
 }
 
+static async Task<int> OpenInventoryAsync(
+    string[] args,
+    CancellationToken cancellationToken)
+{
+    var options = ParseOptions(args);
+    var transport = CreateRealAndroidTransport(options);
+    var devices = await transport.ListDevicesAsync(cancellationToken);
+    var selected = DeviceSnapshotService.SelectDevice(devices, Optional(options, "serial"));
+    await transport.OpenPokemonInventoryAsync(selected.Serial, cancellationToken);
+    Console.WriteLine($"Sent one allow-listed OpenPokemonInventory action to {selected.Serial}.");
+    return 0;
+}
+
 static int? ParseOptionalPositiveInt(
     IReadOnlyDictionary<string, string> options,
     string key)
@@ -1917,6 +1933,7 @@ static void PrintHelp()
     Console.WriteLine("                   [--requested-maximum-items <n>] [--generate-overlays <true|false>]");
     Console.WriteLine("                   [--copy-screenshots <true|false>] [--generate-checkpoint-evidence <true|false>]");
     Console.WriteLine("  device-stop-known-app --app calcy [--adb <adb.exe>] [--serial <serial>]");
+    Console.WriteLine("  device-open-inventory [--adb <adb.exe>] [--serial <serial>]");
     Console.WriteLine("  inventory-db-init [--db <pogo-inventory.db>]");
     Console.WriteLine("  inventory-db-summary [--db <pogo-inventory.db>]");
     Console.WriteLine("  inventory-scan --fake --profile <automation.json> --screen-profile <screen-profile.json>");
