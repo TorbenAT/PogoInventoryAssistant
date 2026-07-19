@@ -2,6 +2,11 @@ namespace PogoInventory.Device.Transport;
 
 public interface IAndroidAutomationTransport : IAndroidDeviceTransport
 {
+    Task EnterInventorySearchQueryAsync(
+        string serial,
+        string query,
+        CancellationToken cancellationToken = default);
+
     Task TapAsync(
         string serial,
         int x,

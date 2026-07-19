@@ -249,6 +249,24 @@ public sealed class AdbAndroidDeviceTransport : IAndroidAutomationTransport, IAn
             cancellationToken);
     }
 
+    public async Task EnterInventorySearchQueryAsync(
+        string serial,
+        string query,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(serial);
+        ArgumentException.ThrowIfNullOrWhiteSpace(query);
+        if (query.Length > 100 || query.Any(char.IsControl) || !query.StartsWith("!#", StringComparison.Ordinal))
+        {
+            throw new ArgumentException("Only validated Pokémon GO filter queries are allowed.", nameof(query));
+        }
+
+        await RunAsync(
+            ForDevice(serial, "shell", "input", "text", query),
+            "enter the validated Pokémon GO search query",
+            cancellationToken);
+    }
+
     public async Task SwipeAsync(
         string serial,
         int startX,
