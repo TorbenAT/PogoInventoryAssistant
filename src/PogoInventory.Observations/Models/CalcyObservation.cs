@@ -23,6 +23,7 @@ public sealed record CalcyObservation
     public string? FastMove { get; init; }
     public string? ChargedMove1 { get; init; }
     public string? ChargedMove2 { get; init; }
+    public string? CatchLocation { get; init; }
     public string? RawProviderOutput { get; init; }
     public string? RawProviderOutputSha256 { get; init; }
     public string? ErrorCode { get; init; }

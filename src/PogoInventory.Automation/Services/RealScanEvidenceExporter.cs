@@ -385,6 +385,7 @@ public static class RealScanEvidenceExporter
                 RawProviderOutputSha256 = item.Observation.RawProviderOutputSha256,
                 VariantIdentity = variant,
                 Cp = item.Observation.Cp,
+                CatchLocation = item.Observation.CatchLocation,
                 ObservationStatus = isCandidate ? "Candidate" : "Incomplete",
                 ErrorCode = isCandidate ? null : "AppraisalCandidateNotConfirmed",
                 ErrorDetail = isCandidate ? null : analysis.Detail,

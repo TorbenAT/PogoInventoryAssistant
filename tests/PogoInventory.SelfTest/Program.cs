@@ -129,6 +129,7 @@ var tests = new (string Name, Func<Task> Run)[]
     ("Calcy probe writes local evidence and report", CalcyProbeWritesEvidenceAsync),
     ("Automatic Calcy live check reaches appraisal and parses output", CalcyLiveCheckNavigatesAndParsesAsync),
     ("Calcy raw parser extracts complete observation", CalcyRawParserExtractsCompleteObservationAsync),
+    ("Calcy raw parser preserves catch location", CalcyRawParserPreservesCatchLocationAsync),
     ("Calcy raw parser keeps incomplete output partial", CalcyRawParserKeepsPartialObservationAsync),
     ("Calcy raw parser detects conflicting fields", CalcyRawParserDetectsConflictingFieldsAsync),
     ("Profile driven provider preserves raw output", ProfileDrivenProviderPreservesRawOutputAsync),
@@ -2070,6 +2071,32 @@ static async Task ObservationProviderFailureIsRecordedAsync()
     AssertTrue(
         result.ErrorDetail?.Contains("simulated provider failure", StringComparison.Ordinal) == true,
         "provider failure detail");
+}
+
+static Task CalcyRawParserPreservesCatchLocationAsync()
+{
+    var profile = new CalcyTextParserProfile
+    {
+        Name = "Catch location self-test",
+        ProviderVersion = "self-test",
+        Patterns = new[]
+        {
+            new CalcyTextPatternDefinition
+            {
+                Field = CalcyTextField.CatchLocation,
+                Pattern = @"caught\s+at\s+(?<value>.+)$"
+            }
+        }
+    };
+
+    var observation = new CalcyRawTextParser().Parse(
+        profile,
+        Bundle("caught at Holstebro, Denmark"),
+        "SelfTestParser");
+
+    AssertEqual("Holstebro, Denmark", observation.CatchLocation, "parsed catch location");
+    AssertEqual(CalcyObservationStatus.Partial, observation.Status, "location-only parser status");
+    return Task.CompletedTask;
 }
 
 static async Task AppraisalProviderPropagatesCancellationAsync()

@@ -82,6 +82,7 @@ public sealed class CalcyRawTextParser
         var attackIv = Integer(CalcyTextField.AttackIv, 0, 15);
         var defenseIv = Integer(CalcyTextField.DefenseIv, 0, 15);
         var hpIv = Integer(CalcyTextField.HpIv, 0, 15);
+        var catchLocation = Text(CalcyTextField.CatchLocation);
 
         var hasAny = !string.IsNullOrWhiteSpace(species) ||
             pokedexNumber is not null ||
@@ -95,7 +96,8 @@ public sealed class CalcyRawTextParser
             !string.IsNullOrWhiteSpace(Text(CalcyTextField.Gender)) ||
             !string.IsNullOrWhiteSpace(Text(CalcyTextField.FastMove)) ||
             !string.IsNullOrWhiteSpace(Text(CalcyTextField.ChargedMove1)) ||
-            !string.IsNullOrWhiteSpace(Text(CalcyTextField.ChargedMove2));
+            !string.IsNullOrWhiteSpace(Text(CalcyTextField.ChargedMove2)) ||
+            !string.IsNullOrWhiteSpace(catchLocation);
         var complete = (species is not null || pokedexNumber is not null) &&
             cp is not null &&
             attackIv is not null &&
@@ -140,6 +142,7 @@ public sealed class CalcyRawTextParser
             FastMove = Text(CalcyTextField.FastMove),
             ChargedMove1 = Text(CalcyTextField.ChargedMove1),
             ChargedMove2 = Text(CalcyTextField.ChargedMove2),
+            CatchLocation = catchLocation,
             RawProviderOutput = raw,
             ErrorCode = status == CalcyObservationStatus.Failed
                 ? "NoRecognizedFields"

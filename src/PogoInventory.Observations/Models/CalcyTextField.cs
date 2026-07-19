@@ -14,5 +14,6 @@ public enum CalcyTextField
     Gender,
     FastMove,
     ChargedMove1,
-    ChargedMove2
+    ChargedMove2,
+    CatchLocation
 }
