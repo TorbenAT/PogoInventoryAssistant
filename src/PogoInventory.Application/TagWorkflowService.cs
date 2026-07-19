@@ -56,4 +56,31 @@ public sealed class TagWorkflowService
         command.Parameters.AddWithValue("@error", (object?)error ?? DBNull.Value);
         await command.ExecuteNonQueryAsync(cancellationToken);
     }
+
+    public async Task<bool> IsVerifiedAsync(
+        string localPokemonId,
+        string tagName,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(localPokemonId);
+        ArgumentException.ThrowIfNullOrWhiteSpace(tagName);
+        if (!AllowedTags.Contains(tagName))
+        {
+            throw new InvalidOperationException($"Tag '{tagName}' is not allow-listed.");
+        }
+
+        if (!File.Exists(_databasePath))
+        {
+            return false;
+        }
+
+        await using var connection = new SqliteConnection($"Data Source={_databasePath}");
+        await connection.OpenAsync(cancellationToken);
+        await using var command = connection.CreateCommand();
+        command.CommandText = "SELECT VerifiedState = 'Verified' FROM TagAssignments WHERE LocalPokemonId = @id AND TagName = @tag";
+        command.Parameters.AddWithValue("@id", localPokemonId);
+        command.Parameters.AddWithValue("@tag", tagName);
+        var value = await command.ExecuteScalarAsync(cancellationToken);
+        return value is not null && Convert.ToInt32(value) == 1;
+    }
 }
