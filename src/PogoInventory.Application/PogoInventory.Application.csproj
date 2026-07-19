@@ -6,6 +6,7 @@
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
   </PropertyGroup>
   <ItemGroup>
+    <PackageReference Include="Microsoft.Data.Sqlite" Version="8.0.10" />
     <ProjectReference Include="..\PogoInventory.Persistence\PogoInventory.Persistence.csproj" />
   </ItemGroup>
 </Project>
