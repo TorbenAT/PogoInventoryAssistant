@@ -106,7 +106,7 @@ Version 0.14.0 adds:
 - read-only `phone-prepare`
 - local device-adjusted profile generation
 - Android readiness report
-- 113 expected self-tests
+- 114 expected self-tests
 
 ## Input boundary
 
@@ -144,7 +144,7 @@ generate phone-specific definitions automatically.
 ## Required checkpoint after push
 
 1. Build all 15 projects.
-2. Confirm 113 of 113 self-tests pass.
+2. Confirm 114 of 114 self-tests pass.
 3. Confirm the existing iPhone evidence stages remain green.
 4. Confirm appraisal pretest finds at least five candidates.
 5. Confirm candidates are concentrated at least 70 percent in one cluster.

@@ -85,7 +85,7 @@ Run:
 .\scripts\test.ps1
 ```
 
-The current declared test count is 113.
+The current declared test count is 114.
 
 ### iPhone evidence chain
 

@@ -32,4 +32,4 @@ catch (Exception exception) when (
 No decoder policy, appraisal geometry, thresholds, report schema, removal
 script or phone action changed.
 
-Expected total: 113 self-tests.
+Expected total: 114 self-tests.

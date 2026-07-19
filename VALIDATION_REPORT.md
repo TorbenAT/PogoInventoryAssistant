@@ -8,7 +8,7 @@ Static checks confirm:
 - all five recoverable exception types remain present
 - the malformed phrase `or exception is` is absent
 - the unsupported-PNG regression test remains declared
-- the expected self-test count remains 113
+- the expected self-test count remains 114
 - no phone action changed
 
 GitHub Actions remains the authoritative compiler and execution environment.
@@ -69,7 +69,7 @@ Torben reported version 0.13.1 fully green.
 - the CLI contains `appraisal-pretest` and `phone-prepare`
 - the default appraisal profile parses
 - the workflow runs the real iPhone appraisal pretest
-- 113 self-tests are declared
+- 114 self-tests are declared
 - no new phone input action exists
 - the committed profile is unverified
 - Complete output requires both verification metadata and an explicit verified-provider enable flag

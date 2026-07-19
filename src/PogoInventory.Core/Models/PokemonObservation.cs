@@ -15,6 +15,7 @@ public sealed record PokemonObservation
     public int? DefenseIv { get; init; }
     public int? HpIv { get; init; }
     public DateOnly? CatchDate { get; init; }
+    public string? CatchLocation { get; init; }
 
     public bool? IsShiny { get; init; }
     public bool? IsLegendary { get; init; }

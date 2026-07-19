@@ -21,7 +21,7 @@ Accepted:
 - candidate IV estimates only
 - zero Complete results from unverified profiles
 - read-only Android `phone-prepare`
-- 113 self-tests
+- 114 self-tests
 
 First verify that version 0.14.3 is green.
 

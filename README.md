@@ -187,7 +187,7 @@ along with the nullable Pokémon fields, provider information, warnings, raw out
 .\scripts\parse-synthetic-calcy-output.ps1
 ```
 
-The expected test count is 91.
+The expected test count is 114.
 
 ## Real-device Calcy probe
 

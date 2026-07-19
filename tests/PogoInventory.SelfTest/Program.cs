@@ -46,6 +46,7 @@ var tests = new (string Name, Func<Task> Run)[]
     ("Perfect is kept", Sync(PerfectIsKept)),
     ("Trade nickname is kept", Sync(TradeNicknameIsKept)),
     ("Old Pokémon is kept", Sync(OldPokemonIsKept)),
+    ("Pokémon observation preserves catch location", Sync(PokemonObservationPreservesCatchLocation)),
     ("Shadow is reviewed", Sync(ShadowIsReviewed)),
     ("Inferior duplicate is deleted", Sync(InferiorDuplicateIsDeleted)),
     ("Preliminary PvP candidate is reviewed", Sync(PvpCandidateIsReviewed)),
@@ -203,6 +204,20 @@ static void OldPokemonIsKept()
     var result = Analyze(
         P("A", "Eevee", 300, 5, 5, 5) with { CatchDate = new DateOnly(2018, 1, 1) });
     AssertCategory(result, "A", DecisionCategory.Keep);
+}
+
+static void PokemonObservationPreservesCatchLocation()
+{
+    var original = P("A", "Eevee", 300, 5, 5, 5) with
+    {
+        CatchLocation = "Holstebro, Danmark"
+    };
+
+    var json = JsonSerializer.Serialize(original);
+    var roundTripped = JsonSerializer.Deserialize<PokemonObservation>(json) ??
+        throw new InvalidOperationException("Round-tripped observation was null.");
+
+    AssertEqual("Holstebro, Danmark", roundTripped.CatchLocation, "catch location");
 }
 
 static void ShadowIsReviewed()
@@ -4169,6 +4184,7 @@ static PokemonObservation P(
         DefenseIv = defense,
         HpIv = hp,
         CatchDate = new DateOnly(2026, 7, 1),
+        CatchLocation = "Holstebro, Danmark",
         IsShiny = false,
         IsMythical = false,
         IsBackground = false,
