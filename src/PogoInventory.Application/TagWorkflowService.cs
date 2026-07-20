@@ -20,12 +20,12 @@ public sealed class TagWorkflowService
 
     public async Task RequestAndRecordAsync(
         string localPokemonId,
-        string tagName,
-        bool verified,
-        string? error = null,
+        TagExecutionResult execution,
         CancellationToken cancellationToken = default)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(localPokemonId);
+        ArgumentNullException.ThrowIfNull(execution);
+        var tagName = execution.TagName;
         ArgumentException.ThrowIfNullOrWhiteSpace(tagName);
         if (!AllowedTags.Contains(tagName))
         {
@@ -50,10 +50,10 @@ public sealed class TagWorkflowService
         var now = DateTimeOffset.UtcNow.ToString("O");
         command.Parameters.AddWithValue("@id", localPokemonId);
         command.Parameters.AddWithValue("@tag", tagName);
-        command.Parameters.AddWithValue("@verified", verified ? "Verified" : "Failed");
+        command.Parameters.AddWithValue("@verified", execution.IsCompleteVerification ? "Verified" : "Failed");
         command.Parameters.AddWithValue("@requested", now);
-        command.Parameters.AddWithValue("@verifiedAt", verified ? now : DBNull.Value);
-        command.Parameters.AddWithValue("@error", (object?)error ?? DBNull.Value);
+        command.Parameters.AddWithValue("@verifiedAt", execution.IsCompleteVerification ? now : DBNull.Value);
+        command.Parameters.AddWithValue("@error", (object?)execution.Error ?? DBNull.Value);
         await command.ExecuteNonQueryAsync(cancellationToken);
     }
 

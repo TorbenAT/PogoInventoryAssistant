@@ -7,11 +7,13 @@ public sealed class RunCoordinator
 {
     private readonly InventoryPersistenceService _persistence;
     private readonly TagWorkflowService _tags;
+    private readonly IPokemonGoTagExecutor? _tagExecutor;
 
-    public RunCoordinator(string databasePath)
+    public RunCoordinator(string databasePath, IPokemonGoTagExecutor? tagExecutor = null)
     {
         _persistence = new InventoryPersistenceService(databasePath);
         _tags = new TagWorkflowService(databasePath);
+        _tagExecutor = tagExecutor;
     }
 
     public async Task<RunCycleResult> CommitObservationAndTagsAsync(
@@ -39,12 +41,22 @@ public sealed class RunCoordinator
                     continue;
                 }
 
-                await _tags.RequestAndRecordAsync(
-                    localPokemonId,
-                    tag,
-                    verified: true,
-                    cancellationToken: cancellationToken);
-                tags.Add(tag);
+                var execution = _tagExecutor is null
+                    ? new TagExecutionResult
+                    {
+                        TagName = tag,
+                        Error = "No real Pokémon GO tag executor is configured."
+                    }
+                    : await _tagExecutor.ExecuteAsync(localPokemonId, tag, cancellationToken);
+                await _tags.RequestAndRecordAsync(localPokemonId, execution, cancellationToken);
+                if (execution.IsCompleteVerification)
+                {
+                    tags.Add(tag);
+                }
+                else
+                {
+                    tagErrors.Add($"{tag}: {execution.Error ?? "Tag execution was not fully verified."}");
+                }
             }
             catch (Exception exception) when (exception is not OperationCanceledException)
             {

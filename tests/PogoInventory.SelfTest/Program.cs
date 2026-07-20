@@ -2,6 +2,7 @@ using System.Globalization;
 using System.Text.Json;
 using PogoInventory.Appraisal.Models;
 using PogoInventory.Appraisal.Services;
+using PogoInventory.Application;
 using PogoInventory.Automation.Models;
 using PogoInventory.Automation.Services;
 using PogoInventory.Automation.Transport;
@@ -181,6 +182,7 @@ var tests = new (string Name, Func<Task> Run)[]
     ("Phone preparation writes generated profile", PhonePreparationWritesGeneratedProfileAsync),
     ("Phone preparation remains read only on non appraisal screen", PhonePreparationHandlesNonAppraisalScreenAsync),
     ("Appraisal profile rejects incomplete verification metadata", Sync(AppraisalProfileRejectsIncompleteVerificationMetadata))
+    ,("Tag verification requires executor evidence", TagVerificationTests.RunAsync)
 };
 
 var failed = 0;
