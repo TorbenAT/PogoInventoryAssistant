@@ -126,6 +126,9 @@ static async Task<int> MainAsync(string[] args)
             "device-press-back" => await PressBackAsync(
                 args.Skip(1).ToArray(),
                 cancellationSource.Token),
+            "device-close-inventory" => await CloseInventoryAsync(
+                args.Skip(1).ToArray(),
+                cancellationSource.Token),
             "device-detect-game-state" => await DetectGameStateAsync(
                 args.Skip(1).ToArray(),
                 cancellationSource.Token),
@@ -1765,6 +1768,60 @@ static async Task<int> PressBackAsync(
     return 0;
 }
 
+static async Task<int> CloseInventoryAsync(string[] args, CancellationToken cancellationToken)
+{
+    var options = ParseOptions(args);
+    var output = Path.GetFullPath(Require(options, "out"));
+    Directory.CreateDirectory(output);
+    var transport = CreateRealAndroidTransport(options);
+    var selected = DeviceSnapshotService.SelectDevice(
+        await transport.ListDevicesAsync(cancellationToken), Optional(options, "serial"));
+    var detector = new PokemonGoGameStateDetector();
+    var before = await CaptureCloseFrameAsync("before", null);
+    if (!GuardedInventoryClose.CanAct(before.Detection))
+    {
+        Console.WriteLine($"Close inventory result: FAIL_CLOSED; state={before.Detection.State}; PHONE_ACTIONS: 0");
+        return 2;
+    }
+
+    await transport.PressBackAsync(selected.Serial, cancellationToken);
+    var post = await WaitForMapAsync();
+    Console.WriteLine($"Close inventory result: {(GuardedInventoryClose.IsSuccessful(post.Detection) ? "PASS" : "FAIL")}; PHONE_ACTIONS: 1; state={post.Detection.State}");
+    return GuardedInventoryClose.IsSuccessful(post.Detection) ? 0 : 1;
+
+    async Task<(byte[] Screenshot, PokemonGoGameStateDetection Detection)> CaptureCloseFrameAsync(
+        string name, PokemonGoGameState? expected)
+    {
+        var screenshot = await transport.CaptureScreenshotPngAsync(selected.Serial, cancellationToken);
+        var detection = detector.Detect(screenshot);
+        var directory = Path.Combine(output, name);
+        Directory.CreateDirectory(directory);
+        await File.WriteAllBytesAsync(Path.Combine(directory, name == "before" ? "before-screen.png" : "after-screen.png"), screenshot, cancellationToken);
+        await File.WriteAllTextAsync(Path.Combine(directory, "state.json"), JsonSerializer.Serialize(new
+        {
+            state = detection.State.ToString(), confidence = detection.Confidence,
+            evidence = detection.Evidence, screenshotSha256 = detection.ScreenshotSha256,
+            expected = expected?.ToString(), actionCount = name == "before" ? 0 : 1
+        }, new JsonSerializerOptions { WriteIndented = true }), cancellationToken);
+        return (screenshot, detection);
+    }
+
+    async Task<(byte[] Screenshot, PokemonGoGameStateDetection Detection)> WaitForMapAsync()
+    {
+        var deadline = DateTimeOffset.UtcNow.AddSeconds(8);
+        (byte[] Screenshot, PokemonGoGameStateDetection Detection) latest = default;
+        do
+        {
+            await Task.Delay(350, cancellationToken);
+            latest = await CaptureCloseFrameAsync("after", PokemonGoGameState.GameplayMap);
+            if (latest.Detection.State == PokemonGoGameState.GameplayMap || latest.Detection.State == PokemonGoGameState.Unknown)
+                return latest;
+        }
+        while (DateTimeOffset.UtcNow < deadline);
+        return latest;
+    }
+}
+
 static async Task<int> DetectGameStateAsync(string[] args, CancellationToken cancellationToken)
 {
     var options = ParseOptions(args);
@@ -2331,6 +2388,7 @@ static void PrintHelp()
     Console.WriteLine("  device-stop-known-app --app calcy [--adb <adb.exe>] [--serial <serial>]");
     Console.WriteLine("  device-open-inventory [--adb <adb.exe>] [--serial <serial>]");
     Console.WriteLine("  device-press-back [--adb <adb.exe>] [--serial <serial>]");
+    Console.WriteLine("  device-close-inventory --adb <adb.exe> --out <directory> [--serial <serial>]");
     Console.WriteLine("  device-detect-game-state --adb <adb.exe> --out <directory> [--appraisal-profile <profile.json>]");
     Console.WriteLine("  device-recover-inventory --adb <adb.exe> --out <directory> [--appraisal-profile <profile.json>]");
     Console.WriteLine("  device-open-main-menu [--adb <adb.exe>] [--serial <serial>]");

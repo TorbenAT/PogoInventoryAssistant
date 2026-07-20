@@ -4,6 +4,7 @@ public enum PokemonGoGameState
 {
     Unknown,
     GameplayMap,
+    MainMenu,
     Inventory,
     PokemonDetails,
     PokemonMenu,

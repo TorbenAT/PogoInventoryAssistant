@@ -36,13 +36,6 @@ public sealed class PokemonGoGameStateDetector
                 new[] { "AppraisalIntroDetected" }.Concat(appraisalIntro.Evidence).ToArray(), hash);
         }
 
-        var menu = _locator.LocateAppraiseMenuItem(screenshotPng);
-        if (menu is not null)
-        {
-            return Result(PokemonGoGameState.PokemonMenu, menu.Confidence,
-                new[] { "AppraiseMenuItemDetected" }.Concat(menu.Evidence).ToArray(), hash);
-        }
-
         var map = _locator.LocateMainMenuPokeball(screenshotPng);
         if (map is not null && map.Confidence >= 0.90)
         {
@@ -50,11 +43,25 @@ public sealed class PokemonGoGameStateDetector
                 new[] { "MainMenuPokeballDetected" }.Concat(map.Evidence).ToArray(), hash);
         }
 
+        var menu = _locator.LocateAppraiseMenuItem(screenshotPng);
+        if (menu is not null)
+        {
+            return Result(PokemonGoGameState.PokemonMenu, menu.Confidence,
+                new[] { "AppraiseMenuItemDetected" }.Concat(menu.Evidence).ToArray(), hash);
+        }
+
         var inventory = _locator.LocateInventoryCard(screenshotPng);
         if (inventory is not null)
         {
             return Result(PokemonGoGameState.Inventory, inventory.Confidence,
                 new[] { "InventoryCardDetected" }.Concat(inventory.Evidence).ToArray(), hash);
+        }
+
+        var mainMenu = _locator.LocatePokemonInventory(screenshotPng);
+        if (mainMenu is not null)
+        {
+            return Result(PokemonGoGameState.MainMenu, mainMenu.Confidence,
+                new[] { "PokemonGoMainMenuDetected" }.Concat(mainMenu.Evidence).ToArray(), hash);
         }
 
         var details = _locator.LocateDetailsMenu(screenshotPng);

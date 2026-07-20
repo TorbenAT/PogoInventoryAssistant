@@ -46,6 +46,7 @@ using PogoInventory.SelfTest;
 var tests = new (string Name, Func<Task> Run)[]
 {
     ("Real-state detector regression fixtures", StateDetectorRegressionTests.RunAsync),
+    ("Guarded inventory close enforces one map transition", GuardedInventoryCloseTests.RunAsync),
     ("Perfect is kept", Sync(PerfectIsKept)),
     ("Trade nickname is kept", Sync(TradeNicknameIsKept)),
     ("Old Pokémon is kept", Sync(OldPokemonIsKept)),

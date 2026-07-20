@@ -4,11 +4,12 @@ internal static class StateDetectorRegressionTests
 {
     public static Task RunAsync()
     {
-        var states = new[] { "Unknown", "GameplayMap", "Inventory", "PokemonDetails", "PokemonMenu", "Appraisal" };
+        var states = new[] { "Unknown", "GameplayMap", "MainMenu", "Inventory", "PokemonDetails", "PokemonMenu", "Appraisal" };
         Assert(states.Contains("GameplayMap"), "GameplayMap state contract");
         Assert(states.Contains("Inventory"), "Inventory state contract");
         Assert(states.Contains("PokemonDetails"), "PokemonDetails state contract");
         Assert(states.Contains("PokemonMenu"), "PokemonMenu state contract");
+        Assert(states.Contains("MainMenu"), "MainMenu state contract");
         Assert(states.Contains("Appraisal"), "Appraisal state contract");
         var evidence = new[] { "MainMenuPokeballDetected", "InventorySearchBarDetected",
             "DetailsPageTopologyDetected", "AppraiseMenuItemDetected", "AppraisalIntroDetected" };
