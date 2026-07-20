@@ -91,10 +91,26 @@ public sealed class VisualControlLocator
         var image = PngDecoder.Decode(screenshotPng);
         var modelArea = RegionMatch(image, 0.22, 0.12, 0.78, 0.42, IsDetailsModelArea);
         var cpArea = RegionMatch(image, 0.25, 0.07, 0.75, 0.18, IsDetailsPanel);
-        var detailsPanel = RegionMatch(image, 0.03, 0.39, 0.97, 0.92, IsDetailsPanel);
-        if (modelArea < 0.25 || cpArea < 0.20 || detailsPanel < 0.35)
+        var detailsPanel = RegionMatch(image, 0.03, 0.39, 0.97, 0.92, IsDetailsPanelBroad);
+        // Details pages can be partially occluded by the transition back from
+        // appraisal. Keep all three independent regions, but accept the
+        // lower-coverage frame only when each still contributes evidence.
+        if (modelArea < 0.15 || cpArea < 0.10 || detailsPanel < 0.20)
         {
-            return null;
+            var upperBlue = RegionMatch(image, 0.05, 0.05, 0.95, 0.36, IsDetailsPageBlue);
+            var lowerPanel = RegionMatch(image, 0.03, 0.38, 0.97, 0.92, IsDetailsPanelBroad);
+            if (upperBlue < 0.18 || lowerPanel < 0.25)
+            {
+                return null;
+            }
+
+            return new LocatedControl
+            {
+                ControlName = "PokemonDetailsPageTopology",
+                Target = new NormalizedPoint { X = 0.50, Y = 0.40 },
+                Confidence = 0.30,
+                Evidence = new[] { "DetailsPageBlueHeaderDetected", "DetailsPagePanelDetected", "DetailsPageFallbackTopologyDetected" }
+            };
         }
 
         return new LocatedControl
@@ -354,6 +370,9 @@ public sealed class VisualControlLocator
         pixel.B is >= 30 and <= 90 &&
         Math.Abs(pixel.R - pixel.G) <= 25;
 
+    private static bool IsDetailsPageBlue(Rgba32 pixel) =>
+        pixel.B >= 70 && pixel.B >= pixel.R * 1.25 && pixel.B >= pixel.G * 1.05;
+
     private static bool IsDetailsModelArea(Rgba32 pixel) =>
         pixel.R is >= 35 and <= 180 &&
         pixel.G is >= 35 and <= 180 &&
@@ -363,6 +382,10 @@ public sealed class VisualControlLocator
 
     private static bool IsDetailsPanel(Rgba32 pixel) =>
         IsLight(pixel) || (pixel.G >= 90 && pixel.G >= pixel.R * 1.05 && pixel.B >= pixel.R * 0.95);
+
+    private static bool IsDetailsPanelBroad(Rgba32 pixel) =>
+        IsDetailsPanel(pixel) ||
+        (pixel.B >= 70 && pixel.G >= 35 && pixel.R <= 190 && pixel.B >= pixel.R * 1.08);
 
     private static bool IsAppraisalOverlay(Rgba32 pixel) =>
         pixel.B >= 105 && pixel.G >= 90 && pixel.R <= 130;

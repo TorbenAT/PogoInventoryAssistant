@@ -14,6 +14,7 @@ internal static class StateDetectorRegressionTests
         var evidence = new[] { "MainMenuPokeballDetected", "InventorySearchBarDetected",
             "DetailsPageTopologyDetected", "AppraiseMenuItemDetected", "AppraisalIntroDetected" };
         Assert(evidence.Length == 5, "independent state anchor contracts");
+        Assert(evidence.Contains("DetailsPageTopologyDetected"), "details fallback retains topology evidence");
 
         return Task.CompletedTask;
     }

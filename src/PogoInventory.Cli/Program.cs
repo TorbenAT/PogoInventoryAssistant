@@ -129,6 +129,9 @@ static async Task<int> MainAsync(string[] args)
             "device-close-inventory" => await CloseInventoryAsync(
                 args.Skip(1).ToArray(),
                 cancellationSource.Token),
+            "device-continue-appraisal-intro" => await ContinueAppraisalIntroAsync(
+                args.Skip(1).ToArray(),
+                cancellationSource.Token),
             "device-detect-game-state" => await DetectGameStateAsync(
                 args.Skip(1).ToArray(),
                 cancellationSource.Token),
@@ -1768,6 +1771,104 @@ static async Task<int> PressBackAsync(
     return 0;
 }
 
+static async Task<int> ContinueAppraisalIntroAsync(string[] args, CancellationToken cancellationToken)
+{
+    var options = ParseOptions(args);
+    var output = Path.GetFullPath(Require(options, "out"));
+    Directory.CreateDirectory(output);
+    var transport = CreateRealAndroidTransport(options);
+    var selected = DeviceSnapshotService.SelectDevice(await transport.ListDevicesAsync(cancellationToken), Optional(options, "serial"));
+    var profile = await AppraisalProfileLoader.LoadAsync(Require(options, "appraisal-profile"), cancellationToken);
+    var recovery = new GuardedInventoryRecovery();
+    var frames = new List<RecoveryFrame>();
+    var audit = new List<object>();
+    var deadline = DateTimeOffset.UtcNow.AddSeconds(12);
+    var index = 0;
+    var introTapActions = 0;
+    var tapWasSent = false;
+    while (DateTimeOffset.UtcNow < deadline)
+    {
+        var screenshot = await transport.CaptureScreenshotPngAsync(selected.Serial, cancellationToken);
+        var frame = recovery.Observe(screenshot, profile);
+        frames.Add(frame);
+        var pollName = $"poll-{index++:00}";
+        await File.WriteAllBytesAsync(Path.Combine(output, $"{pollName}.png"), screenshot, cancellationToken);
+        await File.WriteAllTextAsync(Path.Combine(output, $"{pollName}.json"),
+            JsonSerializer.Serialize(FrameDiagnostic(frame),
+                new JsonSerializerOptions { WriteIndented = true }), cancellationToken);
+        var decision = GuardedInventoryRecovery.DecideAppraisalContinuation(
+            frames, introTapActions, tapWasSent);
+        if (decision is AppraisalContinuationOutcome.SUCCESS_ALREADY_ADVANCED or
+            AppraisalContinuationOutcome.SUCCESS_TAPPED)
+        {
+            await WriteAuditAsync(decision.ToString());
+            Console.WriteLine($"RESULT: {decision}; PHONE_ACTIONS: {introTapActions}");
+            return 0;
+        }
+
+        if (decision == AppraisalContinuationOutcome.TAP_INTRO_ONCE &&
+            GuardedInventoryRecovery.TryGetStableFrame(frames, out var stableIntro) &&
+            stableIntro?.LocatorTarget is { } target)
+        {
+            var image = PngDecoder.Decode(stableIntro.Screenshot);
+            var (x, y) = target.ToPixels(image.Width, image.Height);
+            var startedAt = DateTimeOffset.UtcNow;
+            await transport.TapAsync(selected.Serial, x, y, cancellationToken);
+            var completedAt = DateTimeOffset.UtcNow;
+            introTapActions++;
+            tapWasSent = true;
+            audit.Add(new
+            {
+                sequence = introTapActions,
+                action = "TapAppraisalIntroContinue",
+                stateBefore = stableIntro.Detection.State.ToString(),
+                expectedState = "AppraisalBars",
+                startedAtUtc = startedAt,
+                completedAtUtc = completedAt,
+                detail = $"Visually located target ({x},{y}); confidence {stableIntro.LocatorConfidence:F3}."
+            });
+            frames.Clear();
+        }
+        else if (decision == AppraisalContinuationOutcome.FAIL_CLOSED)
+        {
+            await WriteAuditAsync(decision.ToString());
+            Console.WriteLine($"RESULT: FAIL_CLOSED; PHONE_ACTIONS: {introTapActions}");
+            return 2;
+        }
+
+        await Task.Delay(250, cancellationToken);
+    }
+
+    await WriteAuditAsync("STABILITY_TIMEOUT");
+    Console.WriteLine($"RESULT: STABILITY_TIMEOUT; PHONE_ACTIONS: {introTapActions}");
+    return 1;
+
+    Task WriteAuditAsync(string result) => File.WriteAllTextAsync(
+        Path.Combine(output, "input-audit.json"),
+        JsonSerializer.Serialize(new
+        {
+            result,
+            phoneActions = introTapActions,
+            actions = audit
+        }, new JsonSerializerOptions { WriteIndented = true }), cancellationToken);
+
+    static object FrameDiagnostic(RecoveryFrame frame) => new
+    {
+        state = frame.Detection.State.ToString(),
+        kind = frame.Kind.ToString(),
+        confidence = frame.Detection.Confidence,
+        evidence = frame.Detection.Evidence,
+        screenshotSha256 = frame.Detection.ScreenshotSha256,
+        introAnchor = frame.HasIntroAnchor,
+        barsAnchor = frame.HasBarsAnchor,
+        conflictingAnchor = frame.HasConflictingAnchor,
+        locatorConfidence = frame.LocatorConfidence,
+        locatorTarget = frame.LocatorTarget,
+        stableRegions = frame.StableRegions.Select(region => region.Features),
+        bars = frame.Bars
+    };
+}
+
 static async Task<int> CloseInventoryAsync(string[] args, CancellationToken cancellationToken)
 {
     var options = ParseOptions(args);
@@ -1879,70 +1980,97 @@ static async Task<int> RecoverInventoryAsync(string[] args, CancellationToken ca
     var profile = Optional(options, "appraisal-profile") is { } profilePath
         ? await AppraisalProfileLoader.LoadAsync(profilePath, cancellationToken)
         : null;
-    var detector = new PokemonGoGameStateDetector();
-    var state = await CaptureRecoveryFrameAsync("step-00", null);
-    if (state.State == PokemonGoGameState.Unknown)
+    var recovery = new GuardedInventoryRecovery();
+    var audit = new List<object>();
+    var initialFrames = await CaptureStableWindowAsync("step-00", null);
+    var outcome = recovery.Begin(initialFrames);
+    while (outcome is RecoveryOutcome.PROGRESSED or RecoveryOutcome.ACTION_NOT_OBSERVED)
     {
-        Console.WriteLine("Recovery stopped: Unknown; no input sent.");
-        return 2;
-    }
-    var actions = 0;
-    while (state.State != PokemonGoGameState.Inventory && actions < 2)
-    {
-        var expected = state.State == PokemonGoGameState.PokemonMenu || state.State == PokemonGoGameState.Appraisal
-            ? (actions == 0 ? PokemonGoGameState.PokemonDetails : PokemonGoGameState.Inventory)
-            : PokemonGoGameState.Inventory;
-        await transport.PressBackAsync(selected.Serial, cancellationToken);
-        actions++;
-        state = await WaitForRecoveryStateAsync($"step-{actions:00}", expected);
-        if (state.State == PokemonGoGameState.Unknown)
+        var authorization = recovery.AuthorizeBack();
+        if (authorization is null)
         {
-            Console.WriteLine($"Recovery stopped: Unknown after Back {actions}; no further input sent.");
-            return 2;
+            outcome = RecoveryOutcome.UNEXPECTED_STOP;
+            break;
         }
-        if (state.State != expected && state.State != PokemonGoGameState.Inventory)
-        {
-            Console.WriteLine($"Recovery failed: expected {expected}, observed {state.State}.");
-            return 1;
-        }
-    }
-    Console.WriteLine($"Recovery result: {(state.State == PokemonGoGameState.Inventory ? "PASS" : "FAIL")}; Back actions: {actions}.");
-    return state.State == PokemonGoGameState.Inventory ? 0 : 1;
 
-    async Task<PokemonGoGameStateDetection> CaptureRecoveryFrameAsync(string name, PokemonGoGameState? expected)
+        var startedAt = DateTimeOffset.UtcNow;
+        await transport.PressBackAsync(selected.Serial, cancellationToken);
+        var completedAt = DateTimeOffset.UtcNow;
+        var postFrames = await CaptureStableWindowAsync(
+            $"step-{authorization.Sequence:00}", authorization.ExpectedState);
+        outcome = recovery.ObservePostAction(postFrames);
+        audit.Add(new
+        {
+            sequence = authorization.Sequence,
+            action = "PressBack",
+            stateBefore = authorization.StateBefore.ToString(),
+            expectedState = authorization.ExpectedState.ToString(),
+            stateAfter = recovery.Current?.Detection.State.ToString(),
+            outcome = outcome.ToString(),
+            startedAtUtc = startedAt,
+            completedAtUtc = completedAt,
+            detail = authorization.Detail
+        });
+    }
+
+    await File.WriteAllTextAsync(Path.Combine(output, "input-audit.json"),
+        JsonSerializer.Serialize(new
+        {
+            result = outcome.ToString(),
+            backActions = recovery.BackActions,
+            appraisalRetries = recovery.AppraisalRetries,
+            actions = audit
+        }, new JsonSerializerOptions { WriteIndented = true }), cancellationToken);
+    Console.WriteLine(
+        $"Recovery result: {outcome}; Back actions: {recovery.BackActions}; appraisal retries: {recovery.AppraisalRetries}.");
+    return outcome == RecoveryOutcome.SUCCEEDED
+        ? 0
+        : outcome == RecoveryOutcome.UNKNOWN_STOP ? 2 : 1;
+
+    async Task<IReadOnlyList<RecoveryFrame>> CaptureStableWindowAsync(
+        string name,
+        PokemonGoGameState? expected)
     {
-        var screenshot = await transport.CaptureScreenshotPngAsync(selected.Serial, cancellationToken);
-        var detection = detector.Detect(screenshot, profile);
         var directory = Path.Combine(output, name);
         Directory.CreateDirectory(directory);
-        await File.WriteAllBytesAsync(Path.Combine(directory, "before-screen.png"), screenshot, cancellationToken);
-        await File.WriteAllTextAsync(Path.Combine(directory, "state.json"), JsonSerializer.Serialize(new
-        {
-            state = detection.State.ToString(), confidence = detection.Confidence,
-            evidence = detection.Evidence, screenshotSha256 = detection.ScreenshotSha256,
-            expected = expected?.ToString()
-        }, new JsonSerializerOptions { WriteIndented = true }), cancellationToken);
-        return detection;
-    }
-
-    async Task<PokemonGoGameStateDetection> WaitForRecoveryStateAsync(
-        string name,
-        PokemonGoGameState expected)
-    {
-        var deadline = DateTimeOffset.UtcNow.AddSeconds(8);
-        PokemonGoGameStateDetection latest;
+        var frames = new List<RecoveryFrame>();
+        var deadline = DateTimeOffset.UtcNow.AddSeconds(12);
+        var poll = 0;
         do
         {
-            await Task.Delay(350, cancellationToken);
-            latest = await CaptureRecoveryFrameAsync(name, expected);
-            if (latest.State == expected || latest.State == PokemonGoGameState.Inventory)
+            var screenshot = await transport.CaptureScreenshotPngAsync(selected.Serial, cancellationToken);
+            var frame = recovery.Observe(screenshot, profile);
+            frames.Add(frame);
+            await File.WriteAllBytesAsync(
+                Path.Combine(directory, $"poll-{poll:00}.png"), screenshot, cancellationToken);
+            await File.WriteAllTextAsync(
+                Path.Combine(directory, $"poll-{poll:00}.json"),
+                JsonSerializer.Serialize(new
+                {
+                    state = frame.Detection.State.ToString(),
+                    kind = frame.Kind.ToString(),
+                    confidence = frame.Detection.Confidence,
+                    evidence = frame.Detection.Evidence,
+                    screenshotSha256 = frame.Detection.ScreenshotSha256,
+                    expected = expected?.ToString(),
+                    introAnchor = frame.HasIntroAnchor,
+                    barsAnchor = frame.HasBarsAnchor,
+                    conflictingAnchor = frame.HasConflictingAnchor,
+                    locatorConfidence = frame.LocatorConfidence,
+                    locatorTarget = frame.LocatorTarget,
+                    stableRegions = frame.StableRegions.Select(region => region.Features),
+                    bars = frame.Bars
+                }, new JsonSerializerOptions { WriteIndented = true }), cancellationToken);
+            poll++;
+            if (GuardedInventoryRecovery.IsStable(frames))
             {
-                return latest;
+                return frames;
             }
+            await Task.Delay(350, cancellationToken);
         }
         while (DateTimeOffset.UtcNow < deadline);
 
-        return latest;
+        return frames;
     }
 }
 
@@ -2001,7 +2129,6 @@ static async Task<int> OpenAppraisalFromInventoryAsync(
     var snapshotService = new DeviceSnapshotService(transport, DeviceHarnessOptions.CurrentVersion);
 
     var locator = new VisualControlLocator();
-    var analyzer = new AppraisalAnalyzer();
     var inventory = await WaitForControlAsync(
         locator.LocateInventoryCard,
         "InventoryList");
@@ -2020,28 +2147,49 @@ static async Task<int> OpenAppraisalFromInventoryAsync(
     await snapshotService.CaptureAsync(Path.Combine(output, "03-menu"), selected.Serial, cancellationToken);
     await TapControlAsync(appraise, "appraise");
 
-    var introAdvanced = false;
+    var appraisalRecovery = new GuardedInventoryRecovery();
+    var appraisalFrames = new List<RecoveryFrame>();
+    var introTapActions = 0;
+    var introTapWasSent = false;
     var deadline = DateTimeOffset.UtcNow.AddSeconds(profile.StateTimeoutSeconds);
     double appraisalConfidence = 0;
+    var stableAppraisalBars = false;
     while (DateTimeOffset.UtcNow < deadline)
     {
         var screenshot = await transport.CaptureScreenshotPngAsync(selected.Serial, cancellationToken);
-        var appraisal = analyzer.Analyze(PngDecoder.Decode(screenshot), appraisalProfile);
-        if (appraisal.IsAppraisal && appraisal.Confidence >= 0.90)
+        var frame = appraisalRecovery.Observe(screenshot, appraisalProfile);
+        appraisalFrames.Add(frame);
+        var decision = GuardedInventoryRecovery.DecideAppraisalContinuation(
+            appraisalFrames, introTapActions, introTapWasSent);
+        if (decision is AppraisalContinuationOutcome.SUCCESS_ALREADY_ADVANCED or
+            AppraisalContinuationOutcome.SUCCESS_TAPPED)
         {
-            appraisalConfidence = appraisal.Confidence;
+            GuardedInventoryRecovery.TryGetStableFrame(appraisalFrames, out var stable);
+            appraisalConfidence = stable?.Detection.Confidence ?? 0;
+            stableAppraisalBars = true;
             break;
         }
 
-        var continueControl = locator.LocateAppraisalIntroContinue(screenshot);
-        if (!introAdvanced && continueControl is not null)
+        if (decision == AppraisalContinuationOutcome.TAP_INTRO_ONCE &&
+            GuardedInventoryRecovery.TryGetStableFrame(appraisalFrames, out var stableIntro) &&
+            stableIntro?.LocatorTarget is { } target)
         {
-            await TapControlAsync(continueControl, "appraisal intro continue");
-            introAdvanced = true;
+            var image = PngDecoder.Decode(stableIntro.Screenshot);
+            var (x, y) = target.ToPixels(image.Width, image.Height);
+            await transport.TapAsync(selected.Serial, x, y, cancellationToken);
+            Console.WriteLine(
+                $"Executed stable ROI-grounded appraisal intro continue at ({x},{y}), confidence {stableIntro.LocatorConfidence:F3}.");
+            introTapActions++;
+            introTapWasSent = true;
+            appraisalFrames.Clear();
+        }
+        else if (decision == AppraisalContinuationOutcome.FAIL_CLOSED)
+        {
+            break;
         }
         await Task.Delay(Math.Max(250, profile.StatePollMilliseconds), cancellationToken);
     }
-    if (appraisalConfidence < 0.90)
+    if (!stableAppraisalBars || appraisalConfidence < 0.90)
     {
         throw new InvalidOperationException(
             "The GAME navigation skill did not reach semantically verified AppraisalOpen.");
@@ -2389,6 +2537,7 @@ static void PrintHelp()
     Console.WriteLine("  device-open-inventory [--adb <adb.exe>] [--serial <serial>]");
     Console.WriteLine("  device-press-back [--adb <adb.exe>] [--serial <serial>]");
     Console.WriteLine("  device-close-inventory --adb <adb.exe> --out <directory> [--serial <serial>]");
+    Console.WriteLine("  device-continue-appraisal-intro --adb <adb.exe> --appraisal-profile <profile.json> --out <directory>");
     Console.WriteLine("  device-detect-game-state --adb <adb.exe> --out <directory> [--appraisal-profile <profile.json>]");
     Console.WriteLine("  device-recover-inventory --adb <adb.exe> --out <directory> [--appraisal-profile <profile.json>]");
     Console.WriteLine("  device-open-main-menu [--adb <adb.exe>] [--serial <serial>]");

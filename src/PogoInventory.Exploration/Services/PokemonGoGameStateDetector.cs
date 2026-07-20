@@ -66,10 +66,10 @@ public sealed class PokemonGoGameStateDetector
 
         var details = _locator.LocateDetailsMenu(screenshotPng);
         var detailsPage = _locator.LocateDetailsPageTopology(screenshotPng);
-        if (details is not null && detailsPage is not null)
+        if (detailsPage is not null && (details is not null || detailsPage.Confidence >= 0.25))
         {
-            return Result(PokemonGoGameState.PokemonDetails, details.Confidence,
-                new[] { "DetailsMenuDetected" }.Concat(details.Evidence)
+            return Result(PokemonGoGameState.PokemonDetails, details?.Confidence ?? detailsPage.Confidence,
+                new[] { "DetailsMenuDetected" }.Concat(details?.Evidence ?? new[] { "DetailsMenuControlNotVisible" })
                     .Concat(detailsPage.Evidence).ToArray(), hash);
         }
 

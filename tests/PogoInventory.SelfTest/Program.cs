@@ -47,6 +47,8 @@ var tests = new (string Name, Func<Task> Run)[]
 {
     ("Real-state detector regression fixtures", StateDetectorRegressionTests.RunAsync),
     ("Guarded inventory close enforces one map transition", GuardedInventoryCloseTests.RunAsync),
+    ("Recovery ROI consensus ignores full-screen animation", GuardedInventoryRecoveryTests.RunRoiConsensusAsync),
+    ("Guarded inventory recovery enforces stable bounded transitions", GuardedInventoryRecoveryTests.RunStateMachineAsync),
     ("Perfect is kept", Sync(PerfectIsKept)),
     ("Trade nickname is kept", Sync(TradeNicknameIsKept)),
     ("Old Pokémon is kept", Sync(OldPokemonIsKept)),
