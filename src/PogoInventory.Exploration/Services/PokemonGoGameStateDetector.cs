@@ -36,11 +36,11 @@ public sealed class PokemonGoGameStateDetector
                 new[] { "AppraiseMenuItemDetected" }.Concat(menu.Evidence).ToArray(), hash);
         }
 
-        var details = _locator.LocateDetailsMenu(screenshotPng);
-        if (details is not null)
+        var map = _locator.LocateMainMenuPokeball(screenshotPng);
+        if (map is not null && map.Confidence >= 0.90)
         {
-            return Result(PokemonGoGameState.PokemonDetails, details.Confidence,
-                new[] { "DetailsMenuDetected" }.Concat(details.Evidence).ToArray(), hash);
+            return Result(PokemonGoGameState.GameplayMap, map.Confidence,
+                new[] { "MainMenuPokeballDetected" }.Concat(map.Evidence).ToArray(), hash);
         }
 
         var inventory = _locator.LocateInventoryCard(screenshotPng);
@@ -48,6 +48,15 @@ public sealed class PokemonGoGameStateDetector
         {
             return Result(PokemonGoGameState.Inventory, inventory.Confidence,
                 new[] { "InventoryCardDetected" }.Concat(inventory.Evidence).ToArray(), hash);
+        }
+
+        var details = _locator.LocateDetailsMenu(screenshotPng);
+        var detailsPage = _locator.LocateDetailsPageTopology(screenshotPng);
+        if (details is not null && detailsPage is not null)
+        {
+            return Result(PokemonGoGameState.PokemonDetails, details.Confidence,
+                new[] { "DetailsMenuDetected" }.Concat(details.Evidence)
+                    .Concat(detailsPage.Evidence).ToArray(), hash);
         }
 
         return Result(PokemonGoGameState.Unknown, 0, new[] { "NoKnownGameAnchorDetected" }, hash);

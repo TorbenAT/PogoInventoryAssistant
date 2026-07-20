@@ -174,3 +174,12 @@ Limitations observed during validation:
 - Real recovery: one Back action attempted; stable post-state remained
   `PokemonDetails`, so recovery stopped fail-closed and did not claim PASS.
 - The required 3/3 Details-to-Inventory acceptance was not completed.
+## 2026-07-20 gameplay-map detector iteration
+
+- Build: passed.
+- Self-tests: passed.
+- Saved real gameplay-map frame: `GameplayMap`, confidence `1.000`.
+- Saved real inventory frame: no longer classified as `PokemonDetails`.
+- Live read-only captures: one `PokemonMenu`, followed by `GameplayMap`, then
+  `PokemonMenu`; acceptance `3/3` was not claimed.
+- Phone actions: zero.

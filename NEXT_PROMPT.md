@@ -1,5 +1,10 @@
 # Continuation prompt
 
+The gameplay-map detector correction is committed, but live 3/3 map detection
+remains open because the phone was not continuously on GameplayMap. The next
+iteration must begin with read-only verification of GameplayMap and may only
+navigate after that acceptance is explicitly complete.
+
 The next single iteration must verify Inventory -> Details -> Menu ->
 Appraisal three times with the shared game-state detector. The 2026-07-20
 Details-to-Inventory recovery acceptance remains open because the real phone

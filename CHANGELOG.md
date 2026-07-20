@@ -277,3 +277,11 @@
   Back actions and post-action screenshots.
 - Real detection identified PokemonDetails at confidence 1.000; recovery did
   not reach Inventory and stopped after the first Back attempt.
+## 0.14.3 - 2026-07-20
+
+- Added explicit `GameplayMap` state detection using the existing main-menu
+  Poké Ball locator.
+- Tightened PokemonDetails detection to require independent page topology.
+- Added offline `game-state-detect-image` regression command.
+- No phone input was sent; live acceptance remained open because the phone was
+  in PokemonMenu during the read-only capture window.

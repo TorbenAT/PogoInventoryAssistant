@@ -129,6 +129,9 @@ static async Task<int> MainAsync(string[] args)
             "device-detect-game-state" => await DetectGameStateAsync(
                 args.Skip(1).ToArray(),
                 cancellationSource.Token),
+            "game-state-detect-image" => await DetectGameStateImageAsync(
+                args.Skip(1).ToArray(),
+                cancellationSource.Token),
             "device-recover-inventory" => await RecoverInventoryAsync(
                 args.Skip(1).ToArray(),
                 cancellationSource.Token),
@@ -1788,6 +1791,23 @@ static async Task<int> DetectGameStateAsync(string[] args, CancellationToken can
             deviceSerial = selected.Serial
         }, new JsonSerializerOptions { WriteIndented = true }), cancellationToken);
     Console.WriteLine($"State: {detection.State}; confidence: {detection.Confidence:F3}; evidence: {string.Join(",", detection.Evidence)}");
+    return 0;
+}
+
+static async Task<int> DetectGameStateImageAsync(string[] args, CancellationToken cancellationToken)
+{
+    var options = ParseOptions(args);
+    var imagePath = Require(options, "image");
+    var output = Path.GetFullPath(Require(options, "out"));
+    Directory.CreateDirectory(Path.GetDirectoryName(output) ?? ".");
+    var profile = Optional(options, "appraisal-profile") is { } profilePath
+        ? await AppraisalProfileLoader.LoadAsync(profilePath, cancellationToken)
+        : null;
+    var detection = new PokemonGoGameStateDetector().Detect(
+        await File.ReadAllBytesAsync(imagePath, cancellationToken), profile);
+    await File.WriteAllTextAsync(output, JsonSerializer.Serialize(detection,
+        new JsonSerializerOptions { WriteIndented = true }), cancellationToken);
+    Console.WriteLine($"State: {detection.State}; confidence: {detection.Confidence:F3}");
     return 0;
 }
 

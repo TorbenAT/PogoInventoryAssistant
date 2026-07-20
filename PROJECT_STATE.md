@@ -182,6 +182,15 @@ remained Details, so the run stopped without a second blind action.
 
 ## Not completed
 
+### Gameplay map state detection (2026-07-20)
+
+The shared detector now has an explicit `GameplayMap` state. It checks the
+existing main-menu Poké Ball anchor before Inventory and Details, preventing
+the map's lower-right teal control from being misclassified as PokemonDetails.
+PokemonDetails now also requires an independent details-page topology anchor.
+The saved real map frame is detected as GameplayMap at confidence 1.000.
+No phone input was sent in this iteration.
+
 - extraction of exact semantic variant identity from Android screenshots
 - twenty-case appraisal truth verification
 - verified Complete visual IV provider

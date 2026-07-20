@@ -88,6 +88,36 @@ public sealed class VisualControlLocator
         };
     }
 
+    public LocatedControl? LocateDetailsPageTopology(byte[] screenshotPng)
+    {
+        var image = PngDecoder.Decode(screenshotPng);
+        var pageChecks = new[]
+        {
+            IsDetailsPageBackground(Sample(image, image.Width / 2, image.Height / 8)),
+            IsDetailsPageBackground(Sample(image, image.Width / 8, image.Height / 2)),
+            IsDetailsPageBackground(Sample(image, image.Width * 7 / 8, image.Height / 2)),
+            IsDetailsPageBackground(Sample(image, image.Width / 2, image.Height * 3 / 4))
+        };
+        var modelArea = Sample(image, image.Width / 2, image.Height * 2 / 5);
+        if (pageChecks.Count(value => value) < 3 || !IsDetailsModelArea(modelArea))
+        {
+            return null;
+        }
+
+        return new LocatedControl
+        {
+            ControlName = "PokemonDetailsPageTopology",
+            Target = new NormalizedPoint { X = 0.50, Y = 0.40 },
+            Confidence = pageChecks.Count(value => value) / (double)pageChecks.Length,
+            Evidence = new[]
+            {
+                "DetailsPageBackgroundDetected",
+                "PokemonModelAreaDetected",
+                "DetailsPageTopologyDetected"
+            }
+        };
+    }
+
     public LocatedControl? LocateAppraiseMenuItem(byte[] screenshotPng)
     {
         var image = PngDecoder.Decode(screenshotPng);
@@ -311,6 +341,19 @@ public sealed class VisualControlLocator
     private static bool IsDetailsMenuBackground(Rgba32 pixel) =>
         pixel.G >= 80 && pixel.B >= 80 && pixel.R <= 100 &&
         pixel.G >= pixel.R * 1.25 && pixel.B >= pixel.R * 1.15;
+
+    private static bool IsDetailsPageBackground(Rgba32 pixel) =>
+        pixel.R is >= 20 and <= 70 &&
+        pixel.G is >= 25 and <= 80 &&
+        pixel.B is >= 30 and <= 90 &&
+        Math.Abs(pixel.R - pixel.G) <= 25;
+
+    private static bool IsDetailsModelArea(Rgba32 pixel) =>
+        pixel.R is >= 35 and <= 180 &&
+        pixel.G is >= 35 and <= 180 &&
+        pixel.B is >= 35 and <= 190 &&
+        Math.Max(pixel.R, Math.Max(pixel.G, pixel.B)) -
+        Math.Min(pixel.R, Math.Min(pixel.G, pixel.B)) >= 8;
 
     private static bool IsAppraisalOverlay(Rgba32 pixel) =>
         pixel.B >= 105 && pixel.G >= 90 && pixel.R <= 130;
