@@ -34,6 +34,13 @@ and align stable ROIs to Details anchors/content after the section; do not
 ignore one fixed tag rectangle. No Task 4 implementation is included in the
 Task 3 checkpoint.
 
+Task 4 implementation now exists locally: `PokemonDetailsIdentityAnalyzer` and
+`identity-fingerprint` provide separate evidence hashes, stable fingerprints,
+dynamic tag metadata, three-frame consensus and ordinal instance IDs. Offline
+tests are 154/154. Tune the device profile and repeat real zero/one/two-tag
+acceptance before calling Task 4 real-phone green; do not claim approval from
+the current partial evidence.
+
 Use this after the 2026-07-19 real-phone validation run.
 
 I am building Pogo Inventory Assistant in C# and .NET 8.

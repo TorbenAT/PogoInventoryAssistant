@@ -53,6 +53,19 @@ remains the authoritative compiler and test runner.
 
 # Validation report
 
+## Task 4 dynamic identity checkpoint on 2026-07-20
+
+- implementation build: PASS for Vision, Automation, CLI and SelfTest
+- package-free self-tests: PASS, 154/154
+- CLI evidence reports: PASS, four five-frame real Details groups completed
+- screenshot evidence hashes are retained separately from stable fingerprints
+- reversible named AI-Indexed and AI-Review add/remove: completed; wrong
+  selections 0; final phone state unfiltered Inventory with no test tags
+- real Task 4 tag-layout acceptance: PARTIAL and explicitly not claimed green;
+  the new generic tag heuristic produced inconsistent counts on some older
+  Task 3 screenshots
+- production raw ADB actions: 0
+
 ## Version
 
 0.14.3

@@ -1,5 +1,16 @@
 # Changelog
 
+## Task 4 dynamic identity checkpoint - 2026-07-20
+
+- Added `PokemonDetailsIdentityAnalyzer` and package-free models for separate
+  screenshot evidence SHA-256, stable multi-ROI fingerprint, mutable tag
+  observation, three-frame consensus and run-scoped ordinal instances.
+- Added the `identity-fingerprint` CLI command and five deterministic identity
+  regressions. Self-tests pass 154/154.
+- Real OnePlus evidence captured four five-frame Details groups. The phone
+  ended in unfiltered Inventory after a reversible AI-Indexed/AI-Review
+  add/remove sequence. Full real tag-layout acceptance remains unclaimed.
+
 ## Unreleased Android navigation increment - 2026-07-20
 
 - Added `device-set-pokemon-tag` and `TagSelector`: visible rows are found

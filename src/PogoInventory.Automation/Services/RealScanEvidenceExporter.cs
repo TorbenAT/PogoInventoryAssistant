@@ -339,7 +339,7 @@ public static class RealScanEvidenceExporter
                     outputDirectory,
                     options)
             };
-            var instanceKey = $"{checkpoint.RunId}:{item.SequenceNumber:D6}:{item.ScreenshotSha256[..12]}";
+            var instanceKey = $"{checkpoint.RunId}:{item.SequenceNumber:D6}";
             var captureAction = checkpoint.Actions.Single(action =>
                 action.Kind == AutomationActionKind.CaptureEvidence &&
                 string.Equals(

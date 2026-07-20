@@ -180,6 +180,9 @@ static async Task<int> MainAsync(string[] args)
             "screen-fingerprint" => await ExtractScreenFingerprintAsync(
                 args.Skip(1).ToArray(),
                 cancellationSource.Token),
+            "identity-fingerprint" => await ExtractPokemonIdentityFingerprintAsync(
+                args.Skip(1).ToArray(),
+                cancellationSource.Token),
             "calibration-init" => await InitializeCalibrationAsync(
                 args.Skip(1).ToArray(),
                 cancellationSource.Token),
@@ -1961,6 +1964,34 @@ static async Task<int> DetectGameStateAsync(string[] args, CancellationToken can
     return 0;
 }
 
+static async Task<int> ExtractPokemonIdentityFingerprintAsync(
+    string[] args,
+    CancellationToken cancellationToken)
+{
+    var options = ParseOptions(args);
+    var imagePaths = Require(options, "images")
+        .Split(';', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+    if (imagePaths.Length == 0 || imagePaths.Length > 20)
+        throw new ArgumentException("--images must contain between 1 and 20 semicolon-separated PNG paths.");
+    var frames = new List<PokemonIdentityFrame>();
+    foreach (var path in imagePaths)
+        frames.Add(new PokemonIdentityFrame
+        {
+            ScreenshotPng = await File.ReadAllBytesAsync(path, cancellationToken)
+        });
+    var analyzer = new PokemonDetailsIdentityAnalyzer();
+    var consensus = analyzer.Consensus(frames);
+    var outputPath = Path.GetFullPath(Require(options, "out"));
+    Directory.CreateDirectory(Path.GetDirectoryName(outputPath)!);
+    await File.WriteAllTextAsync(outputPath, JsonSerializer.Serialize(
+        new { schemaVersion = "1.0", consensus },
+        ScreenProfileLoader.CreateJsonOptions(writeIndented: true)), cancellationToken);
+    Console.WriteLine($"Identity fingerprint written to: {outputPath}");
+    Console.WriteLine($"Status: {consensus.Status}; confidence: {consensus.Confidence:F4}; " +
+        $"stable fingerprint: {consensus.StableFingerprintSha256}");
+    return consensus.Status == PokemonIdentityObservationStatus.Unavailable ? 1 : 0;
+}
+
 static async Task<int> DetectGameStateImageAsync(string[] args, CancellationToken cancellationToken)
 {
     var options = ParseOptions(args);
@@ -3127,6 +3158,7 @@ static void PrintHelp()
     Console.WriteLine();
     Console.WriteLine("  screen-detect --image <screen.png> --profile <profile.json> --out <evidence.json>");
     Console.WriteLine("  screen-fingerprint --image <screen.png> --region <x,y,w,h> --out <fingerprint.json>");
+    Console.WriteLine("  identity-fingerprint --images <a.png;b.png;c.png> --out <identity.json>");
     Console.WriteLine("                     [--mode <Color|Grayscale|Edge>] [--width <n>] [--height <n>]");
     Console.WriteLine();
     Console.WriteLine("  calibration-init --workspace <private-local-directory>");

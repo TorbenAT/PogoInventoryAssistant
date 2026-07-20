@@ -4,6 +4,20 @@
 
 0.14.3
 
+## Task 4 dynamic identity implementation checkpoint
+
+`PokemonDetailsIdentityAnalyzer` keeps the concrete PNG SHA-256 evidence hash
+separate from a stable multi-ROI fingerprint. It records dynamic tag-section
+bounds, mutable tag observation, lower-content anchor evidence and three-frame
+consensus. `PokemonIdentityInstance` assigns `ScanRunId:ordinal` independently
+of both hashes, so identical fingerprints remain separate instances.
+
+Offline self-tests are 154/154. Four real five-frame Details groups were
+captured locally. Real-phone acceptance of the new tag detector is PARTIAL:
+the existing named tag workflow completed the reversible Ekans cycle, but the
+new heuristic is not yet stable on every Task 3 capture. No real-phone Task 4
+approval claim is made.
+
 ## Verified tag selection by name accepted on 2026-07-20
 
 `device-set-pokemon-tag` now identifies visible rows geometrically and matches

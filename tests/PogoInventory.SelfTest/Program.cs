@@ -194,6 +194,11 @@ var tests = new (string Name, Func<Task> Run)[]
     ("Phone preparation remains read only on non appraisal screen", PhonePreparationHandlesNonAppraisalScreenAsync),
     ("Appraisal profile rejects incomplete verification metadata", Sync(AppraisalProfileRejectsIncompleteVerificationMetadata))
     ,("Tag verification requires executor evidence", TagVerificationTests.RunAsync)
+    ,("Dynamic identity separates evidence hash and instance ordinal", PokemonIdentityTests.RunHashAndInstanceAsync)
+    ,("Dynamic identity ignores zero one and two mutable tags", PokemonIdentityTests.RunTagLayoutAsync)
+    ,("Dynamic identity aligns lower details after tags", PokemonIdentityTests.RunAnchorAlignmentAsync)
+    ,("Dynamic identity separates changed stable content", PokemonIdentityTests.RunSeparationAsync)
+    ,("Dynamic identity consensus preserves duplicate instances", PokemonIdentityTests.RunConsensusAsync)
 };
 
 var failed = 0;
