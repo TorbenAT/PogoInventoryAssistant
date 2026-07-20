@@ -29,6 +29,19 @@ PokemonDetails authorizes Android Back to Inventory.
 bars already exist. Otherwise it requires stable intro ROI evidence, taps the
 locator target exactly once and requires stable bars afterward.
 
+### Guarded Inventory Search
+
+`GuardedInventorySearch` owns the bounded OpenSearch, ClearSearch, EnterQuery
+and SubmitQuery sequence. `InventorySearchVisualAnalyzer` verifies the search
+surface, keyboard, query ink, clear control and a stable result-region
+signature. An unobserved action terminates the workflow and cannot loop.
+
+Ordinary search text crosses `IAndroidAutomationTransport` into
+`PogoInventory.Device`. `AndroidInputTextEncoder` alone translates it to the
+remote-shell-safe token used by Android `input text`; Submit is a separate
+named `KEYCODE_ENTER` transport operation. CLI and Automation never construct
+raw shell syntax.
+
 ```text
 Android phone
     |

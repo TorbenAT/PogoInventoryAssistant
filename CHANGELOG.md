@@ -2,6 +2,16 @@
 
 ## Unreleased Android navigation increment - 2026-07-20
 
+- Added `device-search-inventory` with guarded Open, Clear, Enter and Submit
+  phases, visual pre/postconditions, bounded polling and per-action audit.
+- Centralized remote-shell text encoding in `PogoInventory.Device`; callers
+  pass ordinary queries. Real commands use the proven `%s#Trade` and
+  `!\#Trade` encodings and a named Enter key event.
+- Completed two real-phone rounds of `age0-7`, `age0-365`, `age0-1825`,
+  `#Trade` and `!#Trade`. All ten query fields were visually correct, every
+  result changed, and both final clear operations restored unfiltered Inventory.
+- Added generic encoding, injection-escaping and fail-closed search workflow
+  regressions; 146/146 self-tests pass.
 - Replaced full-screen byte stability with state-specific ROI signatures for
   appraisal intro dialog/overlay anchors and the three transformed IV bars.
 - Added a three-of-five frame consensus that rejects Unknown or conflicting

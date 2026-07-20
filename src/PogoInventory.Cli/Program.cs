@@ -147,6 +147,9 @@ static async Task<int> MainAsync(string[] args)
             "device-open-pokemon-inventory" => await OpenPokemonInventoryFromMainMenuAsync(
                 args.Skip(1).ToArray(),
                 cancellationSource.Token),
+            "device-search-inventory" => await SearchInventoryAsync(
+                args.Skip(1).ToArray(),
+                cancellationSource.Token),
             "device-open-appraisal" => await OpenAppraisalFromInventoryAsync(
                 args.Skip(1).ToArray(),
                 cancellationSource.Token),
@@ -2138,6 +2141,200 @@ static async Task<int> OpenPokemonInventoryFromMainMenuAsync(
     return 0;
 }
 
+static async Task<int> SearchInventoryAsync(
+    string[] args,
+    CancellationToken cancellationToken)
+{
+    var options = ParseOptions(args);
+    var output = Path.GetFullPath(Require(options, "out"));
+    var query = InventorySearchQuery.Validate(Require(options, "query"));
+    var clearAfter = ParseBoolean(options, "clear-after", false);
+    Directory.CreateDirectory(output);
+
+    var transport = CreateRealAndroidTransport(options);
+    var devices = await transport.ListDevicesAsync(cancellationToken);
+    var selected = DeviceSnapshotService.SelectDevice(devices, Optional(options, "serial"));
+    var metadata = await transport.ReadMetadataAsync(selected.Serial, cancellationToken);
+    var width = metadata.Screen.EffectiveWidth ??
+        throw new InvalidOperationException("Screen width unavailable.");
+    var height = metadata.Screen.EffectiveHeight ??
+        throw new InvalidOperationException("Screen height unavailable.");
+    var analyzer = new InventorySearchVisualAnalyzer();
+    var detector = new PokemonGoGameStateDetector();
+    var workflow = new GuardedInventorySearch();
+    var audit = new List<object>();
+
+    var before = await transport.CaptureScreenshotPngAsync(selected.Serial, cancellationToken);
+    var beforeState = detector.Detect(before);
+    var current = analyzer.Analyze(before);
+    await File.WriteAllBytesAsync(Path.Combine(output, "before.png"), before, cancellationToken);
+    await WriteJsonAsync("state-before.json", new
+    {
+        gameState = beforeState.State.ToString(),
+        beforeState.Confidence,
+        search = current
+    });
+    if (beforeState.State != PokemonGoGameState.Inventory ||
+        workflow.Begin(current, query) != InventorySearchOutcome.Progressed)
+    {
+        throw new InvalidOperationException(
+            "Inventory or InventorySearch was not visually verified; no search input was sent.");
+    }
+
+    InventorySearchOutcome outcome = InventorySearchOutcome.Progressed;
+    while (outcome == InventorySearchOutcome.Progressed)
+    {
+        var authorization = workflow.AuthorizeNextAction() ??
+            throw new InvalidOperationException("Search workflow could not authorize its next bounded action.");
+        var actionBefore = current;
+        int? x = null;
+        int? y = null;
+        switch (authorization.Action)
+        {
+            case InventorySearchAction.OpenSearch:
+                _ = new VisualControlLocator().LocateInventoryCard(before) ??
+                    throw new InvalidOperationException("Inventory search field was not visually grounded.");
+                (x, y) = new NormalizedPoint { X = 0.5005, Y = 0.1881 }.ToPixels(width, height);
+                await transport.TapAsync(selected.Serial, x.Value, y.Value, cancellationToken);
+                break;
+            case InventorySearchAction.ClearSearch:
+                if (!current.ClearControlVisible)
+                {
+                    throw new InvalidOperationException("Search clear control was not visually verified.");
+                }
+                (x, y) = new NormalizedPoint { X = 0.9175, Y = 0.1881 }.ToPixels(width, height);
+                await transport.TapAsync(selected.Serial, x.Value, y.Value, cancellationToken);
+                break;
+            case InventorySearchAction.EnterQuery:
+                await transport.EnterInventorySearchQueryAsync(
+                    selected.Serial, query, cancellationToken);
+                break;
+            case InventorySearchAction.SubmitQuery:
+                await transport.SubmitInventorySearchQueryAsync(selected.Serial, cancellationToken);
+                break;
+            default:
+                throw new InvalidOperationException(
+                    $"Unsupported authorized search action '{authorization.Action}'.");
+        }
+
+        current = await WaitForSearchPostconditionAsync(authorization.Action);
+        outcome = workflow.ObservePostAction(current);
+        audit.Add(new
+        {
+            authorization.Sequence,
+            action = authorization.Action.ToString(),
+            authorization.ExpectedPostcondition,
+            targetX = x,
+            targetY = y,
+            expectedQuery = query,
+            verificationMode = "device-encoded-input-plus-visual-field-and-result",
+            before = actionBefore,
+            after = current,
+            outcome = outcome.ToString()
+        });
+        if (outcome is not (InventorySearchOutcome.Progressed or InventorySearchOutcome.Succeeded))
+        {
+            throw new InvalidOperationException($"Inventory search stopped fail-closed: {outcome}.");
+        }
+    }
+
+    var after = await transport.CaptureScreenshotPngAsync(selected.Serial, cancellationToken);
+    current = analyzer.Analyze(after);
+    await File.WriteAllBytesAsync(Path.Combine(output, "after.png"), after, cancellationToken);
+    await WriteJsonAsync("state-after.json", new
+    {
+        gameState = detector.Detect(after).State.ToString(),
+        expectedQuery = query,
+        queryDeliveryContractSatisfied = true,
+        visualFieldPopulated = current.QueryVisible,
+        visualLengthCompatible = GuardedInventorySearch.IsQueryLengthCompatible(current, query),
+        visibleResultCount = (int?)null,
+        search = current
+    });
+
+    var cleared = false;
+    if (clearAfter)
+    {
+        if (!current.ClearControlVisible)
+        {
+            throw new InvalidOperationException("Final search clear control was not visually verified.");
+        }
+        var clearTarget = new NormalizedPoint { X = 0.9175, Y = 0.1881 }.ToPixels(width, height);
+        await transport.TapAsync(
+            selected.Serial, clearTarget.X, clearTarget.Y, cancellationToken);
+        var clearedEvidence = await WaitUntilAsync(value => !value.QueryVisible);
+        var clearedPng = await transport.CaptureScreenshotPngAsync(selected.Serial, cancellationToken);
+        await File.WriteAllBytesAsync(
+            Path.Combine(output, "cleared.png"), clearedPng, cancellationToken);
+        audit.Add(new
+        {
+            sequence = workflow.InputActions + 1,
+            action = "ClearCompletedSearch",
+            targetX = clearTarget.X,
+            targetY = clearTarget.Y,
+            expectedQuery = query,
+            before = current,
+            after = clearedEvidence,
+            outcome = "Succeeded"
+        });
+        current = clearedEvidence;
+        cleared = true;
+    }
+
+    await WriteJsonAsync("action.json", new
+    {
+        schemaVersion = "1.0",
+        selected.Serial,
+        query,
+        clearAfter,
+        inputActions = audit.Count,
+        actions = audit
+    });
+    await File.WriteAllTextAsync(
+        Path.Combine(output, "result.txt"),
+        $"SUCCESS query={query}; inputActions={audit.Count}; visualQuery=true; " +
+        $"visibleResultCount=unknown; cleared={cleared}",
+        cancellationToken);
+    Console.WriteLine(
+        $"Verified inventory search '{query}' with {audit.Count} bounded input actions; " +
+        $"visible result count unavailable; cleared={cleared}.");
+    return 0;
+
+    async Task<InventorySearchVisualEvidence> WaitForSearchPostconditionAsync(
+        InventorySearchAction action) => await WaitUntilAsync(value => action switch
+        {
+            InventorySearchAction.OpenSearch => value.KeyboardVisible && !value.QueryVisible,
+            InventorySearchAction.ClearSearch => !value.QueryVisible,
+            InventorySearchAction.EnterQuery => value.KeyboardVisible && value.QueryVisible,
+            InventorySearchAction.SubmitQuery => !value.KeyboardVisible && value.QueryVisible,
+            _ => false
+        });
+
+    async Task<InventorySearchVisualEvidence> WaitUntilAsync(
+        Func<InventorySearchVisualEvidence, bool> predicate)
+    {
+        var deadline = DateTimeOffset.UtcNow.AddSeconds(10);
+        InventorySearchVisualEvidence? latest = null;
+        while (DateTimeOffset.UtcNow < deadline)
+        {
+            var png = await transport.CaptureScreenshotPngAsync(selected.Serial, cancellationToken);
+            latest = analyzer.Analyze(png);
+            if (predicate(latest))
+            {
+                return latest;
+            }
+            await Task.Delay(300, cancellationToken);
+        }
+        throw new InvalidOperationException(
+            $"Timed out waiting for verified inventory-search postcondition; latest={latest}.");
+    }
+
+    Task WriteJsonAsync(string name, object value) => File.WriteAllTextAsync(
+        Path.Combine(output, name),
+        JsonSerializer.Serialize(value, new JsonSerializerOptions { WriteIndented = true }),
+        cancellationToken);
+}
+
 static async Task<int> OpenAppraisalFromInventoryAsync(
     string[] args,
     CancellationToken cancellationToken)
@@ -2573,6 +2770,7 @@ static void PrintHelp()
     Console.WriteLine("  device-recover-inventory --adb <adb.exe> --out <directory> [--appraisal-profile <profile.json>]");
     Console.WriteLine("  device-open-main-menu [--adb <adb.exe>] [--serial <serial>]");
     Console.WriteLine("  device-open-pokemon-inventory [--adb <adb.exe>] [--serial <serial>]");
+    Console.WriteLine("  device-search-inventory --query <query> --out <directory> [--clear-after <true|false>]");
     Console.WriteLine("  device-open-appraisal --profile <automation.json> --appraisal-profile <appraisal.json> --out <directory>");
     Console.WriteLine("                        [--adb <adb.exe>] [--serial <serial>]");
     Console.WriteLine("  inventory-db-init [--db <pogo-inventory.db>]");

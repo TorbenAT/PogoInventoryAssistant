@@ -20,8 +20,8 @@ Final transfer remains manual.
 
 ## Allowed input in version 0.14.3
 
-Only these six named input actions are allowed in the accepted appraisal
-increment:
+Only these named input actions are allowed in the accepted navigation and
+search increments:
 
 ```text
 TapFirstInventoryCard
@@ -30,6 +30,10 @@ TapAppraise
 SwipeNextPokemon
 TapAppraisalIntroContinue
 ExitAppraisal
+OpenInventorySearch
+ClearInventorySearch
+EnterInventorySearchText
+SubmitInventorySearch
 ```
 
 Coordinates come from a validated local automation profile and are converted from normalised values to the locked screen geometry.
@@ -44,7 +48,11 @@ evidence. It uses the documented normalized left-middle target once and must be
 followed by the expected next substate. Android Back is forbidden on
 AppraisalBars and is authorized only after PokemonDetails is verified.
 
-There is no arbitrary shell command, arbitrary higher-layer coordinate API, text input, tag action or destructive action.
+Search text is validated as ordinary text at the caller boundary and encoded
+for Android only inside `PogoInventory.Device`. Search requires verified
+Inventory/Search state, bounded post-action checks and audit. There is no
+arbitrary shell command, arbitrary higher-layer coordinate API, tag action or
+destructive action.
 
 ## No anti-detection behaviour
 

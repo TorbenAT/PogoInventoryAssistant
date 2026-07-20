@@ -138,12 +138,19 @@ public sealed class ScriptedAndroidAutomationTransport : IAndroidAutomationTrans
     {
         cancellationToken.ThrowIfCancellationRequested();
         EnsureSerial(serial);
-        if (query.Length > 100 || query.Any(char.IsControl) || !query.StartsWith("!#", StringComparison.Ordinal))
-        {
-            throw new ArgumentException("Only validated Pokémon GO filter queries are allowed.", nameof(query));
-        }
+        _ = AndroidInputTextEncoder.EncodeInventorySearchQuery(query);
 
         _actions.Add($"enter-search:{query}");
+        return Task.CompletedTask;
+    }
+
+    public Task SubmitInventorySearchQueryAsync(
+        string serial,
+        CancellationToken cancellationToken = default)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        EnsureSerial(serial);
+        _actions.Add("submit-search");
         return Task.CompletedTask;
     }
 

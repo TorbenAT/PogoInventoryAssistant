@@ -4,6 +4,23 @@
 
 0.14.3
 
+## Verified Inventory Search accepted on 2026-07-20
+
+`device-search-inventory` now owns a bounded Open -> Clear -> Enter -> Submit
+workflow. It requires a visually verified Inventory search surface before any
+input, checks each postcondition, records the expected ordinary query and local
+screenshot hashes, and can clear the completed query. Android shell escaping is
+centralized inside `PogoInventory.Device`; higher layers never supply raw ADB
+syntax.
+
+Two complete real-phone rounds passed for `age0-7`, `age0-365`, `age0-1825`,
+`#Trade` and `!#Trade`. Visual review confirmed the exact text and result lists;
+the visible counts were 7, 7, 303 and 0 for the currently empty Trade tag. The
+`!#Trade` result was populated. Both rounds ended in unfiltered Inventory. The
+first pre-input attempt stopped safely when the Search placeholder was too
+broadly classified; the repaired analyzer was then accepted in all ten runs.
+Build passes and 146/146 self-tests pass.
+
 ## Guarded appraisal recovery accepted on 2026-07-20
 
 The recovery increment uses state-specific ROI stability rather than

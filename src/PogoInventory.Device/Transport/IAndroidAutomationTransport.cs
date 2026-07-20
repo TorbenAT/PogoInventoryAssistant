@@ -15,6 +15,10 @@ public interface IAndroidAutomationTransport : IAndroidDeviceTransport
         string query,
         CancellationToken cancellationToken = default);
 
+    Task SubmitInventorySearchQueryAsync(
+        string serial,
+        CancellationToken cancellationToken = default);
+
     Task TapAsync(
         string serial,
         int x,

@@ -148,11 +148,17 @@ public sealed class FakeAndroidDeviceTransport : IAndroidAutomationTransport
     {
         cancellationToken.ThrowIfCancellationRequested();
         EnsureKnownDevice(serial);
-        if (query.Length > 100 || query.Any(char.IsControl) || !query.StartsWith("!#", StringComparison.Ordinal))
-        {
-            throw new ArgumentException("Only validated Pokémon GO filter queries are allowed.", nameof(query));
-        }
+        _ = AndroidInputTextEncoder.EncodeInventorySearchQuery(query);
 
+        return Task.CompletedTask;
+    }
+
+    public Task SubmitInventorySearchQueryAsync(
+        string serial,
+        CancellationToken cancellationToken = default)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        EnsureKnownDevice(serial);
         return Task.CompletedTask;
     }
 

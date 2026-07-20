@@ -57,6 +57,25 @@ remains the authoritative compiler and test runner.
 
 0.14.3
 
+## Verified Inventory Search validation on 2026-07-20
+
+- build: PASS, 18 projects, zero warnings and zero errors
+- self-tests: PASS, 146/146
+- central encoding: `#Trade -> %s#Trade`, `!#Trade -> !\#Trade`
+- acceptance rounds: 2
+- accepted queries: 10/10
+- `age0-7`: PASS twice, visible count 7
+- `age0-365`: PASS twice, visible count 7
+- `age0-1825`: PASS twice, visible count 303
+- `#Trade`: PASS twice, visible count 0 in the current untagged state
+- `!#Trade`: PASS twice, populated result including Ekans CP616
+- final clear: PASS twice; unfiltered Inventory visually restored
+- initial failed attempt: no input sent because the placeholder Search text was
+  conservatively mistaken for an existing query; analyzer repaired and rerun
+- production raw ADB fragments outside Device: 0
+- evidence: ignored
+  `local-data/validation/sol-high-android-implementation/task-02-search`
+
 ## Guarded appraisal recovery validation on 2026-07-20
 
 Offline result:

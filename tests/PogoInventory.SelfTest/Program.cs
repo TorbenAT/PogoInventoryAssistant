@@ -92,6 +92,8 @@ var tests = new (string Name, Func<Task> Run)[]
     ("Known screen fixtures classify correctly", KnownScreenFixturesClassifyAsync),
     ("Known modal requires allow-list and post-state", Sync(KnownModalRequiresAllowListAndPostState)),
     ("Inventory search query is safely validated", Sync(InventorySearchQueryIsSafelyValidated)),
+    ("Inventory search text is centrally escaped and submitted", InventorySearchTests.RunEncodingAsync),
+    ("Inventory search workflow verifies clear, text and result transitions", InventorySearchTests.RunWorkflowAsync),
     ("Incomplete screen returns Unknown", IncompleteScreenReturnsUnknownAsync),
     ("Conflicting screen returns Unknown", ConflictingScreenReturnsUnknownAsync),
     ("Landscape screen fails closed", LandscapeScreenFailsClosedAsync),

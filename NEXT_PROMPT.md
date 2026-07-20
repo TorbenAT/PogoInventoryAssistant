@@ -8,12 +8,17 @@ from PokemonDetails. Three complete cycles passed with zero Unknown states,
 zero wrong states and zero Back actions on AppraisalBars. Build passes and
 144/144 self-tests pass.
 
-Continue with the generic Inventory Search increment. Centralize Android text
-escaping inside `PogoInventory.Device`, accept ordinary caller text including
-`#Trade` and `!#Trade`, and require verified Inventory/InventorySearch pre- and
-post-states, bounded waiting and audit evidence. Preserve the accepted recovery
-state machine and the ignored evidence under
-`local-data/validation/sol-high-android-implementation`.
+Generic Inventory Search is accepted. The caller supplies ordinary text,
+`PogoInventory.Device` owns escaping and Enter, and the guarded workflow
+verifies Open, Clear, Enter and Submit transitions. Two real rounds of all five
+required queries passed and ended with a verified clear. Build passes and
+146/146 self-tests pass.
+
+Continue with generic tag selection by name. Do not use the documented fixed
+Trade row coordinate or index. Derive visible row geometry, match a tag-name
+template from an ignored device profile, bound scrolling, verify checked state
+and the Details tag pill, and send no mutation when the requested name cannot
+be matched confidently.
 
 Use this after the 2026-07-19 real-phone validation run.
 
