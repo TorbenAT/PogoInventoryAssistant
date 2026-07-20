@@ -1,5 +1,10 @@
 # Continuation prompt
 
+The next single iteration must verify Inventory -> Details -> Menu ->
+Appraisal three times with the shared game-state detector. The 2026-07-20
+Details-to-Inventory recovery acceptance remains open because the real phone
+did not expose Inventory after one validated Back action.
+
 Use this after the 2026-07-19 real-phone validation run.
 
 I am building Pogo Inventory Assistant in C# and .NET 8.

@@ -34,6 +34,7 @@ using PogoInventory.Device.Transport;
 using PogoInventory.ImagePretest.Models;
 using PogoInventory.ImagePretest.Services;
 using PogoInventory.Exploration.Services;
+using PogoInventory.Exploration.Models;
 using PogoInventory.Observations.Models;
 using PogoInventory.Observations.Parsing;
 using PogoInventory.Observations.Providers;
@@ -123,6 +124,12 @@ static async Task<int> MainAsync(string[] args)
                 args.Skip(1).ToArray(),
                 cancellationSource.Token),
             "device-press-back" => await PressBackAsync(
+                args.Skip(1).ToArray(),
+                cancellationSource.Token),
+            "device-detect-game-state" => await DetectGameStateAsync(
+                args.Skip(1).ToArray(),
+                cancellationSource.Token),
+            "device-recover-inventory" => await RecoverInventoryAsync(
                 args.Skip(1).ToArray(),
                 cancellationSource.Token),
             "device-open-main-menu" => await OpenPokemonGoMainMenuAsync(
@@ -1755,6 +1762,113 @@ static async Task<int> PressBackAsync(
     return 0;
 }
 
+static async Task<int> DetectGameStateAsync(string[] args, CancellationToken cancellationToken)
+{
+    var options = ParseOptions(args);
+    var output = Path.GetFullPath(Require(options, "out"));
+    Directory.CreateDirectory(output);
+    var transport = CreateRealAndroidTransport(options);
+    var selected = DeviceSnapshotService.SelectDevice(
+        await transport.ListDevicesAsync(cancellationToken), Optional(options, "serial"));
+    var screenshot = await transport.CaptureScreenshotPngAsync(selected.Serial, cancellationToken);
+    var profile = Optional(options, "appraisal-profile") is { } profilePath
+        ? await AppraisalProfileLoader.LoadAsync(profilePath, cancellationToken)
+        : null;
+    var detection = new PokemonGoGameStateDetector().Detect(screenshot, profile);
+    await File.WriteAllBytesAsync(Path.Combine(output, "screen.png"), screenshot, cancellationToken);
+    await File.WriteAllTextAsync(Path.Combine(output, "game-state.json"),
+        JsonSerializer.Serialize(new
+        {
+            schemaVersion = "1.0",
+            state = detection.State.ToString(),
+            confidence = detection.Confidence,
+            evidence = detection.Evidence,
+            screenshotSha256 = detection.ScreenshotSha256,
+            capturedAtUtc = DateTimeOffset.UtcNow,
+            deviceSerial = selected.Serial
+        }, new JsonSerializerOptions { WriteIndented = true }), cancellationToken);
+    Console.WriteLine($"State: {detection.State}; confidence: {detection.Confidence:F3}; evidence: {string.Join(",", detection.Evidence)}");
+    return 0;
+}
+
+static async Task<int> RecoverInventoryAsync(string[] args, CancellationToken cancellationToken)
+{
+    var options = ParseOptions(args);
+    var output = Path.GetFullPath(Require(options, "out"));
+    Directory.CreateDirectory(output);
+    var transport = CreateRealAndroidTransport(options);
+    var selected = DeviceSnapshotService.SelectDevice(
+        await transport.ListDevicesAsync(cancellationToken), Optional(options, "serial"));
+    var profile = Optional(options, "appraisal-profile") is { } profilePath
+        ? await AppraisalProfileLoader.LoadAsync(profilePath, cancellationToken)
+        : null;
+    var detector = new PokemonGoGameStateDetector();
+    var state = await CaptureRecoveryFrameAsync("step-00", null);
+    if (state.State == PokemonGoGameState.Unknown)
+    {
+        Console.WriteLine("Recovery stopped: Unknown; no input sent.");
+        return 2;
+    }
+    var actions = 0;
+    while (state.State != PokemonGoGameState.Inventory && actions < 2)
+    {
+        var expected = state.State == PokemonGoGameState.PokemonMenu || state.State == PokemonGoGameState.Appraisal
+            ? (actions == 0 ? PokemonGoGameState.PokemonDetails : PokemonGoGameState.Inventory)
+            : PokemonGoGameState.Inventory;
+        await transport.PressBackAsync(selected.Serial, cancellationToken);
+        actions++;
+        state = await WaitForRecoveryStateAsync($"step-{actions:00}", expected);
+        if (state.State == PokemonGoGameState.Unknown)
+        {
+            Console.WriteLine($"Recovery stopped: Unknown after Back {actions}; no further input sent.");
+            return 2;
+        }
+        if (state.State != expected && state.State != PokemonGoGameState.Inventory)
+        {
+            Console.WriteLine($"Recovery failed: expected {expected}, observed {state.State}.");
+            return 1;
+        }
+    }
+    Console.WriteLine($"Recovery result: {(state.State == PokemonGoGameState.Inventory ? "PASS" : "FAIL")}; Back actions: {actions}.");
+    return state.State == PokemonGoGameState.Inventory ? 0 : 1;
+
+    async Task<PokemonGoGameStateDetection> CaptureRecoveryFrameAsync(string name, PokemonGoGameState? expected)
+    {
+        var screenshot = await transport.CaptureScreenshotPngAsync(selected.Serial, cancellationToken);
+        var detection = detector.Detect(screenshot, profile);
+        var directory = Path.Combine(output, name);
+        Directory.CreateDirectory(directory);
+        await File.WriteAllBytesAsync(Path.Combine(directory, "before-screen.png"), screenshot, cancellationToken);
+        await File.WriteAllTextAsync(Path.Combine(directory, "state.json"), JsonSerializer.Serialize(new
+        {
+            state = detection.State.ToString(), confidence = detection.Confidence,
+            evidence = detection.Evidence, screenshotSha256 = detection.ScreenshotSha256,
+            expected = expected?.ToString()
+        }, new JsonSerializerOptions { WriteIndented = true }), cancellationToken);
+        return detection;
+    }
+
+    async Task<PokemonGoGameStateDetection> WaitForRecoveryStateAsync(
+        string name,
+        PokemonGoGameState expected)
+    {
+        var deadline = DateTimeOffset.UtcNow.AddSeconds(8);
+        PokemonGoGameStateDetection latest;
+        do
+        {
+            await Task.Delay(350, cancellationToken);
+            latest = await CaptureRecoveryFrameAsync(name, expected);
+            if (latest.State == expected || latest.State == PokemonGoGameState.Inventory)
+            {
+                return latest;
+            }
+        }
+        while (DateTimeOffset.UtcNow < deadline);
+
+        return latest;
+    }
+}
+
 static async Task<int> OpenPokemonGoMainMenuAsync(
     string[] args,
     CancellationToken cancellationToken)
@@ -2197,6 +2311,8 @@ static void PrintHelp()
     Console.WriteLine("  device-stop-known-app --app calcy [--adb <adb.exe>] [--serial <serial>]");
     Console.WriteLine("  device-open-inventory [--adb <adb.exe>] [--serial <serial>]");
     Console.WriteLine("  device-press-back [--adb <adb.exe>] [--serial <serial>]");
+    Console.WriteLine("  device-detect-game-state --adb <adb.exe> --out <directory> [--appraisal-profile <profile.json>]");
+    Console.WriteLine("  device-recover-inventory --adb <adb.exe> --out <directory> [--appraisal-profile <profile.json>]");
     Console.WriteLine("  device-open-main-menu [--adb <adb.exe>] [--serial <serial>]");
     Console.WriteLine("  device-open-pokemon-inventory [--adb <adb.exe>] [--serial <serial>]");
     Console.WriteLine("  device-open-appraisal --profile <automation.json> --appraisal-profile <appraisal.json> --out <directory>");

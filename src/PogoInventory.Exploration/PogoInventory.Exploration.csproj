@@ -9,5 +9,6 @@
     <ProjectReference Include="..\PogoInventory.Automation\PogoInventory.Automation.csproj" />
     <ProjectReference Include="..\PogoInventory.Device\PogoInventory.Device.csproj" />
     <ProjectReference Include="..\PogoInventory.Vision\PogoInventory.Vision.csproj" />
+    <ProjectReference Include="..\PogoInventory.Appraisal\PogoInventory.Appraisal.csproj" />
   </ItemGroup>
 </Project>

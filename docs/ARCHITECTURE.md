@@ -2,6 +2,18 @@
 
 ## Target flow
 
+### Shared game-state detection
+
+`PogoInventory.Exploration.PokemonGoGameStateDetector` is the single read-only
+detector for the current game screen. It reuses `VisualControlLocator` for
+Inventory, Details and Menu anchors and `AppraisalAnalyzer` for Appraisal.
+Detection returns a normalized state, confidence, concrete evidence and the
+SHA-256 of the captured screenshot. No UI hierarchy is used as sole evidence.
+
+`device-recover-inventory` performs only state-validated Back actions, waits
+for a stable expected post-state, caps actions at two and stops fail-closed on
+Unknown or a state mismatch.
+
 ```text
 Android phone
     |

@@ -167,6 +167,19 @@ When the Android phone is connected, the profile searches translation and scale
 around those definitions. A single visible appraisal screen can therefore
 generate phone-specific definitions automatically.
 
+## Game-state detector and guarded recovery iteration (2026-07-20)
+
+Added a shared read-only `PokemonGoGameStateDetector` in the exploration layer.
+It reuses the existing visual control anchors and appraisal analyzer and emits
+one of Inventory, PokemonDetails, PokemonMenu, Appraisal or Unknown together
+with confidence, evidence and screenshot SHA-256. Added CLI commands
+`device-detect-game-state` and `device-recover-inventory`; recovery sends at
+most two Back actions and stops on Unknown or an unexpected post-state.
+
+The real phone detector identified the current Details screen at confidence
+1.000. The guarded recovery sent one Back, but the stable post-action frame
+remained Details, so the run stopped without a second blind action.
+
 ## Not completed
 
 - extraction of exact semantic variant identity from Android screenshots

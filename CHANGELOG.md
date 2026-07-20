@@ -268,3 +268,12 @@
 - Added JSON and Markdown reports.
 - Added package-free self-tests.
 - Added architecture, guardrails, roadmap, project state and continuation prompt.
+## 0.14.3 - 2026-07-20
+
+- Added shared read-only Pokemon GO game-state detection for Inventory,
+  PokemonDetails, PokemonMenu, Appraisal and Unknown.
+- Added state-evidenced `device-detect-game-state` output with screenshot hash.
+- Added fail-closed `device-recover-inventory` with a maximum of two validated
+  Back actions and post-action screenshots.
+- Real detection identified PokemonDetails at confidence 1.000; recovery did
+  not reach Inventory and stopped after the first Back attempt.

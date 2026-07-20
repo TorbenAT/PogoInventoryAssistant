@@ -165,3 +165,12 @@ Limitations observed during validation:
 - `prepare-android-phone` failed with the default `adb` path because ADB was not on PATH in this environment.
 - The real phone preparation run confirmed `Verified IV extraction ready: False`, so verified IV extraction is still not available.
 - the real Calcy live-check did not parse a local observation because no parser profile was supplied yet
+## 2026-07-20 game-state iteration
+
+- Release build: passed.
+- Self-tests: passed.
+- Real read-only detection: `PokemonDetails`, confidence `1.000`, evidence
+  `DetailsMenuDetected`.
+- Real recovery: one Back action attempted; stable post-state remained
+  `PokemonDetails`, so recovery stopped fail-closed and did not claim PASS.
+- The required 3/3 Details-to-Inventory acceptance was not completed.
