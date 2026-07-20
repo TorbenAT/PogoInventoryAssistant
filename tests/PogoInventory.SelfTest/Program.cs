@@ -94,6 +94,8 @@ var tests = new (string Name, Func<Task> Run)[]
     ("Inventory search query is safely validated", Sync(InventorySearchQueryIsSafelyValidated)),
     ("Inventory search text is centrally escaped and submitted", InventorySearchTests.RunEncodingAsync),
     ("Inventory search workflow verifies clear, text and result transitions", InventorySearchTests.RunWorkflowAsync),
+    ("Tag selector profile bounds scrolling and requires named templates", TagSelectorTests.RunProfileSafetyAsync),
+    ("Tag workflow is idempotent and never uses a fixed row", TagSelectorTests.RunWorkflowContractAsync),
     ("Incomplete screen returns Unknown", IncompleteScreenReturnsUnknownAsync),
     ("Conflicting screen returns Unknown", ConflictingScreenReturnsUnknownAsync),
     ("Landscape screen fails closed", LandscapeScreenFailsClosedAsync),

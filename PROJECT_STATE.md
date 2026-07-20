@@ -4,6 +4,26 @@
 
 0.14.3
 
+## Verified tag selection by name accepted on 2026-07-20
+
+`device-set-pokemon-tag` now identifies visible rows geometrically and matches
+the requested name through an ignored, device-calibrated visual profile at
+three bounded normalized scales. It requires confidence plus separation from
+the second-best row. Row position and row ordinal are never identity.
+
+The operation verifies Details, Menu, selector visibility, selected/unselected
+check state, Done and the resulting Details tag pill. It scrolls at most the
+profile limit and records `TAG_NOT_FOUND_NO_MUTATION` without tapping any row
+when a name is unavailable. Requests already in the desired state perform zero
+row mutations.
+
+Two real Trade add/remove cycles passed on Ekans CP616 with zero wrong tag
+selections. Each addition was confirmed by the selector, Details and `#Trade`;
+each removal was confirmed by the selector, Details, an empty `#Trade`, and
+Ekans under `!#Trade`. Final tag state is unselected and Inventory is
+unfiltered. Build passes and 148/148 self-tests pass. Real profiles and images
+remain under ignored `local-data`.
+
 ## Verified Inventory Search accepted on 2026-07-20
 
 `device-search-inventory` now owns a bounded Open -> Clear -> Enter -> Submit

@@ -42,6 +42,20 @@ remote-shell-safe token used by Android `input text`; Submit is a separate
 named `KEYCODE_ENTER` transport operation. CLI and Automation never construct
 raw shell syntax.
 
+### Guarded tag selection by name
+
+`TagSelector` first discovers visible rows from their left-side marker geometry.
+It then compares each row's name region with a named template in an ignored
+device profile at bounded 0.94, 1.00 and 1.06 normalized height scales. A match
+requires both an absolute confidence threshold and a second-best margin. Row
+order and fixed row coordinates are never match inputs.
+
+The CLI owns state-validated Menu and Done transitions, while `TagSelector`
+owns read-only row, checkmark and Details-pill observations. The only mutation
+is `SetExistingPokemonTag` against the matched row. It is omitted when the
+requested state already holds or no confident name match exists. Selector
+scrolling is profile-bounded and every action and postcondition is audited.
+
 ```text
 Android phone
     |
@@ -109,9 +123,13 @@ IAndroidAutomationTransport
   extends IAndroidDeviceTransport
   TapAsync
   SwipeAsync
+  EnterTextAsync
+  SubmitAsync
 ```
 
-The input interface contains no text input, arbitrary shell, app launch, key event, location control or destructive game action.
+The input interface contains only named text entry and submit in addition to
+tap/swipe. It contains no arbitrary shell, arbitrary key event, location
+control or destructive game action.
 
 `AdbAndroidDeviceTransport` converts the two input methods to these fixed ADB command forms:
 

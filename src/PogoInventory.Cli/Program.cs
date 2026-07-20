@@ -150,6 +150,12 @@ static async Task<int> MainAsync(string[] args)
             "device-search-inventory" => await SearchInventoryAsync(
                 args.Skip(1).ToArray(),
                 cancellationSource.Token),
+            "device-set-pokemon-tag" => await SetPokemonTagAsync(
+                args.Skip(1).ToArray(),
+                cancellationSource.Token),
+            "tag-selector-detect-image" => await DetectTagSelectorImageAsync(
+                args.Skip(1).ToArray(),
+                cancellationSource.Token),
             "device-open-appraisal" => await OpenAppraisalFromInventoryAsync(
                 args.Skip(1).ToArray(),
                 cancellationSource.Token),
@@ -2335,6 +2341,294 @@ static async Task<int> SearchInventoryAsync(
         cancellationToken);
 }
 
+static async Task<int> SetPokemonTagAsync(
+    string[] args,
+    CancellationToken cancellationToken)
+{
+    var options = ParseOptions(args);
+    var output = Path.GetFullPath(Require(options, "out"));
+    var tagName = Require(options, "tag");
+    var selectedState = ParseBoolean(options, "selected", false);
+    var profilePath = Path.GetFullPath(Require(options, "profile"));
+    var profile = await TagSelectorProfileLoader.LoadAsync(profilePath, cancellationToken);
+    Directory.CreateDirectory(output);
+
+    var transport = CreateRealAndroidTransport(options);
+    var devices = await transport.ListDevicesAsync(cancellationToken);
+    var selected = DeviceSnapshotService.SelectDevice(devices, Optional(options, "serial"));
+    var metadata = await transport.ReadMetadataAsync(selected.Serial, cancellationToken);
+    if (!string.Equals(profile.DeviceSerial, selected.Serial, StringComparison.Ordinal) ||
+        metadata.Screen.EffectiveWidth != profile.ScreenWidth ||
+        metadata.Screen.EffectiveHeight != profile.ScreenHeight)
+    {
+        throw new InvalidOperationException(
+            "Tag selector profile does not match the selected device and geometry.");
+    }
+
+    var detector = new PokemonGoGameStateDetector();
+    var locator = new VisualControlLocator();
+    var tagSelector = new TagSelector();
+    var actions = new List<object>();
+    var before = await transport.CaptureScreenshotPngAsync(selected.Serial, cancellationToken);
+    var beforeState = detector.Detect(before);
+    await File.WriteAllBytesAsync(Path.Combine(output, "before.png"), before, cancellationToken);
+    await WriteJsonAsync("state-before.json", new
+    {
+        state = beforeState.State.ToString(),
+        beforeState.Confidence,
+        requestedTag = tagName,
+        requestedSelected = selectedState
+    });
+    if (beforeState.State != PokemonGoGameState.PokemonDetails)
+    {
+        throw new InvalidOperationException(
+            "PokemonDetails was not verified; no tag operation was sent.");
+    }
+
+    var menuControl = locator.LocateDetailsMenu(before) ??
+        throw new InvalidOperationException("Details menu control was not visually verified.");
+    var menuTarget = menuControl.Target.ToPixels(profile.ScreenWidth, profile.ScreenHeight);
+    await transport.TapAsync(selected.Serial, menuTarget.X, menuTarget.Y, cancellationToken);
+    actions.Add(ActionRecord("OpenPokemonMenu", menuTarget.X, menuTarget.Y,
+        "PokemonDetails", "PokemonMenu"));
+    _ = await WaitForAsync(png => detector.Detect(png).State == PokemonGoGameState.PokemonMenu,
+        "PokemonMenu");
+
+    var openTagTarget = profile.OpenTagMenu.ToPixels(profile.ScreenWidth, profile.ScreenHeight);
+    await transport.TapAsync(selected.Serial, openTagTarget.X, openTagTarget.Y, cancellationToken);
+    actions.Add(ActionRecord("OpenPokemonTagSelector", openTagTarget.X, openTagTarget.Y,
+        "PokemonMenu", "TagSelector"));
+    var selectorPng = await WaitForAsync(
+        png => tagSelector.IsSelectorVisible(png, profile), "TagSelector");
+    await File.WriteAllBytesAsync(
+        Path.Combine(output, "selector-before.png"), selectorPng, cancellationToken);
+
+    TagSelectionMatch? match = null;
+    var scrolls = 0;
+    while (scrolls <= profile.MaximumScrolls)
+    {
+        match = tagSelector.FindByName(selectorPng, tagName, profile, profilePath);
+        if (match is not null)
+        {
+            break;
+        }
+        if (scrolls == profile.MaximumScrolls)
+        {
+            break;
+        }
+        var start = profile.ScrollStart.ToPixels(profile.ScreenWidth, profile.ScreenHeight);
+        var end = profile.ScrollEnd.ToPixels(profile.ScreenWidth, profile.ScreenHeight);
+        await transport.SwipeAsync(
+            selected.Serial, start.X, start.Y, end.X, end.Y, 320, cancellationToken);
+        scrolls++;
+        actions.Add(new
+        {
+            sequence = actions.Count + 1,
+            action = "ScrollTagSelector",
+            target = new
+            {
+                startX = start.X,
+                startY = start.Y,
+                endX = end.X,
+                endY = end.Y
+            },
+            expectedState = "TagSelector",
+            maximumScrolls = profile.MaximumScrolls
+        });
+        await Task.Delay(700, cancellationToken);
+        selectorPng = await transport.CaptureScreenshotPngAsync(selected.Serial, cancellationToken);
+        if (!tagSelector.IsSelectorVisible(selectorPng, profile))
+        {
+            throw new InvalidOperationException("Tag selector disappeared after bounded scroll.");
+        }
+    }
+
+    if (match is null)
+    {
+        await File.WriteAllBytesAsync(
+            Path.Combine(output, "after.png"), selectorPng, cancellationToken);
+        await WriteJsonAsync("action.json", new
+        {
+            schemaVersion = "1.0",
+            requestedTag = tagName,
+            requestedSelected = selectedState,
+            scrolls,
+            rowMutationActions = 0,
+            actions,
+            outcome = "TAG_NOT_FOUND_NO_MUTATION"
+        });
+        await File.WriteAllTextAsync(
+            Path.Combine(output, "result.txt"),
+            "TAG_NOT_FOUND_NO_MUTATION",
+            cancellationToken);
+        throw new InvalidOperationException(
+            $"Tag '{tagName}' was not matched confidently; no tag row was tapped.");
+    }
+
+    var initialSelected = match.Row.IsSelected;
+    var rowMutationActions = 0;
+    if (initialSelected != selectedState)
+    {
+        var rowTarget = match.Row.Target.ToPixels(profile.ScreenWidth, profile.ScreenHeight);
+        await transport.TapAsync(selected.Serial, rowTarget.X, rowTarget.Y, cancellationToken);
+        rowMutationActions = 1;
+        actions.Add(new
+        {
+            sequence = actions.Count + 1,
+            action = "SetExistingPokemonTag",
+            tagName,
+            selected = selectedState,
+            targetX = rowTarget.X,
+            targetY = rowTarget.Y,
+            match.Confidence,
+            match.VisibleRowCount,
+            rowIndexUsed = false,
+            expectedState = "TagSelector"
+        });
+        selectorPng = await WaitForAsync(png =>
+        {
+            var updated = tagSelector.FindByName(png, tagName, profile, profilePath);
+            return updated is not null && updated.Row.IsSelected == selectedState;
+        }, "requested tag checkmark state");
+        match = tagSelector.FindByName(selectorPng, tagName, profile, profilePath) ??
+            throw new InvalidOperationException("Matched tag disappeared after its guarded tap.");
+    }
+
+    await File.WriteAllBytesAsync(
+        Path.Combine(output, "selector-after.png"), selectorPng, cancellationToken);
+    if (!tagSelector.IsDoneVisible(selectorPng, profile))
+    {
+        throw new InvalidOperationException("Tag selector Done control was not visually verified.");
+    }
+    var doneTarget = profile.Done.ToPixels(profile.ScreenWidth, profile.ScreenHeight);
+    await transport.TapAsync(selected.Serial, doneTarget.X, doneTarget.Y, cancellationToken);
+    actions.Add(ActionRecord("CommitPokemonTagSelection", doneTarget.X, doneTarget.Y,
+        "TagSelector", "PokemonDetails"));
+    var after = await WaitForAsync(
+        png => detector.Detect(png).State == PokemonGoGameState.PokemonDetails,
+        "PokemonDetails");
+    var detailsPill = tagSelector.HasDetailsTagPill(after);
+    if (detailsPill != selectedState)
+    {
+        await File.WriteAllBytesAsync(Path.Combine(output, "after.png"), after, cancellationToken);
+        throw new InvalidOperationException(
+            $"Details tag-pill verification failed; expected {selectedState}, observed {detailsPill}.");
+    }
+
+    await File.WriteAllBytesAsync(Path.Combine(output, "after.png"), after, cancellationToken);
+    await WriteJsonAsync("state-after.json", new
+    {
+        state = detector.Detect(after).State.ToString(),
+        requestedTag = tagName,
+        requestedSelected = selectedState,
+        initialSelected,
+        selectorSelected = match.Row.IsSelected,
+        detailsTagPill = detailsPill,
+        match.Confidence,
+        match.VisibleRowCount,
+        scrolls,
+        rowMutationActions
+    });
+    await WriteJsonAsync("action.json", new
+    {
+        schemaVersion = "1.0",
+        selected.Serial,
+        requestedTag = tagName,
+        requestedSelected = selectedState,
+        rowIndexUsed = false,
+        fixedRowCoordinateUsed = false,
+        rowMutationActions,
+        actions,
+        outcome = "SUCCEEDED"
+    });
+    await File.WriteAllTextAsync(
+        Path.Combine(output, "result.txt"),
+        $"SUCCEEDED tag={tagName}; selected={selectedState}; " +
+        $"initialSelected={initialSelected}; rowMutationActions={rowMutationActions}; " +
+        $"confidence={match.Confidence:F4}; scrolls={scrolls}",
+        cancellationToken);
+    Console.WriteLine(
+        $"Verified tag '{tagName}' selected={selectedState}; initial={initialSelected}; " +
+        $"row mutations={rowMutationActions}; match={match.Confidence:F3}; scrolls={scrolls}.");
+    return 0;
+
+    object ActionRecord(string action, int x, int y, string beforeStateName, string afterStateName) =>
+        new
+        {
+            sequence = actions.Count + 1,
+            action,
+            targetX = x,
+            targetY = y,
+            stateBefore = beforeStateName,
+            expectedState = afterStateName
+        };
+
+    async Task<byte[]> WaitForAsync(Func<byte[], bool> predicate, string expected)
+    {
+        var deadline = DateTimeOffset.UtcNow.AddSeconds(10);
+        byte[]? latest = null;
+        while (DateTimeOffset.UtcNow < deadline)
+        {
+            latest = await transport.CaptureScreenshotPngAsync(selected.Serial, cancellationToken);
+            if (predicate(latest))
+            {
+                return latest;
+            }
+            await Task.Delay(300, cancellationToken);
+        }
+        if (latest is not null)
+        {
+            await File.WriteAllBytesAsync(Path.Combine(output, "failure.png"), latest, cancellationToken);
+        }
+        throw new InvalidOperationException($"Timed out waiting for {expected}.");
+    }
+
+    Task WriteJsonAsync(string name, object value) => File.WriteAllTextAsync(
+        Path.Combine(output, name),
+        JsonSerializer.Serialize(value, new JsonSerializerOptions { WriteIndented = true }),
+        cancellationToken);
+}
+
+static async Task<int> DetectTagSelectorImageAsync(
+    string[] args,
+    CancellationToken cancellationToken)
+{
+    var options = ParseOptions(args);
+    var imagePath = Path.GetFullPath(Require(options, "image"));
+    var profilePath = Path.GetFullPath(Require(options, "profile"));
+    var tagName = Require(options, "tag");
+    var outputPath = Path.GetFullPath(Require(options, "out"));
+    var profile = await TagSelectorProfileLoader.LoadAsync(profilePath, cancellationToken);
+    var png = await File.ReadAllBytesAsync(imagePath, cancellationToken);
+    var selector = new TagSelector();
+    var rows = selector.FindVisibleRows(png);
+    var best = selector.FindBestByName(png, tagName, profile, profilePath);
+    var candidates = selector.FindCandidatesByName(png, tagName, profile, profilePath);
+    var accepted = selector.FindByName(png, tagName, profile, profilePath);
+    var result = new
+    {
+        selectorVisible = selector.IsSelectorVisible(png, profile),
+        detailsTagPill = selector.HasDetailsTagPill(png),
+        visibleRowCount = rows.Count,
+        rows,
+        requestedTag = tagName,
+        best,
+        candidates,
+        accepted = accepted is not null,
+        minimumConfidence = profile.MinimumMatchConfidence,
+        minimumMargin = profile.MinimumMatchMargin
+    };
+    Directory.CreateDirectory(Path.GetDirectoryName(outputPath)!);
+    await File.WriteAllTextAsync(
+        outputPath,
+        JsonSerializer.Serialize(result, new JsonSerializerOptions { WriteIndented = true }),
+        cancellationToken);
+    Console.WriteLine(
+        $"Selector visible={result.selectorVisible}; rows={rows.Count}; " +
+        $"best={best?.Confidence:F4}; accepted={result.accepted}.");
+    return result.selectorVisible && accepted is not null ? 0 : 1;
+}
+
 static async Task<int> OpenAppraisalFromInventoryAsync(
     string[] args,
     CancellationToken cancellationToken)
@@ -2771,6 +3065,8 @@ static void PrintHelp()
     Console.WriteLine("  device-open-main-menu [--adb <adb.exe>] [--serial <serial>]");
     Console.WriteLine("  device-open-pokemon-inventory [--adb <adb.exe>] [--serial <serial>]");
     Console.WriteLine("  device-search-inventory --query <query> --out <directory> [--clear-after <true|false>]");
+    Console.WriteLine("  device-set-pokemon-tag --tag <name> --selected <true|false> --profile <tag-profile.json> --out <directory>");
+    Console.WriteLine("  tag-selector-detect-image --image <screen.png> --profile <tag-profile.json> --tag <name> --out <result.json>");
     Console.WriteLine("  device-open-appraisal --profile <automation.json> --appraisal-profile <appraisal.json> --out <directory>");
     Console.WriteLine("                        [--adb <adb.exe>] [--serial <serial>]");
     Console.WriteLine("  inventory-db-init [--db <pogo-inventory.db>]");

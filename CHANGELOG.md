@@ -2,6 +2,18 @@
 
 ## Unreleased Android navigation increment - 2026-07-20
 
+- Added `device-set-pokemon-tag` and `TagSelector`: visible rows are found
+  geometrically, names are identified by device-calibrated normalized
+  multi-scale templates, and neither a row ordinal nor fixed row coordinate is
+  accepted as identity.
+- Added confidence and second-best-margin gates, a maximum of three controlled
+  list scrolls, checkmark verification, Details-pill verification and an
+  explicit `TAG_NOT_FOUND_NO_MUTATION` outcome. Repeated requests are
+  idempotent.
+- Completed two real OnePlus 6T Trade add/remove cycles on Ekans CP616 with
+  zero wrong tag selections. Final verification showed `#Trade` count 0 and
+  Ekans present under `!#Trade`; the phone ended in unfiltered Inventory.
+- Added tag profile and workflow safety regressions; 148/148 self-tests pass.
 - Added `device-search-inventory` with guarded Open, Clear, Enter and Submit
   phases, visual pre/postconditions, bounded polling and per-action audit.
 - Centralized remote-shell text encoding in `PogoInventory.Device`; callers
@@ -29,8 +41,9 @@
   states, zero wrong states and zero Back actions on AppraisalBars. Every bars
   exit used exactly one normalized tap at approximately `(0.10, 0.50)` before
   the single Details-to-Inventory Back action.
-- No transfer, tag, delete, Calcy, OCR, location or arbitrary-shell behavior
-  was added.
+- No transfer, delete, Calcy, OCR, location or arbitrary-shell behavior was
+  added. Tag mutation is limited to a confidently identified existing tag and
+  is reversible.
 
 ## 0.14.3
 

@@ -57,6 +57,25 @@ remains the authoritative compiler and test runner.
 
 0.14.3
 
+## Verified tag selection by name validation on 2026-07-20
+
+- build: PASS, zero warnings and zero errors
+- self-tests: PASS, 148/148
+- real test Pokemon: Ekans CP616
+- match: normalized three-scale visual template after geometric row discovery
+- accepted Trade confidence: 0.806; second-best margin: 0.228
+- fixed tag row index/coordinate used: NO
+- add cycles: 2/2; remove cycles: 2/2; wrong tag selections: 0
+- idempotence: verified removal requested while already unselected, zero row
+  mutation actions
+- final `#Trade`: 0 visible results
+- final `!#Trade`: Ekans CP616 visible
+- final state: unfiltered Inventory; Trade unselected on Ekans CP616
+- initial selector-gate and first pill-detector failures were preserved locally,
+  repaired, and rerun; neither caused an unintended mutation
+- limitation: templates are device-local visual evidence, not portable OCR
+- real screenshots, serial, profile and audits remain in ignored `local-data`
+
 ## Verified Inventory Search validation on 2026-07-20
 
 - build: PASS, 18 projects, zero warnings and zero errors

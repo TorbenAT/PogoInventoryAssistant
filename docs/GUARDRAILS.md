@@ -34,6 +34,9 @@ OpenInventorySearch
 ClearInventorySearch
 EnterInventorySearchText
 SubmitInventorySearch
+OpenPokemonTagSelector
+SetExistingPokemonTag
+CommitPokemonTagSelection
 ```
 
 Coordinates come from a validated local automation profile and are converted from normalised values to the locked screen geometry.
@@ -50,8 +53,17 @@ AppraisalBars and is authorized only after PokemonDetails is verified.
 
 Search text is validated as ordinary text at the caller boundary and encoded
 for Android only inside `PogoInventory.Device`. Search requires verified
-Inventory/Search state, bounded post-action checks and audit. There is no
-arbitrary shell command, arbitrary higher-layer coordinate API, tag action or
+Inventory/Search state, bounded post-action checks and audit.
+
+Tag selection is limited to an existing tag whose name is confidently matched
+from geometric row discovery and a validated local profile. A fixed row index,
+a fixed tag-row coordinate, unbounded scrolling and a row action after failed
+matching are forbidden. Selected/unselected state and the resulting Details
+state must be verified. The action is reversible and conveys no transfer or
+delete authority; an `AI-Delete` visual template, if locally configured, is
+identity evidence only.
+
+There is no arbitrary shell command, arbitrary higher-layer coordinate API or
 destructive action.
 
 ## No anti-detection behaviour

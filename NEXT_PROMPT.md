@@ -14,11 +14,17 @@ verifies Open, Clear, Enter and Submit transitions. Two real rounds of all five
 required queries passed and ended with a verified clear. Build passes and
 146/146 self-tests pass.
 
-Continue with generic tag selection by name. Do not use the documented fixed
-Trade row coordinate or index. Derive visible row geometry, match a tag-name
-template from an ignored device profile, bound scrolling, verify checked state
-and the Details tag pill, and send no mutation when the requested name cannot
-be matched confidently.
+Generic tag selection by name is accepted. It uses geometric row discovery,
+normalized multi-scale device templates, confidence and margin gates, bounded
+scrolling, checkmark plus Details-pill verification, and zero mutation for a
+missing match. Two real Trade add/remove cycles passed on Ekans CP616 with zero
+wrong selections. Build passes and 148/148 self-tests pass.
+
+Continue with dynamic-tolerant Pokemon identity. Keep full screenshot SHA-256
+strictly as evidence integrity. Build a separate stable multi-ROI fingerprint
+that excludes the animated model, particles, dynamic background, status bar and
+temporary overlays, and assign every observation a run-scoped ordinal instance
+ID even when two stable fingerprints are identical.
 
 Use this after the 2026-07-19 real-phone validation run.
 
