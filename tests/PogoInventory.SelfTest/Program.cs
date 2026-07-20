@@ -41,9 +41,11 @@ using PogoInventory.Vision.Reporting;
 using PogoInventory.Verification.Models;
 using PogoInventory.Verification.Services;
 using PogoInventory.Vision.Errors;
+using PogoInventory.SelfTest;
 
 var tests = new (string Name, Func<Task> Run)[]
 {
+    ("Real-state detector regression fixtures", StateDetectorRegressionTests.RunAsync),
     ("Perfect is kept", Sync(PerfectIsKept)),
     ("Trade nickname is kept", Sync(TradeNicknameIsKept)),
     ("Old Pokémon is kept", Sync(OldPokemonIsKept)),
