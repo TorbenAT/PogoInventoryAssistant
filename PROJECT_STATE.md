@@ -24,6 +24,14 @@ Ekans under `!#Trade`. Final tag state is unselected and Inventory is
 unfiltered. Build passes and 148/148 self-tests pass. Real profiles and images
 remain under ignored `local-data`.
 
+Additional Task 3 acceptance passed for all four existing AI tag names. Each
+named row was independently matched, selected, committed, observed on Details
+and removed with zero wrong selections. Dynamic pill counting accepted zero,
+one and two simultaneous tags and verified the 2 -> 1 -> 0 removal sequence.
+AI-Delete was only a reversible tag-name test; no destructive action exists or
+ran. The final phone state is unfiltered Inventory and Ekans CP616 has none of
+the tested tags. Build passes and 149/149 self-tests pass.
+
 ## Verified Inventory Search accepted on 2026-07-20
 
 `device-search-inventory` now owns a bounded Open -> Clear -> Enter -> Submit

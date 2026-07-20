@@ -2371,6 +2371,7 @@ static async Task<int> SetPokemonTagAsync(
     var actions = new List<object>();
     var before = await transport.CaptureScreenshotPngAsync(selected.Serial, cancellationToken);
     var beforeState = detector.Detect(before);
+    var detailsTagPillsBefore = tagSelector.CountDetailsTagPills(before);
     await File.WriteAllBytesAsync(Path.Combine(output, "before.png"), before, cancellationToken);
     await WriteJsonAsync("state-before.json", new
     {
@@ -2507,12 +2508,16 @@ static async Task<int> SetPokemonTagAsync(
     var after = await WaitForAsync(
         png => detector.Detect(png).State == PokemonGoGameState.PokemonDetails,
         "PokemonDetails");
-    var detailsPill = tagSelector.HasDetailsTagPill(after);
-    if (detailsPill != selectedState)
+    var detailsTagPillsAfter = tagSelector.CountDetailsTagPills(after);
+    var expectedPillCount = rowMutationActions == 0
+        ? detailsTagPillsBefore
+        : detailsTagPillsBefore + (selectedState ? 1 : -1);
+    if (detailsTagPillsAfter != expectedPillCount)
     {
         await File.WriteAllBytesAsync(Path.Combine(output, "after.png"), after, cancellationToken);
         throw new InvalidOperationException(
-            $"Details tag-pill verification failed; expected {selectedState}, observed {detailsPill}.");
+            $"Details tag-pill count verification failed; expected {expectedPillCount}, " +
+            $"observed {detailsTagPillsAfter}.");
     }
 
     await File.WriteAllBytesAsync(Path.Combine(output, "after.png"), after, cancellationToken);
@@ -2523,7 +2528,8 @@ static async Task<int> SetPokemonTagAsync(
         requestedSelected = selectedState,
         initialSelected,
         selectorSelected = match.Row.IsSelected,
-        detailsTagPill = detailsPill,
+        detailsTagPillsBefore,
+        detailsTagPillsAfter,
         match.Confidence,
         match.VisibleRowCount,
         scrolls,
@@ -2609,6 +2615,7 @@ static async Task<int> DetectTagSelectorImageAsync(
     {
         selectorVisible = selector.IsSelectorVisible(png, profile),
         detailsTagPill = selector.HasDetailsTagPill(png),
+        detailsTagPillCount = selector.CountDetailsTagPills(png),
         visibleRowCount = rows.Count,
         rows,
         requestedTag = tagName,

@@ -26,6 +26,14 @@ that excludes the animated model, particles, dynamic background, status bar and
 temporary overlays, and assign every observation a run-scoped ordinal instance
 ID even when two stable fingerprints are identical.
 
+Task 4 must also tolerate mutable Details layout. Real Task 3 evidence proves
+that zero, one and two tags produce different full screenshot SHA-256 values
+and move weight/height plus all lower content vertically. Tag names and pills
+are mutable observations, never identity. Detect the tag section dynamically
+and align stable ROIs to Details anchors/content after the section; do not
+ignore one fixed tag rectangle. No Task 4 implementation is included in the
+Task 3 checkpoint.
+
 Use this after the 2026-07-19 real-phone validation run.
 
 I am building Pogo Inventory Assistant in C# and .NET 8.

@@ -96,6 +96,7 @@ var tests = new (string Name, Func<Task> Run)[]
     ("Inventory search workflow verifies clear, text and result transitions", InventorySearchTests.RunWorkflowAsync),
     ("Tag selector profile bounds scrolling and requires named templates", TagSelectorTests.RunProfileSafetyAsync),
     ("Tag workflow is idempotent and never uses a fixed row", TagSelectorTests.RunWorkflowContractAsync),
+    ("Details tag layout counts zero, one and two mutable pills", TagSelectorTests.RunDetailsLayoutAsync),
     ("Incomplete screen returns Unknown", IncompleteScreenReturnsUnknownAsync),
     ("Conflicting screen returns Unknown", ConflictingScreenReturnsUnknownAsync),
     ("Landscape screen fails closed", LandscapeScreenFailsClosedAsync),

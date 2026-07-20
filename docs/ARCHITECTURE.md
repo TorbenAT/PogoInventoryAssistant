@@ -55,6 +55,10 @@ owns read-only row, checkmark and Details-pill observations. The only mutation
 is `SetExistingPokemonTag` against the matched row. It is omitted when the
 requested state already holds or no confident name match exists. Selector
 scrolling is profile-bounded and every action and postcondition is audited.
+Details verification dynamically counts connected gray or colored pill
+components in the tag section and requires the expected before/after delta.
+This supports zero, one and multiple simultaneous tags without treating one
+fixed tag color or location as authoritative.
 
 ```text
 Android phone

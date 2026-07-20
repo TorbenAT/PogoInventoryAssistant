@@ -14,6 +14,13 @@
   zero wrong tag selections. Final verification showed `#Trade` count 0 and
   Ekans present under `!#Trade`; the phone ended in unfiltered Inventory.
 - Added tag profile and workflow safety regressions; 148/148 self-tests pass.
+- Extended real-phone acceptance to `AI-Indexed`, `AI-Review`, `AI-Keep` and
+  `AI-Delete` as tag names. Each passed one add/remove cycle on Ekans CP616;
+  AI-Delete triggered no delete or transfer behavior.
+- Replaced the green-only Details-pill check with dynamic gray/colored pill
+  component counting and before/after count deltas. Zero-, one- and two-tag
+  layouts passed, including simultaneous `AI-Indexed` + `AI-Review`, followed
+  by verified removal back to zero tags. 149/149 self-tests pass.
 - Added `device-search-inventory` with guarded Open, Clear, Enter and Submit
   phases, visual pre/postconditions, bounded polling and per-action audit.
 - Centralized remote-shell text encoding in `PogoInventory.Device`; callers

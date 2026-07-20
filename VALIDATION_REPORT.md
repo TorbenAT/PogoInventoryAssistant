@@ -76,6 +76,21 @@ remains the authoritative compiler and test runner.
 - limitation: templates are device-local visual evidence, not portable OCR
 - real screenshots, serial, profile and audits remain in ignored `local-data`
 
+### Additional AI-tag and Details-layout acceptance
+
+- self-tests after pill-count regression: PASS, 149/149
+- AI-Indexed: add/remove PASS, confidence 0.910
+- AI-Review: add/remove PASS, confidence 0.937
+- AI-Keep: add/remove PASS, confidence 0.931
+- AI-Delete tag name: add/remove PASS, confidence 0.923; destructive actions 0
+- wrong tag selections: 0
+- Details layouts: zero tags PASS; one tag PASS; simultaneous AI-Indexed and
+  AI-Review PASS; removal 2 -> 1 -> 0 PASS
+- full screenshot hashes differed across zero/one/two layouts as expected
+- identity implication recorded for Task 4: tag section must be dynamically
+  detected and lower stable ROIs anchor-aligned; tags are never identity
+- final phone state: unfiltered Inventory; Ekans CP616 has no tested tag
+
 ## Verified Inventory Search validation on 2026-07-20
 
 - build: PASS, 18 projects, zero warnings and zero errors

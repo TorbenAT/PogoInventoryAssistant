@@ -121,35 +121,70 @@ public sealed class TagSelector
         return GreenRatio(image, 0.27, 0.76, 0.73, 0.82) >= 0.10;
     }
 
-    public bool HasDetailsTagPill(byte[] screenshotPng)
+    public bool HasDetailsTagPill(byte[] screenshotPng) =>
+        CountDetailsTagPills(screenshotPng) > 0;
+
+    public int CountDetailsTagPills(byte[] screenshotPng)
     {
         var image = PngDecoder.Decode(screenshotPng);
-        var activeRows = new List<int>();
-        for (var y = (int)(image.Height * 0.40); y < (int)(image.Height * 0.60); y++)
+        var visited = new bool[image.Width * image.Height];
+        var left = (int)(image.Width * 0.20);
+        var right = (int)(image.Width * 0.80);
+        var top = (int)(image.Height * 0.42);
+        var bottom = (int)(image.Height * 0.62);
+        var components = 0;
+        for (var y = top; y < bottom; y++)
         {
-            var green = 0;
-            for (var x = (int)(image.Width * 0.25); x < (int)(image.Width * 0.75); x += 2)
+            for (var x = left; x < right; x++)
             {
-                if (IsTagGreen(image.GetPixel(x, y)))
+                var start = (y * image.Width) + x;
+                if (visited[start] || !IsTagPillFill(image.GetPixel(x, y)))
                 {
-                    green++;
+                    continue;
+                }
+                var queue = new Queue<(int X, int Y)>();
+                queue.Enqueue((x, y));
+                visited[start] = true;
+                var count = 0;
+                var minX = x;
+                var maxX = x;
+                var minY = y;
+                var maxY = y;
+                while (queue.Count > 0)
+                {
+                    var point = queue.Dequeue();
+                    count++;
+                    minX = Math.Min(minX, point.X);
+                    maxX = Math.Max(maxX, point.X);
+                    minY = Math.Min(minY, point.Y);
+                    maxY = Math.Max(maxY, point.Y);
+                    foreach (var next in new[]
+                    {
+                        (point.X - 1, point.Y), (point.X + 1, point.Y),
+                        (point.X, point.Y - 1), (point.X, point.Y + 1)
+                    })
+                    {
+                        if (next.Item1 < left || next.Item1 >= right ||
+                            next.Item2 < top || next.Item2 >= bottom)
+                        {
+                            continue;
+                        }
+                        var index = (next.Item2 * image.Width) + next.Item1;
+                        if (!visited[index] && IsTagPillFill(image.GetPixel(next.Item1, next.Item2)))
+                        {
+                            visited[index] = true;
+                            queue.Enqueue(next);
+                        }
+                    }
+                }
+                if (count >= 900 && maxX - minX >= image.Width * 0.10 &&
+                    maxY - minY >= image.Height * 0.012)
+                {
+                    components++;
                 }
             }
-            if (green >= image.Width * 0.04)
-            {
-                activeRows.Add(y);
-            }
         }
-        var longestBand = 0;
-        var currentBand = 0;
-        var previous = -2;
-        foreach (var y in activeRows)
-        {
-            currentBand = y == previous + 1 ? currentBand + 1 : 1;
-            longestBand = Math.Max(longestBand, currentBand);
-            previous = y;
-        }
-        return longestBand >= 20;
+        return components;
     }
 
     private static IReadOnlyList<VisibleTagRow> FindVisibleRows(PixelImage image)
@@ -288,6 +323,15 @@ public sealed class TagSelector
 
     private static bool IsTagGreen(Rgba32 pixel) =>
         pixel.G >= 150 && pixel.G >= pixel.R + 15 && pixel.G >= pixel.B + 5;
+
+    private static bool IsTagPillFill(Rgba32 pixel)
+    {
+        var maximum = Math.Max(pixel.R, Math.Max(pixel.G, pixel.B));
+        var minimum = Math.Min(pixel.R, Math.Min(pixel.G, pixel.B));
+        var gray = maximum - minimum <= 24 && maximum is >= 145 and <= 225;
+        var colored = maximum is >= 125 and <= 235 && maximum - minimum >= 18;
+        return gray || colored;
+    }
 
     private static void EnsureGeometry(PixelImage image, TagSelectorProfile profile)
     {
