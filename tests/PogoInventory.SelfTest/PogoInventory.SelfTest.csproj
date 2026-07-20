@@ -7,6 +7,7 @@
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
   </PropertyGroup>
   <ItemGroup>
+    <PackageReference Include="Microsoft.Data.Sqlite" Version="8.0.10" />
     <ProjectReference Include="..\..\src\PogoInventory.Automation\PogoInventory.Automation.csproj" />
     <ProjectReference Include="..\..\src\PogoInventory.Bootstrap\PogoInventory.Bootstrap.csproj" />
     <ProjectReference Include="..\..\src\PogoInventory.Calibration\PogoInventory.Calibration.csproj" />
@@ -21,5 +22,6 @@
     <ProjectReference Include="..\..\src\PogoInventory.CropAtlas\PogoInventory.CropAtlas.csproj" />
     <ProjectReference Include="..\..\src\PogoInventory.Appraisal\PogoInventory.Appraisal.csproj" />
     <ProjectReference Include="..\..\src\PogoInventory.Application\PogoInventory.Application.csproj" />
+    <ProjectReference Include="..\..\src\PogoInventory.Persistence\PogoInventory.Persistence.csproj" />
   </ItemGroup>
 </Project>
