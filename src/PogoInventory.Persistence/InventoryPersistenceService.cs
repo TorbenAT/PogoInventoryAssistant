@@ -5,7 +5,7 @@ namespace PogoInventory.Persistence;
 
 public sealed class InventoryPersistenceService
 {
-    private const int SchemaVersion = 1;
+    private const int SchemaVersion = 2;
     private readonly string _databasePath;
 
     public InventoryPersistenceService(string databasePath)
@@ -27,11 +27,46 @@ public sealed class InventoryPersistenceService
             CREATE TABLE IF NOT EXISTS PokemonRecords (LocalPokemonId TEXT PRIMARY KEY, LifecycleState TEXT NOT NULL, FirstSeenRunId TEXT NOT NULL, LastSeenRunId TEXT NOT NULL, FirstSeenAtUtc TEXT NOT NULL, LastSeenAtUtc TEXT NOT NULL, SpeciesName TEXT, Cp INTEGER, AttackIv INTEGER, DefenseIv INTEGER, HpIv INTEGER, FormId TEXT, CostumeId TEXT, BackgroundId TEXT, IsShiny INTEGER, ShadowState TEXT, LuckyState TEXT, DynamaxState TEXT, CatchLocation TEXT, IdentityConfidence TEXT NOT NULL, ProtectionConfidence TEXT NOT NULL, CurrentRecommendation TEXT NOT NULL, RecommendationReason TEXT NOT NULL, LastScreenshotPath TEXT, LastScreenshotSha256 TEXT, LastFingerprintSha256 TEXT);
             CREATE TABLE IF NOT EXISTS Observations (ObservationId INTEGER PRIMARY KEY AUTOINCREMENT, LocalPokemonId TEXT NOT NULL, RunId TEXT NOT NULL, Sequence INTEGER NOT NULL, CapturedAtUtc TEXT NOT NULL, ProviderName TEXT NOT NULL, ObservationStatus TEXT NOT NULL, Confidence REAL NOT NULL, SpeciesName TEXT, Cp INTEGER, AttackIv INTEGER, DefenseIv INTEGER, HpIv INTEGER, CatchLocation TEXT, ScreenshotPath TEXT, ScreenshotSha256 TEXT, FingerprintSha256 TEXT, UNIQUE(RunId, Sequence));
             CREATE TABLE IF NOT EXISTS InventoryEvents (EventId INTEGER PRIMARY KEY AUTOINCREMENT, LocalPokemonId TEXT NOT NULL, RunId TEXT NOT NULL, EventType TEXT NOT NULL, OccurredAtUtc TEXT NOT NULL, DetailJson TEXT);
-            CREATE TABLE IF NOT EXISTS TagAssignments (LocalPokemonId TEXT NOT NULL, TagName TEXT NOT NULL, RequestedState TEXT NOT NULL, VerifiedState TEXT NOT NULL, RequestedAtUtc TEXT NOT NULL, VerifiedAtUtc TEXT, LastError TEXT, PRIMARY KEY(LocalPokemonId, TagName));
+            CREATE TABLE IF NOT EXISTS TagAssignments (LocalPokemonId TEXT NOT NULL, TagName TEXT NOT NULL, RequestedState TEXT NOT NULL, VerifiedState TEXT NOT NULL, RequestedAtUtc TEXT NOT NULL, VerifiedAtUtc TEXT, LastError TEXT, ActionExecuted INTEGER NOT NULL DEFAULT 0, VisuallyVerified INTEGER NOT NULL DEFAULT 0, BeforeScreenshotHash TEXT, AfterScreenshotHash TEXT, AuditReference TEXT, PRIMARY KEY(LocalPokemonId, TagName));
             INSERT INTO SchemaInfo (Version, AppliedAtUtc) SELECT 1, @now WHERE NOT EXISTS (SELECT 1 FROM SchemaInfo);
             """;
         command.Parameters.AddWithValue("@now", DateTimeOffset.UtcNow.ToString("O"));
         await command.ExecuteNonQueryAsync(cancellationToken);
+
+        var existingColumns = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        await using (var columnsCommand = connection.CreateCommand())
+        {
+            columnsCommand.CommandText = "PRAGMA table_info(TagAssignments);";
+            await using var reader = await columnsCommand.ExecuteReaderAsync(cancellationToken);
+            while (await reader.ReadAsync(cancellationToken))
+            {
+                existingColumns.Add(reader.GetString(1));
+            }
+        }
+
+        var migrationStatements = new[]
+        {
+            ("ActionExecuted", "ALTER TABLE TagAssignments ADD COLUMN ActionExecuted INTEGER NOT NULL DEFAULT 0;"),
+            ("VisuallyVerified", "ALTER TABLE TagAssignments ADD COLUMN VisuallyVerified INTEGER NOT NULL DEFAULT 0;"),
+            ("BeforeScreenshotHash", "ALTER TABLE TagAssignments ADD COLUMN BeforeScreenshotHash TEXT;"),
+            ("AfterScreenshotHash", "ALTER TABLE TagAssignments ADD COLUMN AfterScreenshotHash TEXT;"),
+            ("AuditReference", "ALTER TABLE TagAssignments ADD COLUMN AuditReference TEXT;")
+        };
+        foreach (var (column, statement) in migrationStatements)
+        {
+            if (!existingColumns.Contains(column))
+            {
+                await using var migrationCommand = connection.CreateCommand();
+                migrationCommand.CommandText = statement;
+                await migrationCommand.ExecuteNonQueryAsync(cancellationToken);
+            }
+        }
+
+        await using var versionCommand = connection.CreateCommand();
+        versionCommand.CommandText = "UPDATE SchemaInfo SET Version = @version, AppliedAtUtc = @now WHERE Version < @version;";
+        versionCommand.Parameters.AddWithValue("@version", SchemaVersion);
+        versionCommand.Parameters.AddWithValue("@now", DateTimeOffset.UtcNow.ToString("O"));
+        await versionCommand.ExecuteNonQueryAsync(cancellationToken);
     }
 
     public async Task ImportAsync(string runId, InventoryScanItem item, string screenshotPath, CancellationToken cancellationToken = default)
