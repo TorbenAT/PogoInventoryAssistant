@@ -49,6 +49,7 @@ var tests = new (string Name, Func<Task> Run)[]
     ("Guarded inventory close enforces one map transition", GuardedInventoryCloseTests.RunAsync),
     ("Recovery ROI consensus ignores full-screen animation", GuardedInventoryRecoveryTests.RunRoiConsensusAsync),
     ("Guarded inventory recovery enforces stable bounded transitions", GuardedInventoryRecoveryTests.RunStateMachineAsync),
+    ("Appraisal exit uses one tap per substate and Back only from Details", GuardedInventoryRecoveryTests.RunExitActionsAsync),
     ("Perfect is kept", Sync(PerfectIsKept)),
     ("Trade nickname is kept", Sync(TradeNicknameIsKept)),
     ("Old Pokémon is kept", Sync(OldPokemonIsKept)),

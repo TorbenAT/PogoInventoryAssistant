@@ -1,5 +1,27 @@
 # Changelog
 
+## Unreleased Android navigation increment - 2026-07-20
+
+- Replaced full-screen byte stability with state-specific ROI signatures for
+  appraisal intro dialog/overlay anchors and the three transformed IV bars.
+- Added a three-of-five frame consensus that rejects Unknown or conflicting
+  evidence without requiring pixel-identical screenshots.
+- Added the named, normalized `ExitAppraisal` action. AppraisalIntro authorizes
+  one left-middle tap and requires AppraisalBars; AppraisalBars authorizes one
+  left-middle tap and requires PokemonDetails. Only PokemonDetails authorizes
+  Android Back to Inventory.
+- Moved Unknown-stop, unexpected-state-stop and action limits into
+  `GuardedInventoryRecovery`. An unchanged post-action substate terminates with
+  `ACTION_NOT_OBSERVED`; it never authorizes a blind repeated tap.
+- Added ROI, action-count, action-type and legacy-inline-removal regressions;
+  144/144 self-tests pass.
+- Completed three real OnePlus 6T appraisal recovery cycles with zero Unknown
+  states, zero wrong states and zero Back actions on AppraisalBars. Every bars
+  exit used exactly one normalized tap at approximately `(0.10, 0.50)` before
+  the single Details-to-Inventory Back action.
+- No transfer, tag, delete, Calcy, OCR, location or arbitrary-shell behavior
+  was added.
+
 ## 0.14.3
 
 - Fixed the C# exception-pattern syntax in `AppraisalPretestRunner`.

@@ -1982,11 +1982,11 @@ static async Task<int> RecoverInventoryAsync(string[] args, CancellationToken ca
         : null;
     var recovery = new GuardedInventoryRecovery();
     var audit = new List<object>();
-    var initialFrames = await CaptureStableWindowAsync("step-00", null);
+    var initialFrames = await CaptureStableWindowAsync("step-00", null, null);
     var outcome = recovery.Begin(initialFrames);
-    while (outcome is RecoveryOutcome.PROGRESSED or RecoveryOutcome.ACTION_NOT_OBSERVED)
+    while (outcome == RecoveryOutcome.PROGRESSED)
     {
-        var authorization = recovery.AuthorizeBack();
+        var authorization = recovery.AuthorizeNextAction();
         if (authorization is null)
         {
             outcome = RecoveryOutcome.UNEXPECTED_STOP;
@@ -1994,19 +1994,43 @@ static async Task<int> RecoverInventoryAsync(string[] args, CancellationToken ca
         }
 
         var startedAt = DateTimeOffset.UtcNow;
-        await transport.PressBackAsync(selected.Serial, cancellationToken);
+        int? targetX = null;
+        int? targetY = null;
+        if (authorization.Action == RecoveryInputAction.ExitAppraisal &&
+            authorization.Target is { } target && recovery.Current is { } current)
+        {
+            var image = PngDecoder.Decode(current.Screenshot);
+            (targetX, targetY) = target.ToPixels(image.Width, image.Height);
+            await transport.TapAsync(
+                selected.Serial, targetX.Value, targetY.Value, cancellationToken);
+        }
+        else if (authorization.Action == RecoveryInputAction.PressBack)
+        {
+            await transport.PressBackAsync(selected.Serial, cancellationToken);
+        }
+        else
+        {
+            outcome = RecoveryOutcome.UNEXPECTED_STOP;
+            break;
+        }
         var completedAt = DateTimeOffset.UtcNow;
         var postFrames = await CaptureStableWindowAsync(
-            $"step-{authorization.Sequence:00}", authorization.ExpectedState);
+            $"step-{authorization.Sequence:00}",
+            authorization.ExpectedState,
+            authorization.ExpectedFrameKind);
         outcome = recovery.ObservePostAction(postFrames);
         audit.Add(new
         {
             sequence = authorization.Sequence,
-            action = "PressBack",
+            action = authorization.Action.ToString(),
             stateBefore = authorization.StateBefore.ToString(),
             expectedState = authorization.ExpectedState.ToString(),
+            expectedKind = authorization.ExpectedFrameKind?.ToString(),
             stateAfter = recovery.Current?.Detection.State.ToString(),
+            stateAfterKind = recovery.Current?.Kind.ToString(),
             outcome = outcome.ToString(),
+            targetX,
+            targetY,
             startedAtUtc = startedAt,
             completedAtUtc = completedAt,
             detail = authorization.Detail
@@ -2017,19 +2041,22 @@ static async Task<int> RecoverInventoryAsync(string[] args, CancellationToken ca
         JsonSerializer.Serialize(new
         {
             result = outcome.ToString(),
+            inputActions = recovery.InputActions,
             backActions = recovery.BackActions,
-            appraisalRetries = recovery.AppraisalRetries,
+            appraisalTapActions = recovery.AppraisalTapActions,
             actions = audit
         }, new JsonSerializerOptions { WriteIndented = true }), cancellationToken);
     Console.WriteLine(
-        $"Recovery result: {outcome}; Back actions: {recovery.BackActions}; appraisal retries: {recovery.AppraisalRetries}.");
+        $"Recovery result: {outcome}; input actions: {recovery.InputActions}; " +
+        $"appraisal taps: {recovery.AppraisalTapActions}; Back actions: {recovery.BackActions}.");
     return outcome == RecoveryOutcome.SUCCEEDED
         ? 0
         : outcome == RecoveryOutcome.UNKNOWN_STOP ? 2 : 1;
 
     async Task<IReadOnlyList<RecoveryFrame>> CaptureStableWindowAsync(
         string name,
-        PokemonGoGameState? expected)
+        PokemonGoGameState? expected,
+        RecoveryFrameKind? expectedKind)
     {
         var directory = Path.Combine(output, name);
         Directory.CreateDirectory(directory);
@@ -2053,6 +2080,7 @@ static async Task<int> RecoverInventoryAsync(string[] args, CancellationToken ca
                     evidence = frame.Detection.Evidence,
                     screenshotSha256 = frame.Detection.ScreenshotSha256,
                     expected = expected?.ToString(),
+                    expectedKind = expectedKind?.ToString(),
                     introAnchor = frame.HasIntroAnchor,
                     barsAnchor = frame.HasBarsAnchor,
                     conflictingAnchor = frame.HasConflictingAnchor,
@@ -2151,7 +2179,10 @@ static async Task<int> OpenAppraisalFromInventoryAsync(
     var appraisalFrames = new List<RecoveryFrame>();
     var introTapActions = 0;
     var introTapWasSent = false;
-    var deadline = DateTimeOffset.UtcNow.AddSeconds(profile.StateTimeoutSeconds);
+    // AppraisalIntro animation can consume most of the ordinary state timeout.
+    // Keep the same bounded ROI consensus window used by the dedicated command.
+    var deadline = DateTimeOffset.UtcNow.AddSeconds(
+        Math.Max(12, profile.StateTimeoutSeconds));
     double appraisalConfidence = 0;
     var stableAppraisalBars = false;
     while (DateTimeOffset.UtcNow < deadline)

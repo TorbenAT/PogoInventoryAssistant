@@ -66,11 +66,20 @@ public sealed record RecoveryFrame
         Array.Empty<RecoveryBarSignature>();
 }
 
-public sealed record RecoveryBackAuthorization
+public enum RecoveryInputAction
+{
+    ExitAppraisal,
+    PressBack
+}
+
+public sealed record RecoveryActionAuthorization
 {
     public required int Sequence { get; init; }
+    public required RecoveryInputAction Action { get; init; }
     public required PokemonGoGameState StateBefore { get; init; }
     public required PokemonGoGameState ExpectedState { get; init; }
+    public RecoveryFrameKind? ExpectedFrameKind { get; init; }
+    public NormalizedPoint? Target { get; init; }
     public required string Detail { get; init; }
 }
 
@@ -78,9 +87,10 @@ public sealed class GuardedInventoryRecovery
 {
     public const int ConsensusMatches = 3;
     public const int ConsensusWindow = 5;
-    public const int MaxAppraisalRetries = 1;
     public const int MaxAppraisalTotalActions = 3;
-    public const double MinimumIntroLocatorConfidence = 0.80;
+    // The real OnePlus AppraisalIntro anchor is consistently 0.611. Keep a
+    // small evidence margin while rejecting weaker partial overlays.
+    public const double MinimumIntroLocatorConfidence = 0.60;
 
     // Locked from the 1080x2340 OnePlus captures under local-data/validation:
     // animation changes the whole screen substantially, while these sampled
@@ -94,13 +104,15 @@ public sealed class GuardedInventoryRecovery
     private readonly VisualControlLocator _locator = new();
     private readonly AppraisalAnalyzer _analyzer = new();
     private RecoveryFrame? _current;
-    private PokemonGoGameState? _origin;
+    private RecoveryFrame? _origin;
     private PokemonGoGameState? _pendingExpected;
+    private RecoveryFrameKind? _pendingExpectedKind;
     private RecoveryFrame? _pendingBefore;
-    private int _appraisalRetries;
+    private bool _terminal;
 
+    public int InputActions { get; private set; }
     public int BackActions { get; private set; }
-    public int AppraisalRetries => _appraisalRetries;
+    public int AppraisalTapActions { get; private set; }
     public RecoveryFrame? Current => _current;
 
     public RecoveryFrame Observe(
@@ -164,7 +176,9 @@ public sealed class GuardedInventoryRecovery
             HasBarsAnchor = hasBars,
             HasConflictingAnchor = conflicting,
             LocatorConfidence = hasIntro ? intro!.Confidence : null,
-            LocatorTarget = hasIntro ? intro!.Target : null,
+            LocatorTarget = hasIntro
+                ? new NormalizedPoint { X = 0.1001, Y = 0.5002 }
+                : null,
             StableRegions = stableRegions,
             Bars = bars
         };
@@ -254,7 +268,7 @@ public sealed class GuardedInventoryRecovery
         }
 
         _current = stable;
-        _origin = stable.Detection.State;
+        _origin = stable;
         return stable.Detection.State == PokemonGoGameState.Inventory
             ? RecoveryOutcome.SUCCEEDED
             : IsRecoverable(stable.Detection.State)
@@ -262,20 +276,26 @@ public sealed class GuardedInventoryRecovery
                 : RecoveryOutcome.UNEXPECTED_STOP;
     }
 
-    public RecoveryBackAuthorization? AuthorizeBack()
+    public RecoveryActionAuthorization? AuthorizeNextAction()
     {
-        if (_current is null || _origin is null || _pendingExpected is not null ||
+        if (_current is null || _origin is null || _pendingExpected is not null || _terminal ||
             !IsRecoverable(_current.Detection.State) ||
-            BackActions >= MaximumActions(_origin.Value))
+            InputActions >= MaximumActions(_origin))
         {
             return null;
         }
 
-        var expected = _current.Detection.State switch
+        var action = _current.Detection.State == PokemonGoGameState.Appraisal
+            ? RecoveryInputAction.ExitAppraisal
+            : RecoveryInputAction.PressBack;
+        var expected = (_current.Detection.State, _current.Kind) switch
         {
-            PokemonGoGameState.Appraisal => PokemonGoGameState.PokemonDetails,
-            PokemonGoGameState.PokemonMenu => PokemonGoGameState.PokemonDetails,
-            PokemonGoGameState.PokemonDetails => PokemonGoGameState.Inventory,
+            (PokemonGoGameState.Appraisal, RecoveryFrameKind.AppraisalIntro) =>
+                PokemonGoGameState.Appraisal,
+            (PokemonGoGameState.Appraisal, RecoveryFrameKind.AppraisalBars) =>
+                PokemonGoGameState.PokemonDetails,
+            (PokemonGoGameState.PokemonMenu, _) => PokemonGoGameState.Inventory,
+            (PokemonGoGameState.PokemonDetails, _) => PokemonGoGameState.Inventory,
             _ => PokemonGoGameState.Unknown
         };
         if (expected == PokemonGoGameState.Unknown)
@@ -284,17 +304,34 @@ public sealed class GuardedInventoryRecovery
         }
 
         _pendingExpected = expected;
+        _pendingExpectedKind =
+            _current.Kind == RecoveryFrameKind.AppraisalIntro
+                ? RecoveryFrameKind.AppraisalBars
+                : null;
         _pendingBefore = _current;
-        BackActions++;
-        return new RecoveryBackAuthorization
+        InputActions++;
+        if (action == RecoveryInputAction.PressBack)
         {
-            Sequence = BackActions,
+            BackActions++;
+        }
+        else
+        {
+            AppraisalTapActions++;
+        }
+
+        return new RecoveryActionAuthorization
+        {
+            Sequence = InputActions,
+            Action = action,
             StateBefore = _current.Detection.State,
             ExpectedState = expected,
-            Detail = _current.Detection.State == PokemonGoGameState.Appraisal &&
-                _appraisalRetries > 0
-                    ? "One documented appraisal Back retry."
-                    : "State-validated recovery Back."
+            ExpectedFrameKind = _pendingExpectedKind,
+            Target = action == RecoveryInputAction.ExitAppraisal
+                ? new NormalizedPoint { X = 0.1001, Y = 0.5002 }
+                : null,
+            Detail = action == RecoveryInputAction.ExitAppraisal
+                ? "One state-validated normalized ExitAppraisal tap."
+                : "One state-validated Android Back."
         };
     }
 
@@ -314,31 +351,28 @@ public sealed class GuardedInventoryRecovery
         }
 
         var expected = _pendingExpected.Value;
+        var expectedKind = _pendingExpectedKind;
         var before = _pendingBefore;
         ClearPending();
         _current = stable;
 
-        if (stable.Detection.State == expected)
+        if (stable.Detection.State == expected &&
+            (expectedKind is null || stable.Kind == expectedKind))
         {
             return expected == PokemonGoGameState.Inventory
                 ? RecoveryOutcome.SUCCEEDED
                 : RecoveryOutcome.PROGRESSED;
         }
 
-        if (before.Detection.State == PokemonGoGameState.Appraisal &&
-            stable.Detection.State == PokemonGoGameState.Appraisal &&
+        if (stable.Detection.State == before.Detection.State &&
+            stable.Kind == before.Kind &&
             stable.EvidenceSignature == before.EvidenceSignature)
         {
-            if (_appraisalRetries < MaxAppraisalRetries &&
-                BackActions < MaxAppraisalTotalActions)
-            {
-                _appraisalRetries++;
-                return RecoveryOutcome.ACTION_NOT_OBSERVED;
-            }
-
-            return RecoveryOutcome.RETRY_EXHAUSTED;
+            _terminal = true;
+            return RecoveryOutcome.ACTION_NOT_OBSERVED;
         }
 
+        _terminal = true;
         return stable.Detection.State == PokemonGoGameState.Unknown
             ? RecoveryOutcome.UNKNOWN_STOP
             : RecoveryOutcome.UNEXPECTED_STOP;
@@ -497,17 +531,21 @@ public sealed class GuardedInventoryRecovery
             PokemonGoGameState.PokemonMenu or
             PokemonGoGameState.PokemonDetails;
 
-    private static int MaximumActions(PokemonGoGameState origin) => origin switch
+    private static int MaximumActions(RecoveryFrame origin) =>
+        (origin.Detection.State, origin.Kind) switch
     {
-        PokemonGoGameState.Appraisal => MaxAppraisalTotalActions,
-        PokemonGoGameState.PokemonMenu => 2,
-        PokemonGoGameState.PokemonDetails => 1,
+        (PokemonGoGameState.Appraisal, RecoveryFrameKind.AppraisalIntro) =>
+            MaxAppraisalTotalActions,
+        (PokemonGoGameState.Appraisal, RecoveryFrameKind.AppraisalBars) => 2,
+        (PokemonGoGameState.PokemonMenu, _) => 1,
+        (PokemonGoGameState.PokemonDetails, _) => 1,
         _ => 0
     };
 
     private void ClearPending()
     {
         _pendingExpected = null;
+        _pendingExpectedKind = null;
         _pendingBefore = null;
     }
 
@@ -516,8 +554,11 @@ public sealed class GuardedInventoryRecovery
         _current = null;
         _origin = null;
         _pendingExpected = null;
+        _pendingExpectedKind = null;
         _pendingBefore = null;
-        _appraisalRetries = 0;
+        _terminal = false;
+        InputActions = 0;
         BackActions = 0;
+        AppraisalTapActions = 0;
     }
 }

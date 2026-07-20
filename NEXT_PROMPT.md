@@ -1,14 +1,19 @@
 # Continuation prompt
 
-The gameplay-map detector correction is committed, but live 3/3 map detection
-remains open because the phone was not continuously on GameplayMap. The next
-iteration must begin with read-only verification of GameplayMap and may only
-navigate after that acceptance is explicitly complete.
+The guarded appraisal recovery is accepted offline and on the real OnePlus
+A6013. Full-screen animation is excluded from stability; intro and bars use a
+three-of-five ROI consensus. `ExitAppraisal` performs one documented
+left-middle tap per appraisal substate, and Android Back is authorized only
+from PokemonDetails. Three complete cycles passed with zero Unknown states,
+zero wrong states and zero Back actions on AppraisalBars. Build passes and
+144/144 self-tests pass.
 
-The next single iteration must verify Inventory -> Details -> Menu ->
-Appraisal three times with the shared game-state detector. The 2026-07-20
-Details-to-Inventory recovery acceptance remains open because the real phone
-did not expose Inventory after one validated Back action.
+Continue with the generic Inventory Search increment. Centralize Android text
+escaping inside `PogoInventory.Device`, accept ordinary caller text including
+`#Trade` and `!#Trade`, and require verified Inventory/InventorySearch pre- and
+post-states, bounded waiting and audit evidence. Preserve the accepted recovery
+state machine and the ignored evidence under
+`local-data/validation/sol-high-android-implementation`.
 
 Use this after the 2026-07-19 real-phone validation run.
 

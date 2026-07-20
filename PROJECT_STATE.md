@@ -4,6 +4,22 @@
 
 0.14.3
 
+## Guarded appraisal recovery accepted on 2026-07-20
+
+The recovery increment uses state-specific ROI stability rather than
+full-screen pixels. Appraisal intro and appraisal bars each use documented
+regions and a three-of-five consensus. `GuardedInventoryRecovery` owns every
+transition and action-limit rule; the CLI recovery command contains no parallel
+inline state machine. The self-test total is 144/144.
+
+Real-phone acceptance passed on the connected OnePlus A6013 for three complete
+Inventory -> Details -> Menu -> AppraisalIntro -> AppraisalBars -> Details ->
+Inventory cycles. The documented left-middle normalized target `(0.1001,
+0.5002)` is used once per appraisal substate. Android Back is never sent from
+AppraisalBars and is sent once only after PokemonDetails is verified. The run
+recorded zero Unknown states and zero wrong post-states. Evidence is retained
+under ignored `local-data/validation/sol-high-android-implementation`.
+
 ## Build correction in 0.14.1
 
 GitHub Actions built the existing projects and reached

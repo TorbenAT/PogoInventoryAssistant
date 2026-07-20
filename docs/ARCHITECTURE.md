@@ -10,9 +10,24 @@ Inventory, Details and Menu anchors and `AppraisalAnalyzer` for Appraisal.
 Detection returns a normalized state, confidence, concrete evidence and the
 SHA-256 of the captured screenshot. No UI hierarchy is used as sole evidence.
 
-`device-recover-inventory` performs only state-validated Back actions, waits
-for a stable expected post-state, caps actions at two and stops fail-closed on
-Unknown or a state mismatch.
+`GuardedInventoryRecovery` owns recovery stability and transition policy.
+AppraisalIntro stability uses only the dialog and overlay-anchor ROIs;
+AppraisalBars stability uses the three transformed IV-bar ROIs plus the fixed
+label/frame ROI. Three compatible frames among the latest five form consensus,
+while Unknown or conflicting evidence invalidates the active window. Animated
+Pokémon models, particles and the central background are excluded.
+
+`device-recover-inventory` only orchestrates captures, consensus calls,
+service decisions, audited named actions and post-action polling. The service
+owns Unknown-stop, unexpected-state-stop and action limits. An unchanged
+post-action substate yields terminal `ACTION_NOT_OBSERVED`; no blind retry is
+authorized. AppraisalIntro and AppraisalBars each authorize one normalized
+`ExitAppraisal` tap at the documented left-middle target. Only verified
+PokemonDetails authorizes Android Back to Inventory.
+
+`device-continue-appraisal-intro` returns success without input when stable
+bars already exist. Otherwise it requires stable intro ROI evidence, taps the
+locator target exactly once and requires stable bars afterward.
 
 ```text
 Android phone

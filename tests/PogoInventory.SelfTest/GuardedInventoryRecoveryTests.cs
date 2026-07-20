@@ -21,9 +21,15 @@ internal static class GuardedInventoryRecoveryTests
 
     public static Task RunStateMachineAsync()
     {
-        RecoverySessionOwnsRetryAndActionLimits();
-        UnexpectedStatesAndRetryExhaustionStop();
+        UnexpectedStatesStop();
         RecoveryCommandUsesOnlyTheRecoveryServiceForRules();
+        return Task.CompletedTask;
+    }
+
+    public static Task RunExitActionsAsync()
+    {
+        RecoveryUsesTapForEachAppraisalSubstateThenBack();
+        BarsNeverAuthorizeBackAndNoBlindRetryIsAllowed();
         return Task.CompletedTask;
     }
 
@@ -109,6 +115,9 @@ internal static class GuardedInventoryRecoveryTests
         Assert(GuardedInventoryRecovery.DecideAppraisalContinuation(intro, 0, false) ==
             AppraisalContinuationOutcome.TAP_INTRO_ONCE,
             "stable intro authorizes exactly one locator-grounded tap");
+        var weak = intro.Select(frame => frame with { LocatorConfidence = 0.59 }).ToArray();
+        Assert(!GuardedInventoryRecovery.IsStable(weak),
+            "intro locator confidence below the real-device threshold is rejected");
         Assert(GuardedInventoryRecovery.DecideAppraisalContinuation(intro, 1, true) ==
             AppraisalContinuationOutcome.FAIL_CLOSED,
             "a second intro tap is never authorized");
@@ -132,48 +141,72 @@ internal static class GuardedInventoryRecoveryTests
             "one intro tap succeeds only after stable bars");
     }
 
-    private static void RecoverySessionOwnsRetryAndActionLimits()
+    private static void RecoveryUsesTapForEachAppraisalSubstateThenBack()
     {
         var service = new GuardedInventoryRecovery();
-        var bars = Three(() => BarsFrame(new byte[] { 1 }));
-        Assert(service.Begin(bars) == RecoveryOutcome.PROGRESSED,
-            "stable appraisal starts recovery");
-        var first = service.AuthorizeBack();
-        Assert(first is { Sequence: 1, ExpectedState: PokemonGoGameState.PokemonDetails },
-            "first appraisal Back expects Details");
-        Assert(service.ObservePostAction(bars) == RecoveryOutcome.ACTION_NOT_OBSERVED,
-            "same stable appraisal records ACTION_NOT_OBSERVED");
-        var retry = service.AuthorizeBack();
-        Assert(retry is { Sequence: 2, ExpectedState: PokemonGoGameState.PokemonDetails },
-            "one documented appraisal retry is authorized");
+        var intro = Three(() => IntroFrame(new byte[] { 1 }));
+        var bars = Three(() => BarsFrame(new byte[] { 2 }));
+        Assert(service.Begin(intro) == RecoveryOutcome.PROGRESSED,
+            "stable appraisal intro starts recovery");
+        var introExit = service.AuthorizeNextAction();
+        Assert(introExit is
+            {
+                Sequence: 1,
+                Action: RecoveryInputAction.ExitAppraisal,
+                ExpectedState: PokemonGoGameState.Appraisal,
+                ExpectedFrameKind: RecoveryFrameKind.AppraisalBars
+            }, "AppraisalIntro tap expects stable bars");
+        Assert(service.ObservePostAction(bars) == RecoveryOutcome.PROGRESSED,
+            "intro tap progresses to bars");
+
+        var barsExit = service.AuthorizeNextAction();
+        Assert(barsExit is
+            {
+                Sequence: 2,
+                Action: RecoveryInputAction.ExitAppraisal,
+                ExpectedState: PokemonGoGameState.PokemonDetails
+            }, "AppraisalBars tap expects Details");
         Assert(service.ObservePostAction(Three(() => OtherFrame(
                 PokemonGoGameState.PokemonDetails, "details"))) == RecoveryOutcome.PROGRESSED,
-            "retry can reach Details");
-        var final = service.AuthorizeBack();
-        Assert(final is { Sequence: 3, ExpectedState: PokemonGoGameState.Inventory },
-            "Details to Inventory is the third and final appraisal recovery Back");
+            "bars tap progresses to Details");
+
+        var final = service.AuthorizeNextAction();
+        Assert(final is
+            {
+                Sequence: 3,
+                Action: RecoveryInputAction.PressBack,
+                ExpectedState: PokemonGoGameState.Inventory
+            }, "only Details authorizes Back to Inventory");
         Assert(service.ObservePostAction(Three(() => OtherFrame(
                 PokemonGoGameState.Inventory, "inventory"))) == RecoveryOutcome.SUCCEEDED,
             "Inventory completes recovery");
-        Assert(service.AuthorizeBack() is null && service.BackActions == 3,
+        Assert(service.AuthorizeNextAction() is null && service.InputActions == 3 &&
+            service.AppraisalTapActions == 2 && service.BackActions == 1,
             "the three-action limit cannot be exceeded");
     }
 
-    private static void UnexpectedStatesAndRetryExhaustionStop()
+    private static void BarsNeverAuthorizeBackAndNoBlindRetryIsAllowed()
     {
         var bars = Three(() => BarsFrame(new byte[] { 1 }));
-        var exhausted = new GuardedInventoryRecovery();
-        exhausted.Begin(bars);
-        exhausted.AuthorizeBack();
-        Assert(exhausted.ObservePostAction(bars) == RecoveryOutcome.ACTION_NOT_OBSERVED,
-            "first unobserved appraisal Back consumes the sole retry");
-        exhausted.AuthorizeBack();
-        Assert(exhausted.ObservePostAction(bars) == RecoveryOutcome.RETRY_EXHAUSTED,
-            "second unobserved appraisal Back stops retry-exhausted");
+        var service = new GuardedInventoryRecovery();
+        service.Begin(bars);
+        var action = service.AuthorizeNextAction();
+        Assert(action is { Action: RecoveryInputAction.ExitAppraisal },
+            "AppraisalBars never authorizes Android Back");
+        Assert(service.BackActions == 0 && service.AppraisalTapActions == 1,
+            "bars exit records one appraisal tap and zero Back actions");
+        Assert(service.ObservePostAction(bars) == RecoveryOutcome.ACTION_NOT_OBSERVED,
+            "unchanged bars record ACTION_NOT_OBSERVED");
+        Assert(service.AuthorizeNextAction() is null,
+            "unchanged bars cannot authorize a blind repeated tap");
+    }
 
+    private static void UnexpectedStatesStop()
+    {
+        var bars = Three(() => BarsFrame(new byte[] { 1 }));
         var unexpected = new GuardedInventoryRecovery();
         unexpected.Begin(bars);
-        unexpected.AuthorizeBack();
+        unexpected.AuthorizeNextAction();
         Assert(unexpected.ObservePostAction(Three(() => OtherFrame(
                 PokemonGoGameState.Inventory, "inventory"))) == RecoveryOutcome.UNEXPECTED_STOP,
             "an unexpected post-state stops fail-closed");
@@ -195,11 +228,15 @@ internal static class GuardedInventoryRecoveryTests
             StringComparison.Ordinal);
         var method = source[start..end];
         Assert(method.Contains("recovery.Begin(", StringComparison.Ordinal) &&
-            method.Contains("recovery.AuthorizeBack(", StringComparison.Ordinal) &&
+            method.Contains("recovery.AuthorizeNextAction(", StringComparison.Ordinal) &&
             method.Contains("recovery.ObservePostAction(", StringComparison.Ordinal),
             "recovery command delegates state-machine rules to GuardedInventoryRecovery");
+        Assert(method.Contains("RecoveryInputAction.ExitAppraisal", StringComparison.Ordinal) &&
+            method.Contains("RecoveryInputAction.PressBack", StringComparison.Ordinal),
+            "recovery command executes only the service-authorized named action");
         Assert(!method.Contains("while (state.State", StringComparison.Ordinal) &&
             !method.Contains("CanStartBack", StringComparison.Ordinal) &&
+            !method.Contains("AuthorizeBack", StringComparison.Ordinal) &&
             !method.Contains("state.State != expected", StringComparison.Ordinal),
             "old inline recovery rules are removed");
     }

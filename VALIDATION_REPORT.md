@@ -57,6 +57,40 @@ remains the authoritative compiler and test runner.
 
 0.14.3
 
+## Guarded appraisal recovery validation on 2026-07-20
+
+Offline result:
+
+- `scripts/build.ps1`: PASS, 18 projects, zero warnings and zero errors
+- `scripts/test.ps1`: PASS, 144/144
+- demo, fake-device, fake-bootstrap, fake-inventory, fake-Calcy probe and fake
+  Calcy live-check scripts: PASS
+- iPhone pretest: PASS, 23/24 decoded, four clusters
+- appraisal pretest: PASS, 10 candidates, 90.0% dominant cluster, zero Complete
+- synthetic Calcy parse, screen detection, calibration build and calibration
+  validation: PASS
+- `prepare-android-phone.ps1`: PASS when invoked with the required local ADB
+  path and serial; appraisal Candidate, calibration ready, Complete disabled
+- `git diff --check`: PASS
+
+Real recovery result:
+
+- three complete appraisal cycles: PASS, 3/3
+- AppraisalIntro -> AppraisalBars: one normalized `ExitAppraisal` tap at
+  `(0.1001, 0.5002)` with stable bars required afterward
+- AppraisalBars -> PokemonDetails: one normalized `ExitAppraisal` tap at the
+  same documented target with stable Details required afterward
+- PokemonDetails -> Inventory: one Android Back after Details verification
+- Back actions on AppraisalBars: 0
+- Unknown states: 0
+- wrong post-states: 0
+- blind repeated taps: 0
+
+The first cycle retained the earlier failed Back evidence and then completed
+through the repaired action. Cycles two and three used the integrated command
+without repair. Evidence remains under ignored
+`local-data/validation/sol-high-android-implementation/task-01-appraisal-recovery`.
+
 ## Accepted prior checkpoint
 
 Torben reported version 0.13.1 fully green.

@@ -20,16 +20,29 @@ Final transfer remains manual.
 
 ## Allowed input in version 0.14.3
 
-Only four named input actions are allowed:
+Only these six named input actions are allowed in the accepted appraisal
+increment:
 
 ```text
 TapFirstInventoryCard
 TapDetailsMenu
 TapAppraise
 SwipeNextPokemon
+TapAppraisalIntroContinue
+ExitAppraisal
 ```
 
 Coordinates come from a validated local automation profile and are converted from normalised values to the locked screen geometry.
+
+`TapAppraisalIntroContinue` is authorized only by three compatible
+AppraisalIntro ROI observations among the latest five frames. It uses the
+`LocateAppraisalIntroContinue` target, is capped at one tap and must be followed
+by three compatible AppraisalBars ROI observations. Stable bars require no tap.
+
+`ExitAppraisal` is authorized only by stable AppraisalIntro or AppraisalBars
+evidence. It uses the documented normalized left-middle target once and must be
+followed by the expected next substate. Android Back is forbidden on
+AppraisalBars and is authorized only after PokemonDetails is verified.
 
 There is no arbitrary shell command, arbitrary higher-layer coordinate API, text input, tag action or destructive action.
 
