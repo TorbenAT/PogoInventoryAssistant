@@ -53,6 +53,16 @@ remains the authoritative compiler and test runner.
 
 # Validation report
 
+## Task 5 sequence orchestration checkpoint on 2026-07-20
+
+- build: PASS for Automation and SelfTest
+- self-tests: PASS, 155/155
+- bounded item limit, per-item atomic checkpoint and resume: PASS
+- Partial preservation and Unknown stop without further input: PASS
+- tags disabled by default and AI-Delete auto-apply rejected: PASS
+- real-phone sequence acceptance: NOT RUN; no named-operation host was bound
+- production raw ADB actions: 0
+
 ## Task 4 dynamic identity checkpoint on 2026-07-20
 
 - implementation build: PASS for Vision, Automation, CLI and SelfTest

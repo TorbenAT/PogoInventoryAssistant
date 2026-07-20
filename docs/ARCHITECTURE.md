@@ -1,5 +1,16 @@
 # Architecture
 
+## Verified inventory task sequence
+
+`VerifiedInventoryTaskSequence` is the single sequential orchestration
+boundary. Its host supplies only named operations for Inventory, Details,
+Appraisal, tag observation/application and return-to-Inventory. The sequence
+does not construct ADB commands, run parallel navigation, or expose delete.
+Every completed item is atomically checkpointed with query, state, ordinal
+instance ID, stable fingerprint, evidence hashes, appraisal and tags. Partial
+and Unknown states are preserved or controlled-stopped; resume requires a
+matching request and restored Inventory.
+
 ## Dynamic Details identity
 
 `PokemonDetailsIdentityAnalyzer` is the Details identity boundary. It hashes

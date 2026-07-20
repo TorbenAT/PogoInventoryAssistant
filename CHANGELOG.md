@@ -1,5 +1,14 @@
 # Changelog
 
+## Task 5 sequence orchestration checkpoint - 2026-07-20
+
+- Added `VerifiedInventoryTaskSequence` with named-operation boundaries,
+  bounded limits, atomic per-item checkpoints, resume matching, ordinal IDs,
+  Partial/Unknown stops and reversible tag policy.
+- AI-Delete is rejected for auto-apply and no delete operation is exposed.
+  Offline package-free tests pass 155/155; real-phone Task 5 acceptance is
+  not claimed.
+
 ## Task 4 dynamic identity checkpoint - 2026-07-20
 
 - Added `PokemonDetailsIdentityAnalyzer` and package-free models for separate

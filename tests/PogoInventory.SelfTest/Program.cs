@@ -199,6 +199,7 @@ var tests = new (string Name, Func<Task> Run)[]
     ,("Dynamic identity aligns lower details after tags", PokemonIdentityTests.RunAnchorAlignmentAsync)
     ,("Dynamic identity separates changed stable content", PokemonIdentityTests.RunSeparationAsync)
     ,("Dynamic identity consensus preserves duplicate instances", PokemonIdentityTests.RunConsensusAsync)
+    ,("Verified sequence is bounded, checkpointed and fail-closed", VerifiedInventorySequenceTests.RunAsync)
 };
 
 var failed = 0;
