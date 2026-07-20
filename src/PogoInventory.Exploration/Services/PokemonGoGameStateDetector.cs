@@ -29,6 +29,13 @@ public sealed class PokemonGoGameStateDetector
             }
         }
 
+        var appraisalIntro = _locator.LocateAppraisalIntroContinue(screenshotPng);
+        if (appraisalIntro is not null)
+        {
+            return Result(PokemonGoGameState.Appraisal, appraisalIntro.Confidence,
+                new[] { "AppraisalIntroDetected" }.Concat(appraisalIntro.Evidence).ToArray(), hash);
+        }
+
         var menu = _locator.LocateAppraiseMenuItem(screenshotPng);
         if (menu is not null)
         {

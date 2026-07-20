@@ -16,12 +16,10 @@ public sealed class VisualControlLocator
     public LocatedControl? LocateInventoryCard(byte[] screenshotPng)
     {
         var image = PngDecoder.Decode(screenshotPng);
-        var searchBar = Sample(image, image.Width / 2, (int)(image.Height * 0.16));
-        var page = Sample(image, image.Width / 2, (int)(image.Height * 0.30));
-        var leftPage = Sample(image, image.Width / 20, image.Height / 2);
-        if (!IsInventorySearchBackground(searchBar) ||
-            !IsInventoryPage(page) ||
-            !IsInventoryPage(leftPage))
+        var searchBar = RegionMatch(image, 0.08, 0.15, 0.92, 0.22, IsInventorySearchBackground);
+        var grid = RegionMatch(image, 0.04, 0.24, 0.96, 0.90, IsInventoryPage);
+        var header = RegionMatch(image, 0.20, 0.08, 0.80, 0.15, IsInventoryHeader);
+        if (searchBar < 0.55 || grid < 0.45 || header < 0.35)
         {
             return null;
         }
@@ -30,12 +28,12 @@ public sealed class VisualControlLocator
         {
             ControlName = "VisibleInventoryCard",
             Target = new NormalizedPoint { X = 0.17, Y = 0.285 },
-            Confidence = 0.95,
+            Confidence = Math.Min(0.99, (searchBar + grid + header) / 3),
             Evidence = new[]
             {
-                "inventory-search-bar",
-                "inventory-grid-background",
-                "upper-left-visible-card-topology"
+                "InventorySearchBarDetected",
+                "InventoryGridDetected",
+                "InventoryHeaderDetected"
             }
         };
     }
@@ -44,17 +42,17 @@ public sealed class VisualControlLocator
     {
         var image = PngDecoder.Decode(screenshotPng);
         Candidate? best = null;
-        var radius = Math.Max(28, image.Width / 15);
+        var radius = Math.Max(28, image.Width / 20);
         for (var y = (int)(image.Height * 0.80); y < (int)(image.Height * 0.94); y += 4)
         {
             for (var x = (int)(image.Width * 0.75); x < (int)(image.Width * 0.96); x += 4)
             {
                 var checks = new[]
                 {
-                    IsTeal(Sample(image, x - radius, y)),
-                    IsTeal(Sample(image, x + radius, y)),
-                    IsTeal(Sample(image, x, y - radius)),
-                    IsTeal(Sample(image, x, y + radius)),
+                    IsDetailsControl(Sample(image, x - radius, y)),
+                    IsDetailsControl(Sample(image, x + radius, y)),
+                    IsDetailsControl(Sample(image, x, y - radius)),
+                    IsDetailsControl(Sample(image, x, y + radius)),
                     IsDarkTeal(Sample(image, x, y))
                 };
                 var candidate = new Candidate(x, y, checks.Count(value => value) / (double)checks.Length);
@@ -65,7 +63,7 @@ public sealed class VisualControlLocator
             }
         }
 
-        if (best is null || best.Score < 0.80)
+        if (best is null || best.Score < 0.20)
         {
             return null;
         }
@@ -91,15 +89,10 @@ public sealed class VisualControlLocator
     public LocatedControl? LocateDetailsPageTopology(byte[] screenshotPng)
     {
         var image = PngDecoder.Decode(screenshotPng);
-        var pageChecks = new[]
-        {
-            IsDetailsPageBackground(Sample(image, image.Width / 2, image.Height / 8)),
-            IsDetailsPageBackground(Sample(image, image.Width / 8, image.Height / 2)),
-            IsDetailsPageBackground(Sample(image, image.Width * 7 / 8, image.Height / 2)),
-            IsDetailsPageBackground(Sample(image, image.Width / 2, image.Height * 3 / 4))
-        };
-        var modelArea = Sample(image, image.Width / 2, image.Height * 2 / 5);
-        if (pageChecks.Count(value => value) < 3 || !IsDetailsModelArea(modelArea))
+        var modelArea = RegionMatch(image, 0.22, 0.12, 0.78, 0.42, IsDetailsModelArea);
+        var cpArea = RegionMatch(image, 0.25, 0.07, 0.75, 0.18, IsDetailsPanel);
+        var detailsPanel = RegionMatch(image, 0.03, 0.39, 0.97, 0.92, IsDetailsPanel);
+        if (modelArea < 0.25 || cpArea < 0.20 || detailsPanel < 0.35)
         {
             return null;
         }
@@ -108,11 +101,12 @@ public sealed class VisualControlLocator
         {
             ControlName = "PokemonDetailsPageTopology",
             Target = new NormalizedPoint { X = 0.50, Y = 0.40 },
-            Confidence = pageChecks.Count(value => value) / (double)pageChecks.Length,
+            Confidence = Math.Min(0.99, (modelArea + cpArea + detailsPanel) / 3),
             Evidence = new[]
             {
-                "DetailsPageBackgroundDetected",
+                "DetailsPagePanelDetected",
                 "PokemonModelAreaDetected",
+                "DetailsCpNameRegionDetected",
                 "DetailsPageTopologyDetected"
             }
         };
@@ -149,14 +143,9 @@ public sealed class VisualControlLocator
     public LocatedControl? LocateAppraisalIntroContinue(byte[] screenshotPng)
     {
         var image = PngDecoder.Decode(screenshotPng);
-        var dialogChecks = new[]
-        {
-            IsLight(Sample(image, image.Width / 10, (int)(image.Height * 0.84))),
-            IsLight(Sample(image, image.Width / 2, (int)(image.Height * 0.84))),
-            IsLight(Sample(image, image.Width * 9 / 10, (int)(image.Height * 0.84)))
-        };
-        var overlay = Sample(image, image.Width / 3, (int)(image.Height * 0.68));
-        if (dialogChecks.Count(value => value) < 2 || !IsAppraisalOverlay(overlay))
+        var dialog = RegionMatch(image, 0.02, 0.82, 0.98, 0.97, IsLight);
+        var overlay = RegionMatch(image, 0.20, 0.50, 0.80, 0.84, IsAppraisalOverlay);
+        if (dialog < 0.35 || overlay < 0.25)
         {
             return null;
         }
@@ -165,12 +154,11 @@ public sealed class VisualControlLocator
         {
             ControlName = "AppraisalIntroContinue",
             Target = new NormalizedPoint { X = 0.50, Y = 0.88 },
-            Confidence = 0.95,
+            Confidence = Math.Min(0.99, (dialog + overlay) / 2),
             Evidence = new[]
             {
-                "white-appraisal-dialog",
-                "blue-appraisal-overlay",
-                "center-dialog-safe-target"
+                "AppraisalIntroDialogDetected",
+                "AppraisalIntroOverlayDetected",
             }
         };
     }
@@ -314,6 +302,18 @@ public sealed class VisualControlLocator
     private static Rgba32 Sample(PixelImage image, int x, int y) =>
         image.GetPixel(Math.Clamp(x, 0, image.Width - 1), Math.Clamp(y, 0, image.Height - 1));
 
+    private static double RegionMatch(PixelImage image, double left, double top, double right, double bottom,
+        Func<Rgba32, bool> predicate)
+    {
+        var x0 = (int)(image.Width * left); var x1 = (int)(image.Width * right);
+        var y0 = (int)(image.Height * top); var y1 = (int)(image.Height * bottom);
+        var matched = 0; var total = 0;
+        for (var y = y0; y < y1; y += Math.Max(1, image.Height / 90))
+        for (var x = x0; x < x1; x += Math.Max(1, image.Width / 90))
+        { total++; if (predicate(Sample(image, x, y))) matched++; }
+        return total == 0 ? 0 : matched / (double)total;
+    }
+
     private static bool IsRed(Rgba32 pixel) =>
         pixel.R >= 170 && pixel.R >= pixel.G * 1.35 && pixel.R >= pixel.B * 1.25;
 
@@ -335,8 +335,14 @@ public sealed class VisualControlLocator
     private static bool IsInventoryPage(Rgba32 pixel) =>
         pixel.R >= 215 && pixel.G >= 225 && pixel.B >= 205;
 
+    private static bool IsInventoryHeader(Rgba32 pixel) =>
+        pixel.R >= 175 && pixel.G >= 185 && pixel.B >= 175;
+
     private static bool IsDarkTeal(Rgba32 pixel) =>
         pixel.G >= 75 && pixel.B >= 75 && pixel.R <= 80 && pixel.G > pixel.R * 1.4;
+
+    private static bool IsDetailsControl(Rgba32 pixel) =>
+        IsTeal(pixel) || (pixel.R <= 90 && pixel.G <= 150 && pixel.B <= 170);
 
     private static bool IsDetailsMenuBackground(Rgba32 pixel) =>
         pixel.G >= 80 && pixel.B >= 80 && pixel.R <= 100 &&
@@ -353,7 +359,10 @@ public sealed class VisualControlLocator
         pixel.G is >= 35 and <= 180 &&
         pixel.B is >= 35 and <= 190 &&
         Math.Max(pixel.R, Math.Max(pixel.G, pixel.B)) -
-        Math.Min(pixel.R, Math.Min(pixel.G, pixel.B)) >= 8;
+            Math.Min(pixel.R, Math.Min(pixel.G, pixel.B)) >= 8;
+
+    private static bool IsDetailsPanel(Rgba32 pixel) =>
+        IsLight(pixel) || (pixel.G >= 90 && pixel.G >= pixel.R * 1.05 && pixel.B >= pixel.R * 0.95);
 
     private static bool IsAppraisalOverlay(Rgba32 pixel) =>
         pixel.B >= 105 && pixel.G >= 90 && pixel.R <= 130;
