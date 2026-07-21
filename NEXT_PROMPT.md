@@ -1,5 +1,47 @@
 # Continuation prompt
 
+## Evidence-machine result checkpoint (2026-07-21 aften) — CONTROLLER STOPPED AFTER GATE 3
+
+Gates 0-3 of the semantic integration checkpoint were executed on the
+evidence machine. Commits `401d2cd`, `1924f39`, `bfb6ed6`, `c0af853` are
+pushed; self-tests are 208/208.
+
+- Gate 0 green (201/201 at start).
+- Gate 1: `ocr-header-spike` initially read 0/60 — root cause was a
+  BitmapTransform scale-before-crop defect in `WindowsMediaTextRecognizer`
+  (fixed, pure-helper tested). After ROI tuning: species 60/60 frames.
+  WinRT CP consensus produced one FALSE value (29 for a real CP129 —
+  two near-identical frames dropped the same thin "1"). Four hardening
+  experiments measured; binarization/3x-upscale/ROI-jitter all regressed.
+- Controller decision: Tesseract (`TesseractOCR` 5.5.2, tessdata-best)
+  replaced WinRT as the cleanup-flow engine (`--engine winrt` remains in
+  the spike command only). Gate 2 rerun: species 19/20, CP 16/20, 100 %
+  accuracy on everything extracted, zero false values, original database
+  untouched, `RowsWithQueryAsSpecies` 0. The reprocessor now recomputes
+  ObservationStatus (Complete requires species+CP+all IVs; else Partial).
+- Gate 3 (`age0-1825`, item-limit 50 — limit range extended to 6-50):
+  50/50 items captured, 36 distinct species, species 48/50, CP 41/50,
+  IV 47/50, zero query-as-species, zero destructive/tag actions, SQLite
+  integrity ok. Formally RED on the >=48/50 species+CP+IV requirement.
+  STRUCTURAL finding: the misses are dominated by large models (Hoopa x2,
+  Enamorus, Tyranitar) physically occluding the CP header — a UI fact,
+  not an OCR defect; header OCR coverage caps around 82-90 % on a real
+  inventory. Accuracy remained 100 % (unknowns stay fail-safe REVIEW).
+  Evidence: `local-data/validation/cleanup-value-proof/age0-1825-50-semantic`.
+- The phone ended on a verified real GameplayMap, but the run reported
+  `FinalMapNotVerified:PokemonDetails` — the final verification ran before
+  the recovery/exit chain finished. Open defect.
+
+Open items for the next iteration (controller decisions needed):
+1. `CleanupProofRunner` still marks rows Complete despite Unknown CP/IV —
+   mirror the reprocessor status recompute in the live runner.
+2. Final-map verification timing defect above.
+3. Gate 4 (double-scan re-identification, >=99 %, ID-006) was NOT run and
+   still blocks all cleanup/tagging work.
+4. Decide whether the >=19/20 / >=48/50 CP coverage requirements should be
+   restated as accuracy gates (zero false values) plus a documented
+   occlusion-driven coverage cap.
+
 ## Semantic integration checkpoint (2026-07-21) — HANDOVER TO EVIDENCE MACHINE
 
 Waves 1+2 of `docs/MINIMAL_EFFORT_PLAN.md` are merged and offline-green at
