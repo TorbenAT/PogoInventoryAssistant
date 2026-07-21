@@ -11,6 +11,8 @@
   result without a second swipe.
 - Controlled stops are resumable; terminal Unknown/Failure and Completed
   checkpoints are distinct and idempotent. Offline self-tests pass 157/157.
+- Resume evidence numbering now appends within an existing output directory and
+  cannot overwrite the earlier replay evidence.
 
 ## Android real-phone attempt blocked - 2026-07-21
 

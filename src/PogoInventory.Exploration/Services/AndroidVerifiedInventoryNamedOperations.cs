@@ -49,6 +49,7 @@ public sealed class AndroidVerifiedInventoryNamedOperations : IVerifiedInventory
         _automationProfile.Validate();
         ArgumentException.ThrowIfNullOrWhiteSpace(evidenceDirectory);
         _evidenceDirectory = Path.GetFullPath(evidenceDirectory);
+        _evidenceOrdinal = NextEvidenceOrdinal(_evidenceDirectory);
         _appraisalProfile = appraisalProfile;
         _identityAnalyzer = new PokemonDetailsIdentityAnalyzer(identityProfile);
     }
@@ -506,6 +507,20 @@ public sealed class AndroidVerifiedInventoryNamedOperations : IVerifiedInventory
         var safe = string.Concat(label.Select(ch => char.IsLetterOrDigit(ch) || ch is '-' or '_' ? ch : '_'));
         var path = Path.Combine(_evidenceDirectory, $"{++_evidenceOrdinal:D4}-{safe}.png");
         await File.WriteAllBytesAsync(path, screenshot, cancellationToken);
+    }
+
+    private static int NextEvidenceOrdinal(string directory)
+    {
+        if (!Directory.Exists(directory)) return 0;
+        var maximum = 0;
+        foreach (var path in Directory.EnumerateFiles(directory, "*.json")
+                     .Concat(Directory.EnumerateFiles(directory, "*.png")))
+        {
+            var name = Path.GetFileName(path);
+            if (name.Length >= 4 && int.TryParse(name[..4], out var ordinal))
+                maximum = Math.Max(maximum, ordinal);
+        }
+        return maximum;
     }
 
     private async Task WriteAuditAsync(string label, object value, CancellationToken cancellationToken)

@@ -339,3 +339,7 @@ Limitations observed during validation:
 - ControlledStopped checkpoints resume through overlap and Completed
   checkpoints are idempotent. Offline self-tests: 157/157.
 - Real-phone acceptance has not started in this repair checkpoint.
+- During the controlled resume acceptance, evidence numbering was observed to
+  restart in an existing output. The host now scans existing evidence ordinals
+  and appends safely; this is the only additional runtime repair required by
+  the acceptance run.
