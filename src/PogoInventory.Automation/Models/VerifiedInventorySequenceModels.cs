@@ -14,6 +14,7 @@ public enum VerifiedSequenceState
     ControlledStopped,
     TerminalUnknown,
     TerminalFailure,
+    NoEffectOrEndOfFilter,
     Completed
 }
 

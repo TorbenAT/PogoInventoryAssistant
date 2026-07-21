@@ -442,3 +442,16 @@
   no blind retry was sent. The final phone state was recovered to GameplayMap.
 - Evidence and failure notes are retained under the ignored Android sequence
   validation root; no local phone data was committed.
+
+## Cursor changed-identity fallback - 2026-07-21
+
+- A missed transient animation now falls back to three independent stable
+  Details frames and accepts a changed stable fingerprint as
+  `SUCCESS_CHANGED_IDENTITY`.
+- Unchanged identity returns explicit `NoEffectOrEndOfFilter` without a blind
+  second swipe.
+- Guarded recovery accepts only bounded visual Details topology as a fallback
+  for detector Unknown; Back still requires an Inventory postcondition.
+- Offline validation remains green at 157/157. The requested age0-1825 phone
+  run was stopped at an unsafe Power Up confirmation screen and is not claimed
+  complete.

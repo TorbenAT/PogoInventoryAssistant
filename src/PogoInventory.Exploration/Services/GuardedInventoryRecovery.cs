@@ -126,6 +126,19 @@ public sealed class GuardedInventoryRecovery
         var image = PngDecoder.Decode(screenshotPng);
         var detection = _detector.Detect(screenshotPng, appraisalProfile);
         var intro = _locator.LocateAppraisalIntroContinue(screenshotPng);
+        var detailsTopology = _locator.LocateDetailsPageTopology(screenshotPng);
+        if (detection.State == PokemonGoGameState.Unknown && detailsTopology is not null)
+        {
+            detection = detection with
+            {
+                State = PokemonGoGameState.PokemonDetails,
+                Confidence = Math.Max(detection.Confidence, detailsTopology.Confidence),
+                Evidence = detection.Evidence
+                    .Concat(detailsTopology.Evidence)
+                    .Distinct(StringComparer.Ordinal)
+                    .ToArray()
+            };
+        }
         AppraisalAnalysisResult? appraisal = appraisalProfile is null
             ? null
             : _analyzer.Analyze(image, appraisalProfile);

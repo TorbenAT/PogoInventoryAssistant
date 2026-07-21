@@ -382,3 +382,17 @@ recorded, then item 4 produced one verified `NO_EFFECT` swipe and entered
 `TerminalUnknown`; no second swipe was sent. A guarded recovery closed
 Inventory and verified `GameplayMap`. No tag mutation or destructive action
 occurred. Evidence is under `local-data/validation/android-sequence-host`.
+
+## Cursor changed-identity checkpoint
+
+The cursor repair is implemented locally with 157/157 self-tests passing. A
+missed transient transition is now resolved by three independent stable Details
+frames: changed fingerprint is `SUCCESS_CHANGED_IDENTITY`, unchanged
+fingerprint is explicit `NoEffectOrEndOfFilter`, and exactly one swipe is ever
+sent. Guarded recovery uses the same allow-listed Details topology fallback for
+detector Unknown.
+
+The first real `age0-1825`, limit-10 run recorded four complete items and
+verified the changed-identity path. Later bounded attempts reached a visible
+`POWER UP: FLETCHLING` confirmation screen. No further input was sent, so the
+10-item acceptance remains blocked and must not be claimed.

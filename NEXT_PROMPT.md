@@ -122,3 +122,13 @@ to improve bounded diagnosis of the age0-365 end-of-filter transition, then
 rerun only Task 9 after the transition evidence is explicit. Final phone state
 was verified as GameplayMap. This remains sequence-host acceptance evidence,
 not unrestricted appraisal-provider approval.
+
+## Current cursor checkpoint
+
+The changed-identity cursor fallback is offline green at 157/157. The first
+`age0-1825` real run recorded four items and accepted one missed transient as
+`SUCCESS_CHANGED_IDENTITY` after three stable post frames. A later bounded
+attempt reached a destructive Power Up confirmation screen; no further phone
+input was sent. Do not retry the phone until the screen is manually returned to
+a safe map or unfiltered Inventory state. Do not implement semantic species,
+CP or IV extraction in the next iteration.

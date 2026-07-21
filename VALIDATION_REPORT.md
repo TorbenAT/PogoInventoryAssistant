@@ -367,3 +367,18 @@ Limitations observed during validation:
 - Final build and self-tests: PASS, 157/157. The evidence root is
   `local-data/validation/android-sequence-host`; the ZIP is generated locally
   and is intentionally not committed.
+
+## Cursor changed-identity repair on 2026-07-21
+
+- Added a bounded post-swipe identity fallback. One swipe with no captured
+  transient now captures three independent Details frames before classification.
+- Different stable fingerprint: `SUCCESS_CHANGED_IDENTITY`; identical stable
+  fingerprint: explicit `NoEffectOrEndOfFilter`; no blind second swipe.
+- Guarded recovery and start-state handling use allow-listed Details topology
+  only when the strict detector returns Unknown, while Back remains guarded by
+  an Inventory postcondition.
+- Build: PASS; self-tests: PASS, 157/157; diff check: PASS.
+- The first real `age0-1825`, limit-10 attempt reached four complete records.
+  Later bounded attempts encountered unstable start/open-inventory state and a
+  visible `POWER UP: FLETCHLING` confirmation screen. No further input was sent
+  and Task G ten-item acceptance is blocked, not passed.

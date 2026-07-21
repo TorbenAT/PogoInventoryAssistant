@@ -1,3 +1,5 @@
+using PogoInventory.Exploration.Services;
+
 internal static class VerifiedSequenceRuntimeTests
 {
     public static Task RunAsync()
@@ -33,6 +35,30 @@ internal static class VerifiedSequenceRuntimeTests
         Assert(advance.Contains("ObserveSwipeTransitionAsync", StringComparison.Ordinal) &&
             advance.Contains("CaptureIndependentDetailsFramesAsync", StringComparison.Ordinal),
             "cursor requires observed transition and three independent post frames");
+        Assert(advance.Contains("ClassifySwipeProgression", StringComparison.Ordinal),
+            "cursor classifies changed identity after post-frame capture");
+        Assert(host.Contains("allowVisualDetailsFallback", StringComparison.Ordinal) &&
+            host.Contains("LocateDetailsPageTopology", StringComparison.Ordinal),
+            "cursor can validate visually stable Details when transient state is missed");
+        var recoverySource = File.ReadAllText(Path.Combine(root, "src", "PogoInventory.Exploration",
+            "Services", "GuardedInventoryRecovery.cs"));
+        Assert(recoverySource.Contains("LocateDetailsPageTopology", StringComparison.Ordinal) &&
+            recoverySource.Contains("State = PokemonGoGameState.PokemonDetails", StringComparison.Ordinal),
+            "guarded recovery uses bounded visual Details topology fallback");
+        Assert(advance.Split("_transport.SwipeAsync", StringSplitOptions.None).Length - 1 == 1,
+            "cursor authorizes exactly one swipe");
+        Assert(AndroidVerifiedInventoryNamedOperations.ClassifySwipeProgression(
+                false, "cp88", "cp129") == CursorProgressionOutcome.SuccessChangedIdentity,
+            "CP88 to CP129 without captured animation is changed identity success");
+        Assert(AndroidVerifiedInventoryNamedOperations.ClassifySwipeProgression(
+                false, "pikachu", "eevee") == CursorProgressionOutcome.SuccessChangedIdentity,
+            "different species without captured animation is changed identity success");
+        Assert(AndroidVerifiedInventoryNamedOperations.ClassifySwipeProgression(
+                true, "same", "same") == CursorProgressionOutcome.Success,
+            "same fingerprint with observed transition is success");
+        Assert(AndroidVerifiedInventoryNamedOperations.ClassifySwipeProgression(
+                false, "same", "same") == CursorProgressionOutcome.NoEffectOrEndOfFilter,
+            "same fingerprint without observed transition is no effect or end of filter");
         Assert(!advance.Contains("before.Screenshot },\n            new PokemonIdentityFrame { ScreenshotPng = after.Screenshot },\n            new PokemonIdentityFrame { ScreenshotPng = after.Screenshot", StringComparison.Ordinal),
             "cursor does not synthesize before/after/after consensus");
         Assert(sequence.Contains("ControlledStopped", StringComparison.Ordinal) &&

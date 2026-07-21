@@ -12,6 +12,13 @@ using PogoInventory.Vision.Errors;
 
 namespace PogoInventory.Exploration.Services;
 
+public enum CursorProgressionOutcome
+{
+    Success,
+    SuccessChangedIdentity,
+    NoEffectOrEndOfFilter
+}
+
 /// <summary>
 /// Real-device adapter for the verified sequence. All input is expressed as a
 /// named operation and every input has a bounded, visual postcondition check.
@@ -62,7 +69,8 @@ public sealed class AndroidVerifiedInventoryNamedOperations : IVerifiedInventory
             new[] { PokemonGoGameState.Inventory, PokemonGoGameState.GameplayMap,
                 PokemonGoGameState.MainMenu, PokemonGoGameState.PokemonDetails,
                 PokemonGoGameState.PokemonMenu, PokemonGoGameState.Appraisal },
-            cancellationToken);
+            cancellationToken,
+            allowVisualDetailsFallback: true);
         if (state.State is PokemonGoGameState.PokemonDetails or PokemonGoGameState.PokemonMenu or
             PokemonGoGameState.Appraisal)
         {
@@ -242,23 +250,35 @@ public sealed class AndroidVerifiedInventoryNamedOperations : IVerifiedInventory
         await _transport.SwipeAsync(_serial, start.X, start.Y, end.X, end.Y,
             _automationProfile.NextPokemonSwipe.DurationMilliseconds, cancellationToken);
         var transition = await ObserveSwipeTransitionAsync(before.Screenshot, beforeDetection, cancellationToken);
-        if (!transition.Observed)
+        var postFrames = await CaptureIndependentDetailsFramesAsync(
+            "post-swipe-identity",
+            allowVisualDetailsFallback: !transition.Observed,
+            cancellationToken: cancellationToken);
+        if (postFrames.Count != 3)
+            return VerifiedSequenceState.Unknown;
+        var postIdentity = _identityAnalyzer.Consensus(postFrames);
+        var outcome = ClassifySwipeProgression(
+            transition.Observed,
+            previous.StableFingerprintSha256,
+            postIdentity.StableFingerprintSha256);
+        if (outcome == CursorProgressionOutcome.NoEffectOrEndOfFilter)
         {
             await WriteAuditAsync("advance-no-effect", new
             {
                 StateBefore = beforeDetection.State,
                 AuthorizedAction = "NextPokemonSwipe",
+                LocatorTarget = _automationProfile.NextPokemonSwipe,
                 InputCount = 1,
                 ExpectedState = PokemonGoGameState.PokemonDetails,
                 ObservedState = transition.State,
-                Result = "NO_EFFECT"
+                Before = previous.StableFingerprintSha256,
+                TransitionEvidence = transition.Evidence,
+                PostFrameCount = postFrames.Count,
+                PostFingerprint = postIdentity.StableFingerprintSha256,
+                Result = "NO_EFFECT_OR_END_OF_FILTER"
             }, cancellationToken);
-            return VerifiedSequenceState.Unknown;
+            return VerifiedSequenceState.NoEffectOrEndOfFilter;
         }
-        var postFrames = await CaptureIndependentDetailsFramesAsync("post-swipe-identity", cancellationToken);
-        if (postFrames.Count != 3)
-            return VerifiedSequenceState.Unknown;
-        var postIdentity = _identityAnalyzer.Consensus(postFrames);
         await WriteAuditAsync("advance", new
         {
             StateBefore = beforeDetection.State,
@@ -272,11 +292,27 @@ public sealed class AndroidVerifiedInventoryNamedOperations : IVerifiedInventory
             TransitionEvidence = transition.Evidence,
             PostFrameCount = postFrames.Count,
             PostFingerprint = postIdentity.StableFingerprintSha256,
-            Result = "SUCCESS"
+            Result = outcome == CursorProgressionOutcome.SuccessChangedIdentity
+                ? "SUCCESS_CHANGED_IDENTITY"
+                : "SUCCESS"
         }, cancellationToken);
         _lastIdentity = postIdentity;
         _lastScreenshot = postFrames[^1].ScreenshotPng;
         return VerifiedSequenceState.PokemonDetails;
+    }
+
+    public static CursorProgressionOutcome ClassifySwipeProgression(
+        bool transientTransitionObserved,
+        string beforeFingerprint,
+        string postFingerprint)
+    {
+        if (transientTransitionObserved)
+            return CursorProgressionOutcome.Success;
+        if (!string.IsNullOrWhiteSpace(beforeFingerprint) &&
+            !string.IsNullOrWhiteSpace(postFingerprint) &&
+            !string.Equals(beforeFingerprint, postFingerprint, StringComparison.Ordinal))
+            return CursorProgressionOutcome.SuccessChangedIdentity;
+        return CursorProgressionOutcome.NoEffectOrEndOfFilter;
     }
 
     public async Task<VerifiedSequenceState> ReturnToInventoryAsync(CancellationToken cancellationToken)
@@ -325,16 +361,24 @@ public sealed class AndroidVerifiedInventoryNamedOperations : IVerifiedInventory
     }
 
     private async Task<IReadOnlyList<PokemonIdentityFrame>> CaptureIndependentDetailsFramesAsync(
-        string label, CancellationToken cancellationToken)
+        string label,
+        bool allowVisualDetailsFallback,
+        CancellationToken cancellationToken)
     {
         var frames = new List<PokemonIdentityFrame>(3);
         for (var index = 0; index < 3; index++)
         {
-            var details = await WaitForStateAsync(new[] { PokemonGoGameState.PokemonDetails }, cancellationToken);
-            if (details.State != PokemonGoGameState.PokemonDetails)
+            var screenshot = allowVisualDetailsFallback
+                ? await CaptureAsync($"{label}-{index + 1}", cancellationToken)
+                : (await WaitForStateAsync(new[] { PokemonGoGameState.PokemonDetails }, cancellationToken)).Screenshot;
+            var detection = _detector.Detect(screenshot, _appraisalProfile);
+            var detailsTopology = _locator.LocateDetailsPageTopology(screenshot);
+            var isDetails = detection.State == PokemonGoGameState.PokemonDetails ||
+                (allowVisualDetailsFallback && detailsTopology is not null);
+            if (!isDetails)
                 return Array.Empty<PokemonIdentityFrame>();
-            frames.Add(new PokemonIdentityFrame { ScreenshotPng = details.Screenshot });
-            await SaveEvidenceAsync($"{label}-{index + 1}", details.Screenshot, cancellationToken);
+            frames.Add(new PokemonIdentityFrame { ScreenshotPng = screenshot });
+            await SaveEvidenceAsync($"{label}-{index + 1}", screenshot, cancellationToken);
             if (index < 2)
                 await Task.Delay(_automationProfile.PostActionSettleMilliseconds, cancellationToken);
         }
@@ -439,7 +483,9 @@ public sealed class AndroidVerifiedInventoryNamedOperations : IVerifiedInventory
     }
 
     private async Task<(PokemonGoGameState State, byte[] Screenshot)> WaitForStateAsync(
-        IReadOnlyCollection<PokemonGoGameState> expected, CancellationToken cancellationToken)
+        IReadOnlyCollection<PokemonGoGameState> expected,
+        CancellationToken cancellationToken,
+        bool allowVisualDetailsFallback = false)
     {
         var deadline = DateTime.UtcNow.AddSeconds(_automationProfile.StateTimeoutSeconds);
         PokemonGoGameState? last = null;
@@ -449,11 +495,17 @@ public sealed class AndroidVerifiedInventoryNamedOperations : IVerifiedInventory
         {
             screenshot = await CaptureAsync("state", cancellationToken);
             var detection = _detector.Detect(screenshot, _appraisalProfile);
-            if (expected.Contains(detection.State))
+            var observedState = detection.State;
+            if (allowVisualDetailsFallback && observedState == PokemonGoGameState.Unknown &&
+                _locator.LocateDetailsPageTopology(screenshot) is not null)
             {
-                consecutive = last == detection.State ? consecutive + 1 : 1;
-                last = detection.State;
-                if (consecutive >= 3) return (detection.State, screenshot);
+                observedState = PokemonGoGameState.PokemonDetails;
+            }
+            if (expected.Contains(observedState))
+            {
+                consecutive = last == observedState ? consecutive + 1 : 1;
+                last = observedState;
+                if (consecutive >= 3) return (observedState, screenshot);
             }
             else
             {

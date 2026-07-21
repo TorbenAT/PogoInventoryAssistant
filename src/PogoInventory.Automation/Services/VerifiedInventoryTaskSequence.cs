@@ -57,7 +57,8 @@ public sealed class VerifiedInventoryTaskSequence
                     $"classification={existing.ApplyClassificationTag}/{request.ApplyClassificationTag}:{existing.ClassificationTag}/{request.ClassificationTag}.");
             runId = existing.ScanRunId;
             if (existing.State is VerifiedSequenceState.TerminalUnknown or
-                VerifiedSequenceState.TerminalFailure or VerifiedSequenceState.Stopped)
+                VerifiedSequenceState.TerminalFailure or VerifiedSequenceState.NoEffectOrEndOfFilter or
+                VerifiedSequenceState.Stopped)
                 return new VerifiedSequenceResult { Checkpoint = existing, CheckpointPath = checkpointPath };
             if (existing.State == VerifiedSequenceState.Completed)
                 return new VerifiedSequenceResult { Checkpoint = existing, CheckpointPath = checkpointPath };
@@ -191,7 +192,11 @@ public sealed class VerifiedInventoryTaskSequence
             await SaveAsync(output, checkpoint, cancellationToken);
             if (advanced != VerifiedSequenceState.PokemonDetails)
                 return await StopAsync(output, checkpoint, items, advanced,
-                    advanced == VerifiedSequenceState.Unknown ? "Swipe result Unknown; no further input" : "Swipe did not verify Details",
+                    advanced == VerifiedSequenceState.Unknown
+                        ? "Swipe result Unknown; no further input"
+                        : advanced == VerifiedSequenceState.NoEffectOrEndOfFilter
+                            ? "No effect or end of filter after stable post-swipe identity"
+                            : "Swipe did not verify Details",
                     cancellationToken);
             currentIdentity = await _operations.CaptureIdentityAsync(cancellationToken);
         }
@@ -230,7 +235,9 @@ public sealed class VerifiedInventoryTaskSequence
     {
         State = state == VerifiedSequenceState.Unknown
             ? VerifiedSequenceState.TerminalUnknown
-            : VerifiedSequenceState.TerminalFailure,
+            : state == VerifiedSequenceState.NoEffectOrEndOfFilter
+                ? VerifiedSequenceState.NoEffectOrEndOfFilter
+                : VerifiedSequenceState.TerminalFailure,
         LastVerifiedState = state, Items = items.ToArray(), NextAction = "TerminalStop:" + detail,
         UpdatedAtUtc = DateTimeOffset.UtcNow
     }, cancellationToken);
