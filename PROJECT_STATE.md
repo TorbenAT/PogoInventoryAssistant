@@ -1,5 +1,24 @@
 # Project state
 
+## Wrong-screen action authorization repair checkpoint
+
+The historical incident in which a Details screenshot authorized the
+MainMenu Inventory target `(300,1837)` is now explicitly fail-closed. Opening
+Inventory requires three stable typed MainMenu observations, positive
+MainMenu/Inventory topology, no Details/PokemonMenu/Appraisal/modal conflict,
+and a fresh pre-tap revalidation. A stale MainMenu frame cannot authorize a
+Details screen, and visual Details fallback never grants MainMenu.
+
+The named-operation host has a conservative destructive-confirmation
+interlock for Power Up, Evolve, Transfer, Purify and purchase/item confirmation
+surfaces. It records UnsafeConfirmation evidence and sends no input; it never
+auto-cancels. Named input audits include strict and fallback observations,
+conflicts, target, precondition/fresh screenshot hashes and InputSent.
+
+Offline self-tests: 158/158. The phone check is intentionally not run in this
+checkpoint because the incident modal requires Torben's manual CANCEL first.
+No real-phone acceptance claim is made.
+
 ## Android runtime repair checkpoint
 
 `AndroidVerifiedInventoryNamedOperations` now delegates appraisal and return

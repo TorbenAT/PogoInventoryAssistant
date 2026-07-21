@@ -202,6 +202,7 @@ var tests = new (string Name, Func<Task> Run)[]
     ,("Dynamic identity consensus requires three frames", PokemonIdentityTests.RunConsensusContractAsync)
     ,("Verified sequence is bounded, checkpointed and fail-closed", VerifiedInventorySequenceTests.RunAsync)
     ,("Android sequence runtime guards remain named and fail-closed", VerifiedSequenceRuntimeTests.RunAsync)
+    ,("Wrong-screen navigation and destructive confirmation authorization", WrongScreenAuthorizationTests.RunAsync)
 };
 
 var failed = 0;

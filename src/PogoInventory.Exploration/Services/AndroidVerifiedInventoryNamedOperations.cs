@@ -33,6 +33,7 @@ public sealed class AndroidVerifiedInventoryNamedOperations : IVerifiedInventory
     private readonly string _evidenceDirectory;
     private readonly PokemonGoGameStateDetector _detector = new();
     private readonly VisualControlLocator _locator = new();
+    private readonly UnsafeConfirmationSurfaceDetector _unsafeSurfaceDetector = new();
     private readonly InventorySearchVisualAnalyzer _searchAnalyzer = new();
     private readonly PokemonDetailsIdentityAnalyzer _identityAnalyzer;
     private readonly GuardedInventoryRecovery _recovery = new();
@@ -88,9 +89,16 @@ public sealed class AndroidVerifiedInventoryNamedOperations : IVerifiedInventory
         }
         if (state.State == PokemonGoGameState.MainMenu)
         {
-            var inventory = _locator.LocatePokemonInventory(state.Screenshot);
-            if (inventory is null) return VerifiedSequenceState.Unknown;
-            await TapAndVerifyAsync(inventory.Target, PokemonGoGameState.Inventory, "open-inventory", cancellationToken);
+            var precondition = await CaptureVerifiedMainMenuPreconditionAsync(cancellationToken);
+            if (precondition is null) return VerifiedSequenceState.Unknown;
+            var fresh = await RevalidateMainMenuPreconditionAsync(precondition, cancellationToken);
+            if (fresh is null) return VerifiedSequenceState.Unknown;
+            await TapAndVerifyAsync(
+                fresh.Value.Target,
+                PokemonGoGameState.Inventory,
+                "open-inventory",
+                cancellationToken,
+                fresh.Value.Authorization);
         }
 
         var current = await WaitForStateAsync(new[] { PokemonGoGameState.Inventory }, cancellationToken);
@@ -112,9 +120,11 @@ public sealed class AndroidVerifiedInventoryNamedOperations : IVerifiedInventory
                     await TapNamedAsync(new NormalizedPoint { X = 0.9175, Y = 0.1881 }, "clear-search", cancellationToken);
                     break;
                 case InventorySearchAction.EnterQuery:
+                    await AuthorizeNonTapInputAsync("enter-inventory-search-query", cancellationToken);
                     await _transport.EnterInventorySearchQueryAsync(_serial, query, cancellationToken);
                     break;
                 case InventorySearchAction.SubmitQuery:
+                    await AuthorizeNonTapInputAsync("submit-inventory-search-query", cancellationToken);
                     await _transport.SubmitInventorySearchQueryAsync(_serial, cancellationToken);
                     break;
             }
@@ -247,6 +257,7 @@ public sealed class AndroidVerifiedInventoryNamedOperations : IVerifiedInventory
         var (width, height) = await ScreenSizeAsync(cancellationToken);
         var start = _automationProfile.NextPokemonSwipe.Start.ToPixels(width, height);
         var end = _automationProfile.NextPokemonSwipe.End.ToPixels(width, height);
+        await AuthorizeNonTapInputAsync("next-pokemon-swipe", cancellationToken);
         await _transport.SwipeAsync(_serial, start.X, start.Y, end.X, end.Y,
             _automationProfile.NextPokemonSwipe.DurationMilliseconds, cancellationToken);
         var transition = await ObserveSwipeTransitionAsync(before.Screenshot, beforeDetection, cancellationToken);
@@ -400,6 +411,7 @@ public sealed class AndroidVerifiedInventoryNamedOperations : IVerifiedInventory
         if (authorization.Action != RecoveryInputAction.PressBack ||
             authorization.StateBefore is not (PokemonGoGameState.PokemonDetails or PokemonGoGameState.PokemonMenu))
             throw new InvalidOperationException("Android Back was not authorized for the observed state.");
+        await AuthorizeNonTapInputAsync("guarded-back", cancellationToken);
         await _transport.PressBackAsync(_serial, cancellationToken);
     }
 
@@ -520,19 +532,224 @@ public sealed class AndroidVerifiedInventoryNamedOperations : IVerifiedInventory
     }
 
     private async Task TapAndVerifyAsync(NormalizedPoint point, PokemonGoGameState expected,
-        string name, CancellationToken cancellationToken)
+        string name, CancellationToken cancellationToken,
+        NamedInputAuthorization? authorization = null)
     {
-        await TapNamedAsync(point, name, cancellationToken);
+        await TapNamedAsync(point, name, cancellationToken, authorization);
         var result = await WaitForStateAsync(new[] { expected }, cancellationToken);
         if (result.State != expected) throw new InvalidOperationException($"{name} postcondition was not verified.");
     }
 
-    private async Task TapNamedAsync(NormalizedPoint point, string name, CancellationToken cancellationToken)
+    private async Task TapNamedAsync(
+        NormalizedPoint point,
+        string name,
+        CancellationToken cancellationToken,
+        NamedInputAuthorization? authorization = null)
     {
+        var screenshot = authorization?.FreshScreenshot ??
+            await CaptureAsync($"pre-{name}", cancellationToken);
+        await EnsureNoUnsafeConfirmationAsync(name, screenshot, cancellationToken);
+        var detection = _detector.Detect(screenshot, _appraisalProfile);
+        var visualFallbackState = detection.State == PokemonGoGameState.Unknown &&
+            _locator.LocateDetailsPageTopology(screenshot) is not null
+            ? PokemonGoGameState.PokemonDetails
+            : (PokemonGoGameState?)null;
+        if (authorization?.RequiredState is { } required && detection.State != required)
+        {
+            await WriteAuditAsync($"{name}-authorization", new
+            {
+                Action = "named-tap",
+                RequiredState = required,
+                StrictDetectedState = detection.State,
+                VisualFallbackState = visualFallbackState,
+                ConflictingStates = new[] { visualFallbackState ?? PokemonGoGameState.Unknown },
+                Target = point,
+                PreconditionScreenshotHash = authorization.PreconditionScreenshotSha256,
+                FreshPreTapScreenshotHash = authorization.FreshPreTapScreenshotSha256,
+                AuthorizationResult = "DENIED_REQUIRED_STATE_CHANGED",
+                InputSent = false
+            }, cancellationToken);
+            return;
+        }
         var (width, height) = await ScreenSizeAsync(cancellationToken);
         var (x, y) = point.ToPixels(width, height);
         await _transport.TapAsync(_serial, x, y, cancellationToken);
-        await WriteAuditAsync(name, new { Action = "named-tap", X = x, Y = y }, cancellationToken);
+        await WriteAuditAsync(name, new
+        {
+            Action = "named-tap",
+            X = x,
+            Y = y,
+            RequiredState = authorization?.RequiredState.ToString() ?? "validated-named-operation",
+            StrictDetectedState = detection.State,
+            VisualFallbackState = visualFallbackState,
+            ConflictingStates = Array.Empty<PokemonGoGameState>(),
+            Target = point,
+            PreconditionScreenshotHash = authorization?.PreconditionScreenshotSha256 ?? detection.ScreenshotSha256,
+            FreshPreTapScreenshotHash = authorization?.FreshPreTapScreenshotSha256 ?? detection.ScreenshotSha256,
+            AuthorizationResult = "AUTHORIZED",
+            InputSent = true
+        }, cancellationToken);
+    }
+
+    private async Task<byte[]> AuthorizeNonTapInputAsync(
+        string name, CancellationToken cancellationToken)
+    {
+        var screenshot = await CaptureAsync($"pre-{name}", cancellationToken);
+        await EnsureNoUnsafeConfirmationAsync(name, screenshot, cancellationToken);
+        var detection = _detector.Detect(screenshot, _appraisalProfile);
+        await WriteAuditAsync($"{name}-authorization", new
+        {
+            Action = name,
+            RequiredState = "validated-named-operation",
+            StrictDetectedState = detection.State,
+            VisualFallbackState = detection.State == PokemonGoGameState.Unknown &&
+                _locator.LocateDetailsPageTopology(screenshot) is not null
+                    ? PokemonGoGameState.PokemonDetails
+                    : (PokemonGoGameState?)null,
+            ConflictingStates = Array.Empty<PokemonGoGameState>(),
+            Target = (object?)null,
+            PreconditionScreenshotHash = detection.ScreenshotSha256,
+            FreshPreTapScreenshotHash = detection.ScreenshotSha256,
+            AuthorizationResult = "AUTHORIZED",
+            InputSent = true
+        }, cancellationToken);
+        return screenshot;
+    }
+
+    private async Task EnsureNoUnsafeConfirmationAsync(
+        string action, byte[] screenshot, CancellationToken cancellationToken)
+    {
+        var unsafeSurface = _unsafeSurfaceDetector.Detect(screenshot, action);
+        if (!unsafeSurface.IsUnsafe) return;
+        await SaveEvidenceAsync($"UnsafeConfirmation-{unsafeSurface.Kind}", screenshot, cancellationToken);
+        await WriteAuditAsync("UnsafeConfirmation", new
+        {
+            Action = action,
+            UnsafeConfirmation = unsafeSurface.Kind.ToString(),
+            ScreenshotSha256 = unsafeSurface.ScreenshotSha256,
+            Evidence = unsafeSurface.Evidence,
+            AuthorizationResult = "DENIED_UNSAFE_CONFIRMATION",
+            InputSent = false,
+            AutoCancel = false
+        }, cancellationToken);
+        throw new UnsafeConfirmationSurfaceException(action, unsafeSurface.Kind);
+    }
+
+    private async Task<VerifiedMainMenuPrecondition?> CaptureVerifiedMainMenuPreconditionAsync(
+        CancellationToken cancellationToken)
+    {
+        var frames = new List<MainMenuFrameObservation>(MainMenuPreconditionValidator.RequiredStableFrames);
+        for (var index = 0; index < MainMenuPreconditionValidator.RequiredStableFrames; index++)
+        {
+            var screenshot = await CaptureAsync($"main-menu-precondition-{index + 1}", cancellationToken);
+            var observation = ObserveMainMenuFrame(screenshot);
+            frames.Add(observation);
+            if (observation.HasUnsafeConfirmation)
+                await SaveEvidenceAsync("UnsafeConfirmation-MainMenuPrecondition", screenshot, cancellationToken);
+            if (index < MainMenuPreconditionValidator.RequiredStableFrames - 1)
+                await Task.Delay(_automationProfile.PostActionSettleMilliseconds, cancellationToken);
+        }
+        var precondition = MainMenuPreconditionValidator.TryCreate(frames);
+        await WriteAuditAsync("open-inventory-precondition", new
+        {
+            Action = "open-inventory",
+            RequiredState = PokemonGoGameState.MainMenu,
+            StrictDetectedState = frames[^1].StrictDetectedState,
+            VisualFallbackState = frames[^1].VisualFallbackState,
+            ConflictingStates = frames.SelectMany(frame => frame.ConflictingStates).Distinct().ToArray(),
+            Target = frames[^1].InventoryTarget,
+            PreconditionScreenshotHash = frames[^1].ScreenshotSha256,
+            FreshPreTapScreenshotHash = (string?)null,
+            AuthorizationResult = precondition is null ? "DENIED_PRECONDITION" : "PRECONDITION_VERIFIED",
+            InputSent = false,
+            StableFrameCount = frames.Count
+        }, cancellationToken);
+        return precondition;
+    }
+
+    private async Task<(NormalizedPoint Target, NamedInputAuthorization Authorization)? >
+        RevalidateMainMenuPreconditionAsync(
+            VerifiedMainMenuPrecondition precondition,
+            CancellationToken cancellationToken)
+    {
+        var screenshot = await CaptureAsync("open-inventory-fresh-pre-tap", cancellationToken);
+        var observation = ObserveMainMenuFrame(screenshot);
+        var valid = MainMenuPreconditionValidator.IsSafeMainMenuFrame(observation) &&
+            observation.InventoryTarget is not null &&
+            Distance(observation.InventoryTarget, precondition.Target) <= 0.025;
+        if (!valid)
+        {
+            await WriteAuditAsync("open-inventory-fresh-precondition", new
+            {
+                Action = "open-inventory",
+                RequiredState = precondition.RequiredState,
+                StrictDetectedState = observation.StrictDetectedState,
+                VisualFallbackState = observation.VisualFallbackState,
+                ConflictingStates = observation.ConflictingStates,
+                Target = observation.InventoryTarget,
+                PreconditionScreenshotHash = precondition.PreconditionScreenshotSha256,
+                FreshPreTapScreenshotHash = observation.ScreenshotSha256,
+                AuthorizationResult = "DENIED_FRESH_PRECONDITION_CHANGED",
+                InputSent = false
+            }, cancellationToken);
+            return null;
+        }
+        return (observation.InventoryTarget!, new NamedInputAuthorization
+        {
+            RequiredState = PokemonGoGameState.MainMenu,
+            PreconditionScreenshotSha256 = precondition.PreconditionScreenshotSha256,
+            FreshPreTapScreenshotSha256 = observation.ScreenshotSha256,
+            FreshScreenshot = screenshot
+        });
+    }
+
+    private MainMenuFrameObservation ObserveMainMenuFrame(byte[] screenshot)
+    {
+        var detection = _detector.Detect(screenshot, _appraisalProfile);
+        var details = _locator.LocateDetailsPageTopology(screenshot);
+        var menu = _locator.LocateAppraiseMenuItem(screenshot);
+        var inventory = _locator.LocatePokemonInventory(screenshot);
+        var unsafeSurface = _unsafeSurfaceDetector.Detect(screenshot, "open-inventory");
+        var visualFallback = detection.State == PokemonGoGameState.Unknown && details is not null
+            ? PokemonGoGameState.PokemonDetails
+            : (PokemonGoGameState?)null;
+        var conflicts = new List<PokemonGoGameState>();
+        if (details is not null) conflicts.Add(PokemonGoGameState.PokemonDetails);
+        if (menu is not null || detection.State == PokemonGoGameState.PokemonMenu)
+            conflicts.Add(PokemonGoGameState.PokemonMenu);
+        if (detection.State == PokemonGoGameState.Appraisal)
+            conflicts.Add(PokemonGoGameState.Appraisal);
+        return new MainMenuFrameObservation
+        {
+            StrictDetectedState = detection.State,
+            VisualFallbackState = visualFallback,
+            HasMainMenuTopology = inventory is not null,
+            HasInventoryLocator = inventory is not null,
+            HasPokemonDetailsTopology = details is not null,
+            HasPokemonMenu = menu is not null || detection.State == PokemonGoGameState.PokemonMenu,
+            HasAppraisal = detection.State == PokemonGoGameState.Appraisal,
+            HasUnsafeConfirmation = unsafeSurface.IsUnsafe,
+            ConflictingStates = conflicts.Distinct().ToArray(),
+            InventoryTarget = inventory?.Target,
+            ScreenshotSha256 = detection.ScreenshotSha256
+        };
+    }
+
+    private static double Distance(NormalizedPoint left, NormalizedPoint right) =>
+        Math.Sqrt(Math.Pow(left.X - right.X, 2) + Math.Pow(left.Y - right.Y, 2));
+
+    private sealed record NamedInputAuthorization
+    {
+        public required PokemonGoGameState RequiredState { get; init; }
+        public required string PreconditionScreenshotSha256 { get; init; }
+        public required string FreshPreTapScreenshotSha256 { get; init; }
+        public required byte[] FreshScreenshot { get; init; }
+    }
+
+    private sealed class UnsafeConfirmationSurfaceException : InvalidOperationException
+    {
+        public UnsafeConfirmationSurfaceException(string action, UnsafeConfirmationKind kind)
+            : base($"Input '{action}' denied by unsafe {kind} confirmation surface.") { }
     }
 
     private async Task<byte[]> CaptureAsync(string label, CancellationToken cancellationToken)

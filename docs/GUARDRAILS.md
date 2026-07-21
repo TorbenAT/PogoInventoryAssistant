@@ -1,3 +1,18 @@
+# Wrong-screen action authorization
+
+MainMenu and Inventory actions require typed, stable state authorization. A
+raw screenshot locator cannot authorize an Inventory tap. The required
+MainMenu precondition is three stable MainMenu frames with positive Inventory
+topology, no mutually exclusive Details/Menu/Appraisal/modal evidence and a
+fresh same-screen revalidation immediately before input. If MainMenu and
+PokemonDetails are both positive, authorization is denied and input count is
+zero.
+
+Power Up, Evolve, Transfer, Purify and purchase/item confirmation surfaces are
+unsafe interlocks. They block normal navigation, search, menu, appraisal,
+Back and swipe inputs, save screenshot evidence and record `InputSent: false`.
+The safety path never auto-cancels a destructive dialog.
+
 # Guardrails
 
 ## Non-negotiable restrictions

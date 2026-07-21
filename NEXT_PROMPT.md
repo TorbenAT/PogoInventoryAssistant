@@ -1,5 +1,17 @@
 # Continuation prompt
 
+The current offline checkpoint repairs wrong-screen action authorization.
+Before any phone input, Torben must manually press CANCEL on the currently
+recorded Power Up confirmation and leave the phone in GameplayMap or
+unfiltered Inventory. Do not send phone input before that manual step.
+
+MainMenu -> Inventory is guarded by three stable typed MainMenu frames plus a
+fresh pre-tap revalidation. Details, visual Details fallback, stale frames,
+conflicting topology and destructive confirmation surfaces deny input. The
+interlock covers taps, search text/submit, Back and cursor swipes and records
+the authorization evidence. Offline self-tests are 158/158. Do not claim
+real-phone acceptance until the bounded three-cycle safety check is run.
+
 Runtime repair is implemented but not yet committed: guarded appraisal uses
 visual Intro/Bars transitions, cursor swipes require observed transition
 evidence plus three independent post frames, equal fingerprints are allowed,

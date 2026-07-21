@@ -1,5 +1,19 @@
 # Changelog
 
+## Wrong-screen navigation authorization repair - 2026-07-21
+
+- MainMenu -> Inventory now requires three stable typed MainMenu frames with
+  positive menu and Inventory topology, no Details/Menu/Appraisal/modal
+  conflict, and a fresh same-screen pre-tap revalidation.
+- A conservative destructive-confirmation interlock blocks all named taps,
+  search text/submit, Back and cursor swipes on confirmation surfaces. The
+  observed Power Up modal is distinguished from normal Details buttons; no
+  automatic Cancel is sent.
+- Named input audits now retain required state, strict/visual observations,
+  conflicts, targets, precondition and fresh screenshot hashes and whether
+  input was sent. Offline self-tests pass 158/158. No phone acceptance is
+  claimed; phone safety cycles await manual CANCEL from the incident modal.
+
 ## Repair Android sequence runtime - 2026-07-21
 
 - Appraisal now uses `GuardedInventoryRecovery` for one visual Intro continue

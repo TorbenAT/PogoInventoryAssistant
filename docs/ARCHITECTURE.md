@@ -1,5 +1,23 @@
 # Architecture
 
+## Action authorization and unsafe confirmation interlock
+
+`MainMenuPreconditionValidator` is the typed boundary for the MainMenu to
+Inventory transition. It accepts only three stable observations whose strict
+state is MainMenu and whose MainMenu and Inventory topology are positive.
+Details, PokemonMenu, Appraisal, visual Details fallback, unsafe modal
+evidence and any conflicting state invalidate the precondition. The host then
+captures and validates a fresh frame immediately before the named tap; the
+precondition and fresh screenshot hashes are retained in the audit record.
+
+`UnsafeConfirmationSurfaceDetector` recognizes the paired-adjuster and large
+confirmation-panel topology of the observed Power Up dialog and conservatively
+blocks uncertain confirmation surfaces for Evolve, Transfer, Purify and
+purchase/item actions. `AndroidVerifiedInventoryNamedOperations` applies the
+interlock before every named tap, search text/submit, Back and cursor swipe.
+Unsafe evidence is saved and audited with `InputSent: false`; no automatic
+Cancel operation exists. Normal Details action buttons are not modal evidence.
+
 ## Verified inventory task sequence
 
 `VerifiedInventoryTaskSequence` is the single sequential orchestration

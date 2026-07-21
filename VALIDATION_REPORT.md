@@ -53,6 +53,20 @@ remains the authoritative compiler and test runner.
 
 # Validation report
 
+## Wrong-screen action authorization repair on 2026-07-21
+
+- incident evidence inspection: PASS; the recorded `(300,1837)` tap was on a
+  Fletchling Details screen and the later Power Up confirmation was not
+  treated as pre-existing
+- normal Details versus Power Up modal detector regression: PASS
+- MainMenu typed precondition conflict/stale/fallback/unsafe cases: PASS
+- package-free self-tests: PASS, 158/158
+- full phone safety check: NOT RUN; manual CANCEL and safe GameplayMap or
+  unfiltered Inventory state are required before phone input
+- real-phone acceptance: NOT CLAIMED
+- destructive action confirmation after repair: 0
+- tag mutations in this checkpoint: 0
+
 ## Task 5 sequence orchestration checkpoint on 2026-07-20
 
 - build: PASS for Automation and SelfTest
