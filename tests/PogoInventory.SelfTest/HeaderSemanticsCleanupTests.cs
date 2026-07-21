@@ -606,7 +606,8 @@ internal static class HeaderSemanticsCleanupTests
         public Task<IReadOnlyList<RecognizedTextLine>> RecognizeAsync(
             byte[] framePng,
             NormalizedRegion roi,
-            CancellationToken cancellationToken = default)
+            CancellationToken cancellationToken = default,
+            HeaderRegionKind regionKind = HeaderRegionKind.Name)
         {
             var queue = roi.Y < 0.2 ? _cpQueue : _nameQueue;
             var text = queue.Count > 0 ? queue.Dequeue() : null;

@@ -11,6 +11,11 @@ namespace PogoInventory.HeaderOcr;
 /// <see cref="ITextRecognizer"/> implementation backed by the Windows.Media.Ocr
 /// WinRT API. Decodes PNG bytes, crops to the requested normalized ROI and
 /// upscales small crops (game header text is small) before recognition.
+/// <paramref name="regionKind"/> (see <see cref="RecognizeAsync"/>) is plumbed
+/// through for CP-specific preprocessing; a CP-only Otsu binarization pass
+/// (<see cref="HeaderOcrBinarization"/>) was measured against the real
+/// 60-frame spike set and made CP reads worse, not better, so it is not
+/// wired in here -- see docs/HEADER_OCR.md for the numbers.
 /// </summary>
 public sealed class WindowsMediaTextRecognizer : ITextRecognizer
 {
@@ -29,7 +34,8 @@ public sealed class WindowsMediaTextRecognizer : ITextRecognizer
     public async Task<IReadOnlyList<RecognizedTextLine>> RecognizeAsync(
         byte[] framePng,
         NormalizedRegion roi,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken = default,
+        HeaderRegionKind regionKind = HeaderRegionKind.Name)
     {
         ArgumentNullException.ThrowIfNull(framePng);
         roi.Validate(nameof(roi));
@@ -47,21 +53,27 @@ public sealed class WindowsMediaTextRecognizer : ITextRecognizer
         var decoder = await BitmapDecoder.CreateAsync(stream);
         var pixelRoi = roi.ToPixels((int)decoder.PixelWidth, (int)decoder.PixelHeight);
 
-        var upscale = ComputeUpscale(pixelRoi.Width, pixelRoi.Height);
-        var scaledWidth = (uint)Math.Max(1, pixelRoi.Width * upscale);
-        var scaledHeight = (uint)Math.Max(1, pixelRoi.Height * upscale);
+        var upscale = HeaderOcrGeometry.ComputeUpscale(pixelRoi.Width, pixelRoi.Height);
+        var headerTransform = HeaderOcrGeometry.ComputeTransform(
+            (int)decoder.PixelWidth,
+            (int)decoder.PixelHeight,
+            pixelRoi,
+            upscale);
 
+        // BitmapTransform scales first, then crops Bounds in the SCALED coordinate
+        // space, so Bounds must be the ROI scaled by `upscale`, not the original
+        // pixel ROI.
         var transform = new BitmapTransform
         {
             Bounds = new BitmapBounds
             {
-                X = (uint)pixelRoi.X,
-                Y = (uint)pixelRoi.Y,
-                Width = (uint)pixelRoi.Width,
-                Height = (uint)pixelRoi.Height
+                X = headerTransform.BoundsX,
+                Y = headerTransform.BoundsY,
+                Width = headerTransform.BoundsWidth,
+                Height = headerTransform.BoundsHeight
             },
-            ScaledWidth = scaledWidth,
-            ScaledHeight = scaledHeight,
+            ScaledWidth = headerTransform.ScaledWidth,
+            ScaledHeight = headerTransform.ScaledHeight,
             InterpolationMode = upscale > 1
                 ? BitmapInterpolationMode.Fant
                 : BitmapInterpolationMode.NearestNeighbor
@@ -73,6 +85,12 @@ public sealed class WindowsMediaTextRecognizer : ITextRecognizer
             transform,
             ExifOrientationMode.IgnoreExifOrientation,
             ColorManagementMode.DoNotColorManage);
+
+        // The returned bitmap is the cropped ROI at `upscale`, sized
+        // BoundsWidth x BoundsHeight — not ScaledWidth/ScaledHeight (that's the
+        // full scaled image before cropping).
+        var outputWidth = (double)headerTransform.OutputWidth;
+        var outputHeight = (double)headerTransform.OutputHeight;
 
         var ocrResult = await _engine.RecognizeAsync(softwareBitmap);
 
@@ -88,10 +106,10 @@ public sealed class WindowsMediaTextRecognizer : ITextRecognizer
 
             var normalizedBounds = new NormalizedRegion
             {
-                X = Math.Clamp(roi.X + left / scaledWidth * roi.Width, 0, 1),
-                Y = Math.Clamp(roi.Y + top / scaledHeight * roi.Height, 0, 1),
-                Width = Math.Max(0.0001, (right - left) / scaledWidth * roi.Width),
-                Height = Math.Max(0.0001, (bottom - top) / scaledHeight * roi.Height)
+                X = Math.Clamp(roi.X + left / outputWidth * roi.Width, 0, 1),
+                Y = Math.Clamp(roi.Y + top / outputHeight * roi.Height, 0, 1),
+                Width = Math.Max(0.0001, (right - left) / outputWidth * roi.Width),
+                Height = Math.Max(0.0001, (bottom - top) / outputHeight * roi.Height)
             };
 
             lines.Add(new RecognizedTextLine
@@ -103,20 +121,6 @@ public sealed class WindowsMediaTextRecognizer : ITextRecognizer
         }
 
         return lines;
-    }
-
-    /// <summary>
-    /// Game header text is small; upscale small crops 2-4x with a smoother
-    /// interpolation mode so the OCR engine has more pixels to work with.
-    /// </summary>
-    private static int ComputeUpscale(int width, int height)
-    {
-        var smallest = Math.Min(width, height);
-        if (smallest <= 0) return 1;
-        if (smallest < 15) return 4;
-        if (smallest < 30) return 3;
-        if (smallest < 60) return 2;
-        return 1;
     }
 
     private static OcrEngine? CreateEngine(string? languageTag)

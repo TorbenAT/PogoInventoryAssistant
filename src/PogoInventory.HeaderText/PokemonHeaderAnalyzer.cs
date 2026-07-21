@@ -56,9 +56,9 @@ public sealed class PokemonHeaderAnalyzer
         var failures = new List<string>();
 
         var cpLines = await _recognizer.RecognizeAsync(
-            framePng, _profile.CpRegionFor(screen), cancellationToken).ConfigureAwait(false);
+            framePng, _profile.CpRegionFor(screen), cancellationToken, HeaderRegionKind.Cp).ConfigureAwait(false);
         var nameLines = await _recognizer.RecognizeAsync(
-            framePng, _profile.NameRegionFor(screen), cancellationToken).ConfigureAwait(false);
+            framePng, _profile.NameRegionFor(screen), cancellationToken, HeaderRegionKind.Name).ConfigureAwait(false);
 
         var (cp, cpConfidence) = ParseCp(cpLines);
         if (cp is null)

@@ -27,7 +27,8 @@ internal sealed class FakeTextRecognizer : ITextRecognizer
     public Task<IReadOnlyList<RecognizedTextLine>> RecognizeAsync(
         byte[] framePng,
         NormalizedRegion roi,
-        CancellationToken cancellationToken = default) =>
+        CancellationToken cancellationToken = default,
+        HeaderRegionKind regionKind = HeaderRegionKind.Name) =>
         Task.FromResult(_resolver(roi));
 
     private static IReadOnlyList<RecognizedTextLine> LineFor(string? text) =>

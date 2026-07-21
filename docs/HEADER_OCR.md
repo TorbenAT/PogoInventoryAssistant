@@ -87,19 +87,25 @@ resolve to the correct species.
 
 ### Default ROIs
 
-Starting points, expected to be tuned by the spike against real screenshots:
+Spike-tuned against the real 20-item appraisal/details evidence set
+(`local-data/validation/ocr-spike/frames-appraisal` +
+`frames-details`, 60 frames total) -- these are no longer starting-point
+guesses, they are the values that reach 60/60 species reads and are
+committed as `HeaderAnalysisProfile`'s defaults (same shape as
+`local-data/validation/ocr-spike/profile-wide.json`):
 
 | Region | X | Y | Width | Height |
 |---|---|---|---|---|
-| Details CP | 0.30 | 0.03 | 0.40 | 0.07 |
-| Details name/species | 0.20 | 0.40 | 0.60 | 0.07 |
-| Appraisal CP | 0.30 | 0.03 | 0.40 | 0.07 |
-| Appraisal name/species | 0.20 | 0.40 | 0.60 | 0.07 |
+| Details CP | 0.28 | 0.07 | 0.44 | 0.07 |
+| Details name/species | 0.15 | 0.41 | 0.70 | 0.08 |
+| Appraisal CP | 0.28 | 0.07 | 0.44 | 0.07 |
+| Appraisal name/species | 0.15 | 0.41 | 0.70 | 0.08 |
 
-The name/species Y matches the existing identity header region
+The name/species Y is still close to the original identity header region
 (`PokemonIdentityFingerprintProfile.HeaderRegion`, Y=0.42 h=0.045 in
-`src/PogoInventory.Vision/Models/PokemonIdentityModels.cs`) with a little
-slack on each side for OCR line height.
+`src/PogoInventory.Vision/Models/PokemonIdentityModels.cs`), widened on X
+and Height to reliably capture the full species/nickname line across both
+screen types.
 
 ## SearchQueryClassifier
 
@@ -188,5 +194,35 @@ correct** (single-frame, not consensus — the real scan pipeline can apply
   noise, missing gender glyph
 - `SearchQueryClassifier`: exact species, species + filter combo, and the
   various broad-filter forms
+- `HeaderOcrGeometry.ComputeUpscale`: crop-size thresholds, including the
+  164px-tall CP region boundary
+- `HeaderOcrBinarization`: luminance conversion, Otsu threshold selection
+  (including the empty-input fallback and a two-cluster split), pixel
+  binarization and alpha handling
 
 None of these tests touch `PogoInventory.HeaderOcr` or a real OCR engine.
+
+### CP digit-drop experiments (spike, not wired into production)
+
+Real-frame spike numbers (60 frames: 57 appraisal + 3 details) with the
+default ROIs above:
+
+| Change | Species | CP | Notes |
+|---|---|---|---|
+| Baseline (old 60px upscale cutoff) | 60/60 | 50/60 | Starting point |
+| Raise upscale cutoff to 220px (both regions) | 60/60 | 53/60 | Shipped default |
+| + CP-only Otsu binarization | 60/60 | 44/60 | Regressed vs. upscale-only; reverted |
+| CP-specific 3x upscale (no binarization) | 60/60 | 52/60 | Also regressed vs. upscale-only; reverted |
+
+The 220px upscale cutoff is the only change kept in
+`WindowsMediaTextRecognizer`. Two follow-up ideas -- CP-only binarization and
+a stronger CP-specific upscale -- were each tried and measured worse on the
+real set, so neither is wired in; `HeaderOcrBinarization` and the
+`ITextRecognizer.RecognizeAsync` `regionKind` hint remain as tested,
+available building blocks for a future attempt. Even after the upscale
+change, digit-drop failures remain on two known items: Swampert
+(0094-0096, actual CP 1659) reads `None`/`69`/`1659` -- no two frames agree,
+so consensus is not reached -- and Minun (0110-0112, actual CP 412) reads
+`None`/`412`/`41` -- same result. Hoopa (0190-0192) stays unread across all
+experiments; its CP is physically occluded by the Pokemon model in every
+captured frame and is not a software-fixable case.
