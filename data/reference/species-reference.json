@@ -1,0 +1,5135 @@
+{
+    "version":  "pogoapi.net+2026-07-21",
+    "source":  "https://pogoapi.net/api/v1/pokemon_names.json and https://pogoapi.net/api/v1/pokemon_rarity.json (fetched 2026-07-21); Basculegion (dex 902) had no rarity entry in pokemon_rarity.json and was defaulted to Ordinary",
+    "species":  [
+                    {
+                        "name":  "Bulbasaur",
+                        "dexNumber":  1,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Ivysaur",
+                        "dexNumber":  2,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Venusaur",
+                        "dexNumber":  3,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Charmander",
+                        "dexNumber":  4,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Charmeleon",
+                        "dexNumber":  5,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Charizard",
+                        "dexNumber":  6,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Squirtle",
+                        "dexNumber":  7,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Wartortle",
+                        "dexNumber":  8,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Blastoise",
+                        "dexNumber":  9,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Caterpie",
+                        "dexNumber":  10,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Metapod",
+                        "dexNumber":  11,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Butterfree",
+                        "dexNumber":  12,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Weedle",
+                        "dexNumber":  13,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Kakuna",
+                        "dexNumber":  14,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Beedrill",
+                        "dexNumber":  15,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Pidgey",
+                        "dexNumber":  16,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Pidgeotto",
+                        "dexNumber":  17,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Pidgeot",
+                        "dexNumber":  18,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Rattata",
+                        "dexNumber":  19,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Raticate",
+                        "dexNumber":  20,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Spearow",
+                        "dexNumber":  21,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Fearow",
+                        "dexNumber":  22,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Ekans",
+                        "dexNumber":  23,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Arbok",
+                        "dexNumber":  24,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Pikachu",
+                        "dexNumber":  25,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Raichu",
+                        "dexNumber":  26,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Sandshrew",
+                        "dexNumber":  27,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Sandslash",
+                        "dexNumber":  28,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Nidoran♀",
+                        "dexNumber":  29,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Nidorina",
+                        "dexNumber":  30,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Nidoqueen",
+                        "dexNumber":  31,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Nidoran♂",
+                        "dexNumber":  32,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Nidorino",
+                        "dexNumber":  33,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Nidoking",
+                        "dexNumber":  34,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Clefairy",
+                        "dexNumber":  35,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Clefable",
+                        "dexNumber":  36,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Vulpix",
+                        "dexNumber":  37,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Ninetales",
+                        "dexNumber":  38,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Jigglypuff",
+                        "dexNumber":  39,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Wigglytuff",
+                        "dexNumber":  40,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Zubat",
+                        "dexNumber":  41,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Golbat",
+                        "dexNumber":  42,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Oddish",
+                        "dexNumber":  43,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Gloom",
+                        "dexNumber":  44,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Vileplume",
+                        "dexNumber":  45,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Paras",
+                        "dexNumber":  46,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Parasect",
+                        "dexNumber":  47,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Venonat",
+                        "dexNumber":  48,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Venomoth",
+                        "dexNumber":  49,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Diglett",
+                        "dexNumber":  50,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Dugtrio",
+                        "dexNumber":  51,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Meowth",
+                        "dexNumber":  52,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Persian",
+                        "dexNumber":  53,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Psyduck",
+                        "dexNumber":  54,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Golduck",
+                        "dexNumber":  55,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Mankey",
+                        "dexNumber":  56,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Primeape",
+                        "dexNumber":  57,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Growlithe",
+                        "dexNumber":  58,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Arcanine",
+                        "dexNumber":  59,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Poliwag",
+                        "dexNumber":  60,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Poliwhirl",
+                        "dexNumber":  61,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Poliwrath",
+                        "dexNumber":  62,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Abra",
+                        "dexNumber":  63,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Kadabra",
+                        "dexNumber":  64,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Alakazam",
+                        "dexNumber":  65,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Machop",
+                        "dexNumber":  66,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Machoke",
+                        "dexNumber":  67,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Machamp",
+                        "dexNumber":  68,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Bellsprout",
+                        "dexNumber":  69,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Weepinbell",
+                        "dexNumber":  70,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Victreebel",
+                        "dexNumber":  71,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Tentacool",
+                        "dexNumber":  72,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Tentacruel",
+                        "dexNumber":  73,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Geodude",
+                        "dexNumber":  74,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Graveler",
+                        "dexNumber":  75,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Golem",
+                        "dexNumber":  76,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Ponyta",
+                        "dexNumber":  77,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Rapidash",
+                        "dexNumber":  78,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Slowpoke",
+                        "dexNumber":  79,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Slowbro",
+                        "dexNumber":  80,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Magnemite",
+                        "dexNumber":  81,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Magneton",
+                        "dexNumber":  82,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Farfetch’d",
+                        "dexNumber":  83,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Doduo",
+                        "dexNumber":  84,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Dodrio",
+                        "dexNumber":  85,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Seel",
+                        "dexNumber":  86,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Dewgong",
+                        "dexNumber":  87,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Grimer",
+                        "dexNumber":  88,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Muk",
+                        "dexNumber":  89,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Shellder",
+                        "dexNumber":  90,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Cloyster",
+                        "dexNumber":  91,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Gastly",
+                        "dexNumber":  92,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Haunter",
+                        "dexNumber":  93,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Gengar",
+                        "dexNumber":  94,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Onix",
+                        "dexNumber":  95,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Drowzee",
+                        "dexNumber":  96,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Hypno",
+                        "dexNumber":  97,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Krabby",
+                        "dexNumber":  98,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Kingler",
+                        "dexNumber":  99,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Voltorb",
+                        "dexNumber":  100,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Electrode",
+                        "dexNumber":  101,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Exeggcute",
+                        "dexNumber":  102,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Exeggutor",
+                        "dexNumber":  103,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Cubone",
+                        "dexNumber":  104,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Marowak",
+                        "dexNumber":  105,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Hitmonlee",
+                        "dexNumber":  106,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Hitmonchan",
+                        "dexNumber":  107,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Lickitung",
+                        "dexNumber":  108,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Koffing",
+                        "dexNumber":  109,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Weezing",
+                        "dexNumber":  110,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Rhyhorn",
+                        "dexNumber":  111,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Rhydon",
+                        "dexNumber":  112,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Chansey",
+                        "dexNumber":  113,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Tangela",
+                        "dexNumber":  114,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Kangaskhan",
+                        "dexNumber":  115,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Horsea",
+                        "dexNumber":  116,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Seadra",
+                        "dexNumber":  117,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Goldeen",
+                        "dexNumber":  118,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Seaking",
+                        "dexNumber":  119,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Staryu",
+                        "dexNumber":  120,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Starmie",
+                        "dexNumber":  121,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Mr. Mime",
+                        "dexNumber":  122,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Scyther",
+                        "dexNumber":  123,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Jynx",
+                        "dexNumber":  124,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Electabuzz",
+                        "dexNumber":  125,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Magmar",
+                        "dexNumber":  126,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Pinsir",
+                        "dexNumber":  127,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Tauros",
+                        "dexNumber":  128,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Magikarp",
+                        "dexNumber":  129,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Gyarados",
+                        "dexNumber":  130,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Lapras",
+                        "dexNumber":  131,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Ditto",
+                        "dexNumber":  132,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Eevee",
+                        "dexNumber":  133,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Vaporeon",
+                        "dexNumber":  134,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Jolteon",
+                        "dexNumber":  135,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Flareon",
+                        "dexNumber":  136,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Porygon",
+                        "dexNumber":  137,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Omanyte",
+                        "dexNumber":  138,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Omastar",
+                        "dexNumber":  139,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Kabuto",
+                        "dexNumber":  140,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Kabutops",
+                        "dexNumber":  141,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Aerodactyl",
+                        "dexNumber":  142,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Snorlax",
+                        "dexNumber":  143,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Articuno",
+                        "dexNumber":  144,
+                        "classification":  "Legendary"
+                    },
+                    {
+                        "name":  "Zapdos",
+                        "dexNumber":  145,
+                        "classification":  "Legendary"
+                    },
+                    {
+                        "name":  "Moltres",
+                        "dexNumber":  146,
+                        "classification":  "Legendary"
+                    },
+                    {
+                        "name":  "Dratini",
+                        "dexNumber":  147,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Dragonair",
+                        "dexNumber":  148,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Dragonite",
+                        "dexNumber":  149,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Mewtwo",
+                        "dexNumber":  150,
+                        "classification":  "Legendary"
+                    },
+                    {
+                        "name":  "Mew",
+                        "dexNumber":  151,
+                        "classification":  "Mythical"
+                    },
+                    {
+                        "name":  "Chikorita",
+                        "dexNumber":  152,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Bayleef",
+                        "dexNumber":  153,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Meganium",
+                        "dexNumber":  154,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Cyndaquil",
+                        "dexNumber":  155,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Quilava",
+                        "dexNumber":  156,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Typhlosion",
+                        "dexNumber":  157,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Totodile",
+                        "dexNumber":  158,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Croconaw",
+                        "dexNumber":  159,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Feraligatr",
+                        "dexNumber":  160,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Sentret",
+                        "dexNumber":  161,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Furret",
+                        "dexNumber":  162,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Hoothoot",
+                        "dexNumber":  163,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Noctowl",
+                        "dexNumber":  164,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Ledyba",
+                        "dexNumber":  165,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Ledian",
+                        "dexNumber":  166,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Spinarak",
+                        "dexNumber":  167,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Ariados",
+                        "dexNumber":  168,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Crobat",
+                        "dexNumber":  169,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Chinchou",
+                        "dexNumber":  170,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Lanturn",
+                        "dexNumber":  171,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Pichu",
+                        "dexNumber":  172,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Cleffa",
+                        "dexNumber":  173,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Igglybuff",
+                        "dexNumber":  174,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Togepi",
+                        "dexNumber":  175,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Togetic",
+                        "dexNumber":  176,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Natu",
+                        "dexNumber":  177,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Xatu",
+                        "dexNumber":  178,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Mareep",
+                        "dexNumber":  179,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Flaaffy",
+                        "dexNumber":  180,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Ampharos",
+                        "dexNumber":  181,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Bellossom",
+                        "dexNumber":  182,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Marill",
+                        "dexNumber":  183,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Azumarill",
+                        "dexNumber":  184,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Sudowoodo",
+                        "dexNumber":  185,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Politoed",
+                        "dexNumber":  186,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Hoppip",
+                        "dexNumber":  187,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Skiploom",
+                        "dexNumber":  188,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Jumpluff",
+                        "dexNumber":  189,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Aipom",
+                        "dexNumber":  190,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Sunkern",
+                        "dexNumber":  191,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Sunflora",
+                        "dexNumber":  192,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Yanma",
+                        "dexNumber":  193,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Wooper",
+                        "dexNumber":  194,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Quagsire",
+                        "dexNumber":  195,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Espeon",
+                        "dexNumber":  196,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Umbreon",
+                        "dexNumber":  197,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Murkrow",
+                        "dexNumber":  198,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Slowking",
+                        "dexNumber":  199,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Misdreavus",
+                        "dexNumber":  200,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Unown",
+                        "dexNumber":  201,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Wobbuffet",
+                        "dexNumber":  202,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Girafarig",
+                        "dexNumber":  203,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Pineco",
+                        "dexNumber":  204,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Forretress",
+                        "dexNumber":  205,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Dunsparce",
+                        "dexNumber":  206,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Gligar",
+                        "dexNumber":  207,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Steelix",
+                        "dexNumber":  208,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Snubbull",
+                        "dexNumber":  209,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Granbull",
+                        "dexNumber":  210,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Qwilfish",
+                        "dexNumber":  211,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Scizor",
+                        "dexNumber":  212,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Shuckle",
+                        "dexNumber":  213,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Heracross",
+                        "dexNumber":  214,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Sneasel",
+                        "dexNumber":  215,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Teddiursa",
+                        "dexNumber":  216,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Ursaring",
+                        "dexNumber":  217,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Slugma",
+                        "dexNumber":  218,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Magcargo",
+                        "dexNumber":  219,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Swinub",
+                        "dexNumber":  220,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Piloswine",
+                        "dexNumber":  221,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Corsola",
+                        "dexNumber":  222,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Remoraid",
+                        "dexNumber":  223,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Octillery",
+                        "dexNumber":  224,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Delibird",
+                        "dexNumber":  225,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Mantine",
+                        "dexNumber":  226,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Skarmory",
+                        "dexNumber":  227,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Houndour",
+                        "dexNumber":  228,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Houndoom",
+                        "dexNumber":  229,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Kingdra",
+                        "dexNumber":  230,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Phanpy",
+                        "dexNumber":  231,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Donphan",
+                        "dexNumber":  232,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Porygon2",
+                        "dexNumber":  233,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Stantler",
+                        "dexNumber":  234,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Smeargle",
+                        "dexNumber":  235,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Tyrogue",
+                        "dexNumber":  236,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Hitmontop",
+                        "dexNumber":  237,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Smoochum",
+                        "dexNumber":  238,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Elekid",
+                        "dexNumber":  239,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Magby",
+                        "dexNumber":  240,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Miltank",
+                        "dexNumber":  241,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Blissey",
+                        "dexNumber":  242,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Raikou",
+                        "dexNumber":  243,
+                        "classification":  "Legendary"
+                    },
+                    {
+                        "name":  "Entei",
+                        "dexNumber":  244,
+                        "classification":  "Legendary"
+                    },
+                    {
+                        "name":  "Suicune",
+                        "dexNumber":  245,
+                        "classification":  "Legendary"
+                    },
+                    {
+                        "name":  "Larvitar",
+                        "dexNumber":  246,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Pupitar",
+                        "dexNumber":  247,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Tyranitar",
+                        "dexNumber":  248,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Lugia",
+                        "dexNumber":  249,
+                        "classification":  "Legendary"
+                    },
+                    {
+                        "name":  "Ho-Oh",
+                        "dexNumber":  250,
+                        "classification":  "Legendary"
+                    },
+                    {
+                        "name":  "Celebi",
+                        "dexNumber":  251,
+                        "classification":  "Mythical"
+                    },
+                    {
+                        "name":  "Treecko",
+                        "dexNumber":  252,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Grovyle",
+                        "dexNumber":  253,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Sceptile",
+                        "dexNumber":  254,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Torchic",
+                        "dexNumber":  255,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Combusken",
+                        "dexNumber":  256,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Blaziken",
+                        "dexNumber":  257,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Mudkip",
+                        "dexNumber":  258,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Marshtomp",
+                        "dexNumber":  259,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Swampert",
+                        "dexNumber":  260,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Poochyena",
+                        "dexNumber":  261,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Mightyena",
+                        "dexNumber":  262,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Zigzagoon",
+                        "dexNumber":  263,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Linoone",
+                        "dexNumber":  264,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Wurmple",
+                        "dexNumber":  265,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Silcoon",
+                        "dexNumber":  266,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Beautifly",
+                        "dexNumber":  267,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Cascoon",
+                        "dexNumber":  268,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Dustox",
+                        "dexNumber":  269,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Lotad",
+                        "dexNumber":  270,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Lombre",
+                        "dexNumber":  271,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Ludicolo",
+                        "dexNumber":  272,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Seedot",
+                        "dexNumber":  273,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Nuzleaf",
+                        "dexNumber":  274,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Shiftry",
+                        "dexNumber":  275,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Taillow",
+                        "dexNumber":  276,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Swellow",
+                        "dexNumber":  277,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Wingull",
+                        "dexNumber":  278,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Pelipper",
+                        "dexNumber":  279,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Ralts",
+                        "dexNumber":  280,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Kirlia",
+                        "dexNumber":  281,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Gardevoir",
+                        "dexNumber":  282,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Surskit",
+                        "dexNumber":  283,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Masquerain",
+                        "dexNumber":  284,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Shroomish",
+                        "dexNumber":  285,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Breloom",
+                        "dexNumber":  286,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Slakoth",
+                        "dexNumber":  287,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Vigoroth",
+                        "dexNumber":  288,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Slaking",
+                        "dexNumber":  289,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Nincada",
+                        "dexNumber":  290,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Ninjask",
+                        "dexNumber":  291,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Shedinja",
+                        "dexNumber":  292,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Whismur",
+                        "dexNumber":  293,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Loudred",
+                        "dexNumber":  294,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Exploud",
+                        "dexNumber":  295,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Makuhita",
+                        "dexNumber":  296,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Hariyama",
+                        "dexNumber":  297,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Azurill",
+                        "dexNumber":  298,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Nosepass",
+                        "dexNumber":  299,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Skitty",
+                        "dexNumber":  300,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Delcatty",
+                        "dexNumber":  301,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Sableye",
+                        "dexNumber":  302,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Mawile",
+                        "dexNumber":  303,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Aron",
+                        "dexNumber":  304,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Lairon",
+                        "dexNumber":  305,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Aggron",
+                        "dexNumber":  306,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Meditite",
+                        "dexNumber":  307,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Medicham",
+                        "dexNumber":  308,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Electrike",
+                        "dexNumber":  309,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Manectric",
+                        "dexNumber":  310,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Plusle",
+                        "dexNumber":  311,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Minun",
+                        "dexNumber":  312,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Volbeat",
+                        "dexNumber":  313,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Illumise",
+                        "dexNumber":  314,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Roselia",
+                        "dexNumber":  315,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Gulpin",
+                        "dexNumber":  316,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Swalot",
+                        "dexNumber":  317,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Carvanha",
+                        "dexNumber":  318,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Sharpedo",
+                        "dexNumber":  319,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Wailmer",
+                        "dexNumber":  320,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Wailord",
+                        "dexNumber":  321,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Numel",
+                        "dexNumber":  322,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Camerupt",
+                        "dexNumber":  323,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Torkoal",
+                        "dexNumber":  324,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Spoink",
+                        "dexNumber":  325,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Grumpig",
+                        "dexNumber":  326,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Spinda",
+                        "dexNumber":  327,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Trapinch",
+                        "dexNumber":  328,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Vibrava",
+                        "dexNumber":  329,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Flygon",
+                        "dexNumber":  330,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Cacnea",
+                        "dexNumber":  331,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Cacturne",
+                        "dexNumber":  332,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Swablu",
+                        "dexNumber":  333,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Altaria",
+                        "dexNumber":  334,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Zangoose",
+                        "dexNumber":  335,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Seviper",
+                        "dexNumber":  336,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Lunatone",
+                        "dexNumber":  337,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Solrock",
+                        "dexNumber":  338,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Barboach",
+                        "dexNumber":  339,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Whiscash",
+                        "dexNumber":  340,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Corphish",
+                        "dexNumber":  341,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Crawdaunt",
+                        "dexNumber":  342,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Baltoy",
+                        "dexNumber":  343,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Claydol",
+                        "dexNumber":  344,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Lileep",
+                        "dexNumber":  345,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Cradily",
+                        "dexNumber":  346,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Anorith",
+                        "dexNumber":  347,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Armaldo",
+                        "dexNumber":  348,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Feebas",
+                        "dexNumber":  349,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Milotic",
+                        "dexNumber":  350,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Castform",
+                        "dexNumber":  351,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Kecleon",
+                        "dexNumber":  352,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Shuppet",
+                        "dexNumber":  353,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Banette",
+                        "dexNumber":  354,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Duskull",
+                        "dexNumber":  355,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Dusclops",
+                        "dexNumber":  356,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Tropius",
+                        "dexNumber":  357,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Chimecho",
+                        "dexNumber":  358,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Absol",
+                        "dexNumber":  359,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Wynaut",
+                        "dexNumber":  360,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Snorunt",
+                        "dexNumber":  361,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Glalie",
+                        "dexNumber":  362,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Spheal",
+                        "dexNumber":  363,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Sealeo",
+                        "dexNumber":  364,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Walrein",
+                        "dexNumber":  365,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Clamperl",
+                        "dexNumber":  366,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Huntail",
+                        "dexNumber":  367,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Gorebyss",
+                        "dexNumber":  368,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Relicanth",
+                        "dexNumber":  369,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Luvdisc",
+                        "dexNumber":  370,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Bagon",
+                        "dexNumber":  371,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Shelgon",
+                        "dexNumber":  372,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Salamence",
+                        "dexNumber":  373,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Beldum",
+                        "dexNumber":  374,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Metang",
+                        "dexNumber":  375,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Metagross",
+                        "dexNumber":  376,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Regirock",
+                        "dexNumber":  377,
+                        "classification":  "Legendary"
+                    },
+                    {
+                        "name":  "Regice",
+                        "dexNumber":  378,
+                        "classification":  "Legendary"
+                    },
+                    {
+                        "name":  "Registeel",
+                        "dexNumber":  379,
+                        "classification":  "Legendary"
+                    },
+                    {
+                        "name":  "Latias",
+                        "dexNumber":  380,
+                        "classification":  "Legendary"
+                    },
+                    {
+                        "name":  "Latios",
+                        "dexNumber":  381,
+                        "classification":  "Legendary"
+                    },
+                    {
+                        "name":  "Kyogre",
+                        "dexNumber":  382,
+                        "classification":  "Legendary"
+                    },
+                    {
+                        "name":  "Groudon",
+                        "dexNumber":  383,
+                        "classification":  "Legendary"
+                    },
+                    {
+                        "name":  "Rayquaza",
+                        "dexNumber":  384,
+                        "classification":  "Legendary"
+                    },
+                    {
+                        "name":  "Jirachi",
+                        "dexNumber":  385,
+                        "classification":  "Mythical"
+                    },
+                    {
+                        "name":  "Deoxys",
+                        "dexNumber":  386,
+                        "classification":  "Mythical"
+                    },
+                    {
+                        "name":  "Turtwig",
+                        "dexNumber":  387,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Grotle",
+                        "dexNumber":  388,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Torterra",
+                        "dexNumber":  389,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Chimchar",
+                        "dexNumber":  390,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Monferno",
+                        "dexNumber":  391,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Infernape",
+                        "dexNumber":  392,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Piplup",
+                        "dexNumber":  393,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Prinplup",
+                        "dexNumber":  394,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Empoleon",
+                        "dexNumber":  395,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Starly",
+                        "dexNumber":  396,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Staravia",
+                        "dexNumber":  397,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Staraptor",
+                        "dexNumber":  398,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Bidoof",
+                        "dexNumber":  399,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Bibarel",
+                        "dexNumber":  400,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Kricketot",
+                        "dexNumber":  401,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Kricketune",
+                        "dexNumber":  402,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Shinx",
+                        "dexNumber":  403,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Luxio",
+                        "dexNumber":  404,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Luxray",
+                        "dexNumber":  405,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Budew",
+                        "dexNumber":  406,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Roserade",
+                        "dexNumber":  407,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Cranidos",
+                        "dexNumber":  408,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Rampardos",
+                        "dexNumber":  409,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Shieldon",
+                        "dexNumber":  410,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Bastiodon",
+                        "dexNumber":  411,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Burmy",
+                        "dexNumber":  412,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Wormadam",
+                        "dexNumber":  413,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Mothim",
+                        "dexNumber":  414,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Combee",
+                        "dexNumber":  415,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Vespiquen",
+                        "dexNumber":  416,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Pachirisu",
+                        "dexNumber":  417,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Buizel",
+                        "dexNumber":  418,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Floatzel",
+                        "dexNumber":  419,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Cherubi",
+                        "dexNumber":  420,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Cherrim",
+                        "dexNumber":  421,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Shellos",
+                        "dexNumber":  422,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Gastrodon",
+                        "dexNumber":  423,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Ambipom",
+                        "dexNumber":  424,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Drifloon",
+                        "dexNumber":  425,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Drifblim",
+                        "dexNumber":  426,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Buneary",
+                        "dexNumber":  427,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Lopunny",
+                        "dexNumber":  428,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Mismagius",
+                        "dexNumber":  429,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Honchkrow",
+                        "dexNumber":  430,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Glameow",
+                        "dexNumber":  431,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Purugly",
+                        "dexNumber":  432,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Chingling",
+                        "dexNumber":  433,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Stunky",
+                        "dexNumber":  434,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Skuntank",
+                        "dexNumber":  435,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Bronzor",
+                        "dexNumber":  436,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Bronzong",
+                        "dexNumber":  437,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Bonsly",
+                        "dexNumber":  438,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Mime Jr.",
+                        "dexNumber":  439,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Happiny",
+                        "dexNumber":  440,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Chatot",
+                        "dexNumber":  441,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Spiritomb",
+                        "dexNumber":  442,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Gible",
+                        "dexNumber":  443,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Gabite",
+                        "dexNumber":  444,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Garchomp",
+                        "dexNumber":  445,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Munchlax",
+                        "dexNumber":  446,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Riolu",
+                        "dexNumber":  447,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Lucario",
+                        "dexNumber":  448,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Hippopotas",
+                        "dexNumber":  449,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Hippowdon",
+                        "dexNumber":  450,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Skorupi",
+                        "dexNumber":  451,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Drapion",
+                        "dexNumber":  452,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Croagunk",
+                        "dexNumber":  453,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Toxicroak",
+                        "dexNumber":  454,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Carnivine",
+                        "dexNumber":  455,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Finneon",
+                        "dexNumber":  456,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Lumineon",
+                        "dexNumber":  457,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Mantyke",
+                        "dexNumber":  458,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Snover",
+                        "dexNumber":  459,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Abomasnow",
+                        "dexNumber":  460,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Weavile",
+                        "dexNumber":  461,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Magnezone",
+                        "dexNumber":  462,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Lickilicky",
+                        "dexNumber":  463,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Rhyperior",
+                        "dexNumber":  464,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Tangrowth",
+                        "dexNumber":  465,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Electivire",
+                        "dexNumber":  466,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Magmortar",
+                        "dexNumber":  467,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Togekiss",
+                        "dexNumber":  468,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Yanmega",
+                        "dexNumber":  469,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Leafeon",
+                        "dexNumber":  470,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Glaceon",
+                        "dexNumber":  471,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Gliscor",
+                        "dexNumber":  472,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Mamoswine",
+                        "dexNumber":  473,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Porygon-Z",
+                        "dexNumber":  474,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Gallade",
+                        "dexNumber":  475,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Probopass",
+                        "dexNumber":  476,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Dusknoir",
+                        "dexNumber":  477,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Froslass",
+                        "dexNumber":  478,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Rotom",
+                        "dexNumber":  479,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Uxie",
+                        "dexNumber":  480,
+                        "classification":  "Legendary"
+                    },
+                    {
+                        "name":  "Mesprit",
+                        "dexNumber":  481,
+                        "classification":  "Legendary"
+                    },
+                    {
+                        "name":  "Azelf",
+                        "dexNumber":  482,
+                        "classification":  "Legendary"
+                    },
+                    {
+                        "name":  "Dialga",
+                        "dexNumber":  483,
+                        "classification":  "Legendary"
+                    },
+                    {
+                        "name":  "Palkia",
+                        "dexNumber":  484,
+                        "classification":  "Legendary"
+                    },
+                    {
+                        "name":  "Heatran",
+                        "dexNumber":  485,
+                        "classification":  "Legendary"
+                    },
+                    {
+                        "name":  "Regigigas",
+                        "dexNumber":  486,
+                        "classification":  "Legendary"
+                    },
+                    {
+                        "name":  "Giratina",
+                        "dexNumber":  487,
+                        "classification":  "Legendary"
+                    },
+                    {
+                        "name":  "Cresselia",
+                        "dexNumber":  488,
+                        "classification":  "Legendary"
+                    },
+                    {
+                        "name":  "Phione",
+                        "dexNumber":  489,
+                        "classification":  "Mythical"
+                    },
+                    {
+                        "name":  "Manaphy",
+                        "dexNumber":  490,
+                        "classification":  "Mythical"
+                    },
+                    {
+                        "name":  "Darkrai",
+                        "dexNumber":  491,
+                        "classification":  "Mythical"
+                    },
+                    {
+                        "name":  "Shaymin",
+                        "dexNumber":  492,
+                        "classification":  "Mythical"
+                    },
+                    {
+                        "name":  "Arceus",
+                        "dexNumber":  493,
+                        "classification":  "Mythical"
+                    },
+                    {
+                        "name":  "Victini",
+                        "dexNumber":  494,
+                        "classification":  "Mythical"
+                    },
+                    {
+                        "name":  "Snivy",
+                        "dexNumber":  495,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Servine",
+                        "dexNumber":  496,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Serperior",
+                        "dexNumber":  497,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Tepig",
+                        "dexNumber":  498,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Pignite",
+                        "dexNumber":  499,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Emboar",
+                        "dexNumber":  500,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Oshawott",
+                        "dexNumber":  501,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Dewott",
+                        "dexNumber":  502,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Samurott",
+                        "dexNumber":  503,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Patrat",
+                        "dexNumber":  504,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Watchog",
+                        "dexNumber":  505,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Lillipup",
+                        "dexNumber":  506,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Herdier",
+                        "dexNumber":  507,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Stoutland",
+                        "dexNumber":  508,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Purrloin",
+                        "dexNumber":  509,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Liepard",
+                        "dexNumber":  510,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Pansage",
+                        "dexNumber":  511,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Simisage",
+                        "dexNumber":  512,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Pansear",
+                        "dexNumber":  513,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Simisear",
+                        "dexNumber":  514,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Panpour",
+                        "dexNumber":  515,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Simipour",
+                        "dexNumber":  516,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Munna",
+                        "dexNumber":  517,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Musharna",
+                        "dexNumber":  518,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Pidove",
+                        "dexNumber":  519,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Tranquill",
+                        "dexNumber":  520,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Unfezant",
+                        "dexNumber":  521,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Blitzle",
+                        "dexNumber":  522,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Zebstrika",
+                        "dexNumber":  523,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Roggenrola",
+                        "dexNumber":  524,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Boldore",
+                        "dexNumber":  525,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Gigalith",
+                        "dexNumber":  526,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Woobat",
+                        "dexNumber":  527,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Swoobat",
+                        "dexNumber":  528,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Drilbur",
+                        "dexNumber":  529,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Excadrill",
+                        "dexNumber":  530,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Audino",
+                        "dexNumber":  531,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Timburr",
+                        "dexNumber":  532,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Gurdurr",
+                        "dexNumber":  533,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Conkeldurr",
+                        "dexNumber":  534,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Tympole",
+                        "dexNumber":  535,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Palpitoad",
+                        "dexNumber":  536,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Seismitoad",
+                        "dexNumber":  537,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Throh",
+                        "dexNumber":  538,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Sawk",
+                        "dexNumber":  539,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Sewaddle",
+                        "dexNumber":  540,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Swadloon",
+                        "dexNumber":  541,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Leavanny",
+                        "dexNumber":  542,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Venipede",
+                        "dexNumber":  543,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Whirlipede",
+                        "dexNumber":  544,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Scolipede",
+                        "dexNumber":  545,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Cottonee",
+                        "dexNumber":  546,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Whimsicott",
+                        "dexNumber":  547,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Petilil",
+                        "dexNumber":  548,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Lilligant",
+                        "dexNumber":  549,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Basculin",
+                        "dexNumber":  550,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Sandile",
+                        "dexNumber":  551,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Krokorok",
+                        "dexNumber":  552,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Krookodile",
+                        "dexNumber":  553,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Darumaka",
+                        "dexNumber":  554,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Darmanitan",
+                        "dexNumber":  555,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Maractus",
+                        "dexNumber":  556,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Dwebble",
+                        "dexNumber":  557,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Crustle",
+                        "dexNumber":  558,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Scraggy",
+                        "dexNumber":  559,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Scrafty",
+                        "dexNumber":  560,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Sigilyph",
+                        "dexNumber":  561,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Yamask",
+                        "dexNumber":  562,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Cofagrigus",
+                        "dexNumber":  563,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Tirtouga",
+                        "dexNumber":  564,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Carracosta",
+                        "dexNumber":  565,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Archen",
+                        "dexNumber":  566,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Archeops",
+                        "dexNumber":  567,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Trubbish",
+                        "dexNumber":  568,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Garbodor",
+                        "dexNumber":  569,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Zorua",
+                        "dexNumber":  570,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Zoroark",
+                        "dexNumber":  571,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Minccino",
+                        "dexNumber":  572,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Cinccino",
+                        "dexNumber":  573,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Gothita",
+                        "dexNumber":  574,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Gothorita",
+                        "dexNumber":  575,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Gothitelle",
+                        "dexNumber":  576,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Solosis",
+                        "dexNumber":  577,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Duosion",
+                        "dexNumber":  578,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Reuniclus",
+                        "dexNumber":  579,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Ducklett",
+                        "dexNumber":  580,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Swanna",
+                        "dexNumber":  581,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Vanillite",
+                        "dexNumber":  582,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Vanillish",
+                        "dexNumber":  583,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Vanilluxe",
+                        "dexNumber":  584,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Deerling",
+                        "dexNumber":  585,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Sawsbuck",
+                        "dexNumber":  586,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Emolga",
+                        "dexNumber":  587,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Karrablast",
+                        "dexNumber":  588,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Escavalier",
+                        "dexNumber":  589,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Foongus",
+                        "dexNumber":  590,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Amoonguss",
+                        "dexNumber":  591,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Frillish",
+                        "dexNumber":  592,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Jellicent",
+                        "dexNumber":  593,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Alomomola",
+                        "dexNumber":  594,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Joltik",
+                        "dexNumber":  595,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Galvantula",
+                        "dexNumber":  596,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Ferroseed",
+                        "dexNumber":  597,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Ferrothorn",
+                        "dexNumber":  598,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Klink",
+                        "dexNumber":  599,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Klang",
+                        "dexNumber":  600,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Klinklang",
+                        "dexNumber":  601,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Tynamo",
+                        "dexNumber":  602,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Eelektrik",
+                        "dexNumber":  603,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Eelektross",
+                        "dexNumber":  604,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Elgyem",
+                        "dexNumber":  605,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Beheeyem",
+                        "dexNumber":  606,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Litwick",
+                        "dexNumber":  607,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Lampent",
+                        "dexNumber":  608,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Chandelure",
+                        "dexNumber":  609,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Axew",
+                        "dexNumber":  610,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Fraxure",
+                        "dexNumber":  611,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Haxorus",
+                        "dexNumber":  612,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Cubchoo",
+                        "dexNumber":  613,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Beartic",
+                        "dexNumber":  614,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Cryogonal",
+                        "dexNumber":  615,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Shelmet",
+                        "dexNumber":  616,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Accelgor",
+                        "dexNumber":  617,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Stunfisk",
+                        "dexNumber":  618,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Mienfoo",
+                        "dexNumber":  619,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Mienshao",
+                        "dexNumber":  620,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Druddigon",
+                        "dexNumber":  621,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Golett",
+                        "dexNumber":  622,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Golurk",
+                        "dexNumber":  623,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Pawniard",
+                        "dexNumber":  624,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Bisharp",
+                        "dexNumber":  625,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Bouffalant",
+                        "dexNumber":  626,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Rufflet",
+                        "dexNumber":  627,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Braviary",
+                        "dexNumber":  628,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Vullaby",
+                        "dexNumber":  629,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Mandibuzz",
+                        "dexNumber":  630,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Heatmor",
+                        "dexNumber":  631,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Durant",
+                        "dexNumber":  632,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Deino",
+                        "dexNumber":  633,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Zweilous",
+                        "dexNumber":  634,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Hydreigon",
+                        "dexNumber":  635,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Larvesta",
+                        "dexNumber":  636,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Volcarona",
+                        "dexNumber":  637,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Cobalion",
+                        "dexNumber":  638,
+                        "classification":  "Legendary"
+                    },
+                    {
+                        "name":  "Terrakion",
+                        "dexNumber":  639,
+                        "classification":  "Legendary"
+                    },
+                    {
+                        "name":  "Virizion",
+                        "dexNumber":  640,
+                        "classification":  "Legendary"
+                    },
+                    {
+                        "name":  "Tornadus",
+                        "dexNumber":  641,
+                        "classification":  "Legendary"
+                    },
+                    {
+                        "name":  "Thundurus",
+                        "dexNumber":  642,
+                        "classification":  "Legendary"
+                    },
+                    {
+                        "name":  "Reshiram",
+                        "dexNumber":  643,
+                        "classification":  "Legendary"
+                    },
+                    {
+                        "name":  "Zekrom",
+                        "dexNumber":  644,
+                        "classification":  "Legendary"
+                    },
+                    {
+                        "name":  "Landorus",
+                        "dexNumber":  645,
+                        "classification":  "Legendary"
+                    },
+                    {
+                        "name":  "Kyurem",
+                        "dexNumber":  646,
+                        "classification":  "Legendary"
+                    },
+                    {
+                        "name":  "Keldeo",
+                        "dexNumber":  647,
+                        "classification":  "Mythical"
+                    },
+                    {
+                        "name":  "Meloetta",
+                        "dexNumber":  648,
+                        "classification":  "Mythical"
+                    },
+                    {
+                        "name":  "Genesect",
+                        "dexNumber":  649,
+                        "classification":  "Mythical"
+                    },
+                    {
+                        "name":  "Chespin",
+                        "dexNumber":  650,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Quilladin",
+                        "dexNumber":  651,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Chesnaught",
+                        "dexNumber":  652,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Fennekin",
+                        "dexNumber":  653,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Braixen",
+                        "dexNumber":  654,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Delphox",
+                        "dexNumber":  655,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Froakie",
+                        "dexNumber":  656,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Frogadier",
+                        "dexNumber":  657,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Greninja",
+                        "dexNumber":  658,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Bunnelby",
+                        "dexNumber":  659,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Diggersby",
+                        "dexNumber":  660,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Fletchling",
+                        "dexNumber":  661,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Fletchinder",
+                        "dexNumber":  662,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Talonflame",
+                        "dexNumber":  663,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Scatterbug",
+                        "dexNumber":  664,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Spewpa",
+                        "dexNumber":  665,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Vivillon",
+                        "dexNumber":  666,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Litleo",
+                        "dexNumber":  667,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Pyroar",
+                        "dexNumber":  668,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Flabebe",
+                        "dexNumber":  669,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Floette",
+                        "dexNumber":  670,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Florges",
+                        "dexNumber":  671,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Skiddo",
+                        "dexNumber":  672,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Gogoat",
+                        "dexNumber":  673,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Pancham",
+                        "dexNumber":  674,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Pangoro",
+                        "dexNumber":  675,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Furfrou",
+                        "dexNumber":  676,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Espurr",
+                        "dexNumber":  677,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Meowstic",
+                        "dexNumber":  678,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Honedge",
+                        "dexNumber":  679,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Doublade",
+                        "dexNumber":  680,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Aegislash",
+                        "dexNumber":  681,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Spritzee",
+                        "dexNumber":  682,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Aromatisse",
+                        "dexNumber":  683,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Swirlix",
+                        "dexNumber":  684,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Slurpuff",
+                        "dexNumber":  685,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Inkay",
+                        "dexNumber":  686,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Malamar",
+                        "dexNumber":  687,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Binacle",
+                        "dexNumber":  688,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Barbaracle",
+                        "dexNumber":  689,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Skrelp",
+                        "dexNumber":  690,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Dragalge",
+                        "dexNumber":  691,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Clauncher",
+                        "dexNumber":  692,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Clawitzer",
+                        "dexNumber":  693,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Helioptile",
+                        "dexNumber":  694,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Heliolisk",
+                        "dexNumber":  695,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Tyrunt",
+                        "dexNumber":  696,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Tyrantrum",
+                        "dexNumber":  697,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Amaura",
+                        "dexNumber":  698,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Aurorus",
+                        "dexNumber":  699,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Sylveon",
+                        "dexNumber":  700,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Hawlucha",
+                        "dexNumber":  701,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Dedenne",
+                        "dexNumber":  702,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Carbink",
+                        "dexNumber":  703,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Goomy",
+                        "dexNumber":  704,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Sliggoo",
+                        "dexNumber":  705,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Goodra",
+                        "dexNumber":  706,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Klefki",
+                        "dexNumber":  707,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Phantump",
+                        "dexNumber":  708,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Trevenant",
+                        "dexNumber":  709,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Pumpkaboo",
+                        "dexNumber":  710,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Gourgeist",
+                        "dexNumber":  711,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Bergmite",
+                        "dexNumber":  712,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Avalugg",
+                        "dexNumber":  713,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Noibat",
+                        "dexNumber":  714,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Noivern",
+                        "dexNumber":  715,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Xerneas",
+                        "dexNumber":  716,
+                        "classification":  "Legendary"
+                    },
+                    {
+                        "name":  "Yveltal",
+                        "dexNumber":  717,
+                        "classification":  "Legendary"
+                    },
+                    {
+                        "name":  "Zygarde",
+                        "dexNumber":  718,
+                        "classification":  "Legendary"
+                    },
+                    {
+                        "name":  "Diancie",
+                        "dexNumber":  719,
+                        "classification":  "Mythical"
+                    },
+                    {
+                        "name":  "Hoopa",
+                        "dexNumber":  720,
+                        "classification":  "Mythical"
+                    },
+                    {
+                        "name":  "Volcanion",
+                        "dexNumber":  721,
+                        "classification":  "Mythical"
+                    },
+                    {
+                        "name":  "Rowlet",
+                        "dexNumber":  722,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Dartrix",
+                        "dexNumber":  723,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Decidueye",
+                        "dexNumber":  724,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Litten",
+                        "dexNumber":  725,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Torracat",
+                        "dexNumber":  726,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Incineroar",
+                        "dexNumber":  727,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Popplio",
+                        "dexNumber":  728,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Brionne",
+                        "dexNumber":  729,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Primarina",
+                        "dexNumber":  730,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Pikipek",
+                        "dexNumber":  731,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Trumbeak",
+                        "dexNumber":  732,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Toucannon",
+                        "dexNumber":  733,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Yungoos",
+                        "dexNumber":  734,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Gumshoos",
+                        "dexNumber":  735,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Grubbin",
+                        "dexNumber":  736,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Charjabug",
+                        "dexNumber":  737,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Vikavolt",
+                        "dexNumber":  738,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Crabrawler",
+                        "dexNumber":  739,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Crabominable",
+                        "dexNumber":  740,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Oricorio",
+                        "dexNumber":  741,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Cutiefly",
+                        "dexNumber":  742,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Ribombee",
+                        "dexNumber":  743,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Rockruff",
+                        "dexNumber":  744,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Lycanroc",
+                        "dexNumber":  745,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Wishiwashi",
+                        "dexNumber":  746,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Mareanie",
+                        "dexNumber":  747,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Toxapex",
+                        "dexNumber":  748,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Mudbray",
+                        "dexNumber":  749,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Mudsdale",
+                        "dexNumber":  750,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Dewpider",
+                        "dexNumber":  751,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Araquanid",
+                        "dexNumber":  752,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Fomantis",
+                        "dexNumber":  753,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Lurantis",
+                        "dexNumber":  754,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Morelull",
+                        "dexNumber":  755,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Shiinotic",
+                        "dexNumber":  756,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Salandit",
+                        "dexNumber":  757,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Salazzle",
+                        "dexNumber":  758,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Stufful",
+                        "dexNumber":  759,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Bewear",
+                        "dexNumber":  760,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Bounsweet",
+                        "dexNumber":  761,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Steenee",
+                        "dexNumber":  762,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Tsareena",
+                        "dexNumber":  763,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Comfey",
+                        "dexNumber":  764,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Oranguru",
+                        "dexNumber":  765,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Passimian",
+                        "dexNumber":  766,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Wimpod",
+                        "dexNumber":  767,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Golisopod",
+                        "dexNumber":  768,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Sandygast",
+                        "dexNumber":  769,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Palossand",
+                        "dexNumber":  770,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Pyukumuku",
+                        "dexNumber":  771,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Type: Null",
+                        "dexNumber":  772,
+                        "classification":  "Legendary"
+                    },
+                    {
+                        "name":  "Silvally",
+                        "dexNumber":  773,
+                        "classification":  "Legendary"
+                    },
+                    {
+                        "name":  "Minior",
+                        "dexNumber":  774,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Komala",
+                        "dexNumber":  775,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Turtonator",
+                        "dexNumber":  776,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Togedemaru",
+                        "dexNumber":  777,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Mimikyu",
+                        "dexNumber":  778,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Bruxish",
+                        "dexNumber":  779,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Drampa",
+                        "dexNumber":  780,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Dhelmise",
+                        "dexNumber":  781,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Jangmo-o",
+                        "dexNumber":  782,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Hakamo-o",
+                        "dexNumber":  783,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Kommo-o",
+                        "dexNumber":  784,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Tapu Koko",
+                        "dexNumber":  785,
+                        "classification":  "Legendary"
+                    },
+                    {
+                        "name":  "Tapu Lele",
+                        "dexNumber":  786,
+                        "classification":  "Legendary"
+                    },
+                    {
+                        "name":  "Tapu Bulu",
+                        "dexNumber":  787,
+                        "classification":  "Legendary"
+                    },
+                    {
+                        "name":  "Tapu Fini",
+                        "dexNumber":  788,
+                        "classification":  "Legendary"
+                    },
+                    {
+                        "name":  "Cosmog",
+                        "dexNumber":  789,
+                        "classification":  "Legendary"
+                    },
+                    {
+                        "name":  "Cosmoem",
+                        "dexNumber":  790,
+                        "classification":  "Legendary"
+                    },
+                    {
+                        "name":  "Solgaleo",
+                        "dexNumber":  791,
+                        "classification":  "Legendary"
+                    },
+                    {
+                        "name":  "Lunala",
+                        "dexNumber":  792,
+                        "classification":  "Legendary"
+                    },
+                    {
+                        "name":  "Nihilego",
+                        "dexNumber":  793,
+                        "classification":  "UltraBeast"
+                    },
+                    {
+                        "name":  "Buzzwole",
+                        "dexNumber":  794,
+                        "classification":  "UltraBeast"
+                    },
+                    {
+                        "name":  "Pheromosa",
+                        "dexNumber":  795,
+                        "classification":  "UltraBeast"
+                    },
+                    {
+                        "name":  "Xurkitree",
+                        "dexNumber":  796,
+                        "classification":  "UltraBeast"
+                    },
+                    {
+                        "name":  "Celesteela",
+                        "dexNumber":  797,
+                        "classification":  "UltraBeast"
+                    },
+                    {
+                        "name":  "Kartana",
+                        "dexNumber":  798,
+                        "classification":  "UltraBeast"
+                    },
+                    {
+                        "name":  "Guzzlord",
+                        "dexNumber":  799,
+                        "classification":  "UltraBeast"
+                    },
+                    {
+                        "name":  "Necrozma",
+                        "dexNumber":  800,
+                        "classification":  "Legendary"
+                    },
+                    {
+                        "name":  "Magearna",
+                        "dexNumber":  801,
+                        "classification":  "Mythical"
+                    },
+                    {
+                        "name":  "Marshadow",
+                        "dexNumber":  802,
+                        "classification":  "Mythical"
+                    },
+                    {
+                        "name":  "Poipole",
+                        "dexNumber":  803,
+                        "classification":  "UltraBeast"
+                    },
+                    {
+                        "name":  "Naganadel",
+                        "dexNumber":  804,
+                        "classification":  "UltraBeast"
+                    },
+                    {
+                        "name":  "Stakataka",
+                        "dexNumber":  805,
+                        "classification":  "UltraBeast"
+                    },
+                    {
+                        "name":  "Blacephalon",
+                        "dexNumber":  806,
+                        "classification":  "UltraBeast"
+                    },
+                    {
+                        "name":  "Zeraora",
+                        "dexNumber":  807,
+                        "classification":  "Mythical"
+                    },
+                    {
+                        "name":  "Meltan",
+                        "dexNumber":  808,
+                        "classification":  "Mythical"
+                    },
+                    {
+                        "name":  "Melmetal",
+                        "dexNumber":  809,
+                        "classification":  "Mythical"
+                    },
+                    {
+                        "name":  "Grookey",
+                        "dexNumber":  810,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Thwackey",
+                        "dexNumber":  811,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Rillaboom",
+                        "dexNumber":  812,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Scorbunny",
+                        "dexNumber":  813,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Raboot",
+                        "dexNumber":  814,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Cinderace",
+                        "dexNumber":  815,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Sobble",
+                        "dexNumber":  816,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Drizzile",
+                        "dexNumber":  817,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Inteleon",
+                        "dexNumber":  818,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Skwovet",
+                        "dexNumber":  819,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Greedent",
+                        "dexNumber":  820,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Rookidee",
+                        "dexNumber":  821,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Corvisquire",
+                        "dexNumber":  822,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Corviknight",
+                        "dexNumber":  823,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Blipbug",
+                        "dexNumber":  824,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Dottler",
+                        "dexNumber":  825,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Orbeetle",
+                        "dexNumber":  826,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Nickit",
+                        "dexNumber":  827,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Thievul",
+                        "dexNumber":  828,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Gossifleur",
+                        "dexNumber":  829,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Eldegoss",
+                        "dexNumber":  830,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Wooloo",
+                        "dexNumber":  831,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Dubwool",
+                        "dexNumber":  832,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Chewtle",
+                        "dexNumber":  833,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Drednaw",
+                        "dexNumber":  834,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Yamper",
+                        "dexNumber":  835,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Boltund",
+                        "dexNumber":  836,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Rolycoly",
+                        "dexNumber":  837,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Carkol",
+                        "dexNumber":  838,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Coalossal",
+                        "dexNumber":  839,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Applin",
+                        "dexNumber":  840,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Flapple",
+                        "dexNumber":  841,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Appletun",
+                        "dexNumber":  842,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Silicobra",
+                        "dexNumber":  843,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Sandaconda",
+                        "dexNumber":  844,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Cramorant",
+                        "dexNumber":  845,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Arrokuda",
+                        "dexNumber":  846,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Barraskewda",
+                        "dexNumber":  847,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Toxel",
+                        "dexNumber":  848,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Toxtricity",
+                        "dexNumber":  849,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Sizzlipede",
+                        "dexNumber":  850,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Centiskorch",
+                        "dexNumber":  851,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Clobbopus",
+                        "dexNumber":  852,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Grapploct",
+                        "dexNumber":  853,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Sinistea",
+                        "dexNumber":  854,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Polteageist",
+                        "dexNumber":  855,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Hatenna",
+                        "dexNumber":  856,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Hattrem",
+                        "dexNumber":  857,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Hatterene",
+                        "dexNumber":  858,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Impidimp",
+                        "dexNumber":  859,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Morgrem",
+                        "dexNumber":  860,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Grimmsnarl",
+                        "dexNumber":  861,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Obstagoon",
+                        "dexNumber":  862,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Perrserker",
+                        "dexNumber":  863,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Cursola",
+                        "dexNumber":  864,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Sirfetch’d",
+                        "dexNumber":  865,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Mr. Rime",
+                        "dexNumber":  866,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Runerigus",
+                        "dexNumber":  867,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Milcery",
+                        "dexNumber":  868,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Alcremie",
+                        "dexNumber":  869,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Falinks",
+                        "dexNumber":  870,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Pincurchin",
+                        "dexNumber":  871,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Snom",
+                        "dexNumber":  872,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Frosmoth",
+                        "dexNumber":  873,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Stonjourner",
+                        "dexNumber":  874,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Eiscue",
+                        "dexNumber":  875,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Indeedee",
+                        "dexNumber":  876,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Morpeko",
+                        "dexNumber":  877,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Cufant",
+                        "dexNumber":  878,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Copperajah",
+                        "dexNumber":  879,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Dracozolt",
+                        "dexNumber":  880,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Arctozolt",
+                        "dexNumber":  881,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Dracovish",
+                        "dexNumber":  882,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Arctovish",
+                        "dexNumber":  883,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Duraludon",
+                        "dexNumber":  884,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Dreepy",
+                        "dexNumber":  885,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Drakloak",
+                        "dexNumber":  886,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Dragapult",
+                        "dexNumber":  887,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Zacian",
+                        "dexNumber":  888,
+                        "classification":  "Legendary"
+                    },
+                    {
+                        "name":  "Zamazenta",
+                        "dexNumber":  889,
+                        "classification":  "Legendary"
+                    },
+                    {
+                        "name":  "Eternatus",
+                        "dexNumber":  890,
+                        "classification":  "Legendary"
+                    },
+                    {
+                        "name":  "Kubfu",
+                        "dexNumber":  891,
+                        "classification":  "Legendary"
+                    },
+                    {
+                        "name":  "Urshifu",
+                        "dexNumber":  892,
+                        "classification":  "Legendary"
+                    },
+                    {
+                        "name":  "Zarude",
+                        "dexNumber":  893,
+                        "classification":  "Mythical"
+                    },
+                    {
+                        "name":  "Regieleki",
+                        "dexNumber":  894,
+                        "classification":  "Legendary"
+                    },
+                    {
+                        "name":  "Regidrago",
+                        "dexNumber":  895,
+                        "classification":  "Legendary"
+                    },
+                    {
+                        "name":  "Glastrier",
+                        "dexNumber":  896,
+                        "classification":  "Legendary"
+                    },
+                    {
+                        "name":  "Spectrier",
+                        "dexNumber":  897,
+                        "classification":  "Legendary"
+                    },
+                    {
+                        "name":  "Calyrex",
+                        "dexNumber":  898,
+                        "classification":  "Legendary"
+                    },
+                    {
+                        "name":  "Wyrdeer",
+                        "dexNumber":  899,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Kleavor",
+                        "dexNumber":  900,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Ursaluna",
+                        "dexNumber":  901,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Basculegion",
+                        "dexNumber":  902,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Sneasler",
+                        "dexNumber":  903,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Overqwil",
+                        "dexNumber":  904,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Enamorus",
+                        "dexNumber":  905,
+                        "classification":  "Legendary"
+                    },
+                    {
+                        "name":  "Sprigatito",
+                        "dexNumber":  906,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Floragato",
+                        "dexNumber":  907,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Meowscarada",
+                        "dexNumber":  908,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Fuecoco",
+                        "dexNumber":  909,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Crocalor",
+                        "dexNumber":  910,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Skeledirge",
+                        "dexNumber":  911,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Quaxly",
+                        "dexNumber":  912,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Quaxwell",
+                        "dexNumber":  913,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Quaquaval",
+                        "dexNumber":  914,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Lechonk",
+                        "dexNumber":  915,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Oinkologne",
+                        "dexNumber":  916,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Tarountula",
+                        "dexNumber":  917,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Spidops",
+                        "dexNumber":  918,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Nymble",
+                        "dexNumber":  919,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Lokix",
+                        "dexNumber":  920,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Pawmi",
+                        "dexNumber":  921,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Pawmo",
+                        "dexNumber":  922,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Pawmot",
+                        "dexNumber":  923,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Tandemaus",
+                        "dexNumber":  924,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Maushold",
+                        "dexNumber":  925,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Fidough",
+                        "dexNumber":  926,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Dachsbun",
+                        "dexNumber":  927,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Smoliv",
+                        "dexNumber":  928,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Dolliv",
+                        "dexNumber":  929,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Arboliva",
+                        "dexNumber":  930,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Squawkabilly",
+                        "dexNumber":  931,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Nacli",
+                        "dexNumber":  932,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Naclstack",
+                        "dexNumber":  933,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Garganacl",
+                        "dexNumber":  934,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Charcadet",
+                        "dexNumber":  935,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Armarouge",
+                        "dexNumber":  936,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Ceruledge",
+                        "dexNumber":  937,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Tadbulb",
+                        "dexNumber":  938,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Bellibolt",
+                        "dexNumber":  939,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Wattrel",
+                        "dexNumber":  940,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Kilowattrel",
+                        "dexNumber":  941,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Maschiff",
+                        "dexNumber":  942,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Mabosstiff",
+                        "dexNumber":  943,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Shroodle",
+                        "dexNumber":  944,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Grafaiai",
+                        "dexNumber":  945,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Bramblin",
+                        "dexNumber":  946,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Brambleghast",
+                        "dexNumber":  947,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Toedscool",
+                        "dexNumber":  948,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Toedscruel",
+                        "dexNumber":  949,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Klawf",
+                        "dexNumber":  950,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Capsakid",
+                        "dexNumber":  951,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Scovillain",
+                        "dexNumber":  952,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Rellor",
+                        "dexNumber":  953,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Rabsca",
+                        "dexNumber":  954,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Flittle",
+                        "dexNumber":  955,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Espathra",
+                        "dexNumber":  956,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Tinkatink",
+                        "dexNumber":  957,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Tinkatuff",
+                        "dexNumber":  958,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Tinkaton",
+                        "dexNumber":  959,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Wiglett",
+                        "dexNumber":  960,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Wugtrio",
+                        "dexNumber":  961,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Bombirdier",
+                        "dexNumber":  962,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Finizen",
+                        "dexNumber":  963,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Palafin",
+                        "dexNumber":  964,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Varoom",
+                        "dexNumber":  965,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Revavroom",
+                        "dexNumber":  966,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Cyclizar",
+                        "dexNumber":  967,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Orthworm",
+                        "dexNumber":  968,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Glimmet",
+                        "dexNumber":  969,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Glimmora",
+                        "dexNumber":  970,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Greavard",
+                        "dexNumber":  971,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Houndstone",
+                        "dexNumber":  972,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Flamigo",
+                        "dexNumber":  973,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Cetoddle",
+                        "dexNumber":  974,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Cetitan",
+                        "dexNumber":  975,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Veluza",
+                        "dexNumber":  976,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Dondozo",
+                        "dexNumber":  977,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Tatsugiri",
+                        "dexNumber":  978,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Annihilape",
+                        "dexNumber":  979,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Clodsire",
+                        "dexNumber":  980,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Farigiraf",
+                        "dexNumber":  981,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Dudunsparce",
+                        "dexNumber":  982,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Kingambit",
+                        "dexNumber":  983,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Great Tusk",
+                        "dexNumber":  984,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Scream Tail",
+                        "dexNumber":  985,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Brute Bonnet",
+                        "dexNumber":  986,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Flutter Mane",
+                        "dexNumber":  987,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Slither Wing",
+                        "dexNumber":  988,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Sandy Shocks",
+                        "dexNumber":  989,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Iron Treads",
+                        "dexNumber":  990,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Iron Bundle",
+                        "dexNumber":  991,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Iron Hands",
+                        "dexNumber":  992,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Iron Jugulis",
+                        "dexNumber":  993,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Iron Moth",
+                        "dexNumber":  994,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Iron Thorns",
+                        "dexNumber":  995,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Frigibax",
+                        "dexNumber":  996,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Arctibax",
+                        "dexNumber":  997,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Baxcalibur",
+                        "dexNumber":  998,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Gimmighoul",
+                        "dexNumber":  999,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Gholdengo",
+                        "dexNumber":  1000,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Wo-Chien",
+                        "dexNumber":  1001,
+                        "classification":  "Legendary"
+                    },
+                    {
+                        "name":  "Chien-Pao",
+                        "dexNumber":  1002,
+                        "classification":  "Legendary"
+                    },
+                    {
+                        "name":  "Ting-Lu",
+                        "dexNumber":  1003,
+                        "classification":  "Legendary"
+                    },
+                    {
+                        "name":  "Chi-Yu",
+                        "dexNumber":  1004,
+                        "classification":  "Legendary"
+                    },
+                    {
+                        "name":  "Roaring Moon",
+                        "dexNumber":  1005,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Iron Valiant",
+                        "dexNumber":  1006,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Koraidon",
+                        "dexNumber":  1007,
+                        "classification":  "Legendary"
+                    },
+                    {
+                        "name":  "Miraidon",
+                        "dexNumber":  1008,
+                        "classification":  "Legendary"
+                    },
+                    {
+                        "name":  "Walking Wake",
+                        "dexNumber":  1009,
+                        "classification":  "Legendary"
+                    },
+                    {
+                        "name":  "Iron Leaves",
+                        "dexNumber":  1010,
+                        "classification":  "Legendary"
+                    },
+                    {
+                        "name":  "Dipplin",
+                        "dexNumber":  1011,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Poltchageist",
+                        "dexNumber":  1012,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Sinistcha",
+                        "dexNumber":  1013,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Okidogi",
+                        "dexNumber":  1014,
+                        "classification":  "Legendary"
+                    },
+                    {
+                        "name":  "Munkidori",
+                        "dexNumber":  1015,
+                        "classification":  "Legendary"
+                    },
+                    {
+                        "name":  "Fezandipiti",
+                        "dexNumber":  1016,
+                        "classification":  "Legendary"
+                    },
+                    {
+                        "name":  "Ogerpon",
+                        "dexNumber":  1017,
+                        "classification":  "Legendary"
+                    },
+                    {
+                        "name":  "Archaludon",
+                        "dexNumber":  1018,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Hydrapple",
+                        "dexNumber":  1019,
+                        "classification":  "Ordinary"
+                    },
+                    {
+                        "name":  "Gouging Fire",
+                        "dexNumber":  1020,
+                        "classification":  "Legendary"
+                    },
+                    {
+                        "name":  "Raging Bolt",
+                        "dexNumber":  1021,
+                        "classification":  "Legendary"
+                    },
+                    {
+                        "name":  "Iron Boulder",
+                        "dexNumber":  1022,
+                        "classification":  "Legendary"
+                    },
+                    {
+                        "name":  "Iron Crown",
+                        "dexNumber":  1023,
+                        "classification":  "Legendary"
+                    },
+                    {
+                        "name":  "Terapagos",
+                        "dexNumber":  1024,
+                        "classification":  "Legendary"
+                    },
+                    {
+                        "name":  "Pecharunt",
+                        "dexNumber":  1025,
+                        "classification":  "Mythical"
+                    }
+                ],
+    "cpRange":  {
+                    "min":  10,
+                    "max":  6000
+                }
+}

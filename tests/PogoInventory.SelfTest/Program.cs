@@ -26,6 +26,7 @@ using PogoInventory.Device.Adb;
 using PogoInventory.Device.Errors;
 using PogoInventory.Device.Models;
 using PogoInventory.Device.Transport;
+using PogoInventory.HeaderText;
 using PogoInventory.ImagePretest.Models;
 using PogoInventory.ImagePretest.Services;
 using PogoInventory.Observations.Models;
@@ -208,6 +209,36 @@ var tests = new (string Name, Func<Task> Run)[]
     ,("Cleanup proof persists partial observations and reopens SQLite", CleanupProofTests.RunAsync)
     ,("Cleanup value proof persists before appraisal and keeps review advisory", CleanupProofTests.RunValueProofAsync)
     ,("Cleanup proof uses one persistent appraisal carousel", CleanupProofTests.RunCarouselLifecycleAsync)
+    ,("Species reference loader rejects empty species list", Sync(SpeciesReferenceAndPolicyLoaderTests.RunSpeciesReferenceLoaderRejectsEmptyDocument))
+    ,("Species reference loader rejects missing version", Sync(SpeciesReferenceAndPolicyLoaderTests.RunSpeciesReferenceLoaderRejectsMissingVersion))
+    ,("Species reference loader rejects duplicate names", Sync(SpeciesReferenceAndPolicyLoaderTests.RunSpeciesReferenceLoaderRejectsDuplicateNames))
+    ,("Species reference lookup is case and diacritic insensitive", Sync(SpeciesReferenceAndPolicyLoaderTests.RunSpeciesReferenceLookupIsCaseAndDiacriticInsensitive))
+    ,("Unknown species reference lookup is conservative, never false", Sync(SpeciesReferenceAndPolicyLoaderTests.RunUnknownSpeciesIsConservative))
+    ,("Known ordinary and protected species classify correctly", Sync(SpeciesReferenceAndPolicyLoaderTests.RunKnownOrdinarySpeciesIsNotProtected))
+    ,("Committed species reference file loads and covers all generations", Sync(SpeciesReferenceAndPolicyLoaderTests.RunFullSpeciesReferenceFileLoadsAndCoversGenerations))
+    ,("Rule policy loader round-trips written defaults", Sync(SpeciesReferenceAndPolicyLoaderTests.RunRulePolicyLoaderRoundTripsDefault))
+    ,("Committed default rule policy sample matches RulePolicy defaults", Sync(SpeciesReferenceAndPolicyLoaderTests.RunCommittedDefaultSampleMatchesRulePolicyDefaults))
+    ,("Rule policy loader fails closed on unknown top-level field", Sync(SpeciesReferenceAndPolicyLoaderTests.RunRulePolicyLoaderFailsClosedOnUnknownTopLevelField))
+    ,("Rule policy loader fails closed on unknown pvpHeuristic field", Sync(SpeciesReferenceAndPolicyLoaderTests.RunRulePolicyLoaderFailsClosedOnUnknownPvpField))
+    ,("Rule policy loader rejects unsupported schema version", Sync(SpeciesReferenceAndPolicyLoaderTests.RunRulePolicyLoaderRejectsUnsupportedSchemaVersion))
+    ,("Analyzer uses reference data classification when provided", Sync(SpeciesReferenceAndPolicyLoaderTests.RunAnalyzerUsesReferenceDataClassificationWhenProvided))
+    ,("Analyzer preserves observation fields when reference data absent", Sync(SpeciesReferenceAndPolicyLoaderTests.RunAnalyzerLeavesObservationUnchangedWhenReferenceDataAbsent))
+    ,("Analyzer preserves observation fields for unknown species even with reference data", Sync(SpeciesReferenceAndPolicyLoaderTests.RunAnalyzerLeavesUnknownSpeciesUnchangedWhenReferenceDataProvided))
+    ,("Semantic identity key normalizes fields and Unknown handling", Sync(SemanticIdentityTests.RunKeyNormalizationAndUnknownHandling))
+    ,("Semantic identity key completeness is classified correctly", Sync(SemanticIdentityTests.RunCompletenessClassification))
+    ,("Semantic identity matcher matches identical Comparable keys", Sync(SemanticIdentityTests.RunMatcherExactMatch))
+    ,("Semantic identity matcher never auto-merges ambiguous collisions", Sync(SemanticIdentityTests.RunMatcherAmbiguousCollisionNeverMerges))
+    ,("Semantic identity matcher never matches Insufficient or Partial keys", Sync(SemanticIdentityTests.RunMatcherInsufficientNeverMatches))
+    ,("GroupKey groups same species and known semantic variant fields", Sync(SemanticIdentityTests.RunGroupKeyGroupsSameSpeciesAndVariant))
+    ,("GroupKey falls back to a per-instance key for unknown species", Sync(SemanticIdentityTests.RunGroupKeyFallsBackForUnknownSpecies))
+    ,("Schema migrates 2 to 3 and persisted semantic key round-trips", SemanticIdentityTests.RunSchemaMigrationAndKeyRoundtripAsync)
+    ,("Reidentification runner measures cross-run re-match rate", SemanticIdentityTests.RunReidentificationRunnerAsync)
+    ,("Header OCR species consensus accepts 2-of-3 and rejects conflicts", HeaderOcrTests.RunSpeciesConsensusAsync)
+    ,("Header OCR rejects UI labels as species", HeaderOcrTests.RunUiLabelsRejectedAsync)
+    ,("Header OCR falls back to nickname for unknown header text", HeaderOcrTests.RunNicknameFallbackAsync)
+    ,("Header OCR parses and validates CP", HeaderOcrTests.RunCpParsingAsync)
+    ,("Header OCR tolerates case and single-character OCR noise", HeaderOcrTests.RunTolerantSpeciesNormalizationAsync)
+    ,("Search query classifier distinguishes exact species from broad filters", HeaderOcrTests.RunSearchQueryClassifierAsync)
 };
 
 var failed = 0;
@@ -440,7 +471,12 @@ static void InstanceFingerprintCannotReplaceVariantIdentity()
     var result = Analyze(first, second);
     AssertCategory(result, "same-fingerprint-A", DecisionCategory.Review);
     AssertCategory(result, "same-fingerprint-B", DecisionCategory.Review);
-    AssertTrue(first.GroupKey != second.GroupKey, "unknown variants must not share a duplicate group");
+    // Both observations share species "Pikachu" and identical known semantic
+    // fields (form/costume/shiny/shadow/background), so they now correctly
+    // share a duplicate-analysis GroupKey; each is still individually forced
+    // to Review because VariantIdentity itself is Unknown, so grouping alone
+    // must not be able to produce a Delete decision without Exact identity.
+    AssertTrue(first.GroupKey == second.GroupKey, "same species and known semantic variant fields must share a duplicate group");
 }
 
 static void AdbDeviceListParserRecognisesStates()

@@ -9,7 +9,7 @@ namespace PogoInventory.Persistence;
 
 public sealed class InventoryPersistenceService
 {
-    private const int SchemaVersion = 2;
+    private const int SchemaVersion = 3;
     private readonly string _databasePath;
 
     public InventoryPersistenceService(string databasePath)
@@ -80,7 +80,11 @@ public sealed class InventoryPersistenceService
             ("Observations", "FieldEvidenceJson", "TEXT"),
             ("Observations", "AppraisalEvidenceJson", "TEXT"),
             ("Observations", "ScreenshotPathsJson", "TEXT"),
-            ("Observations", "ScreenshotHashesJson", "TEXT")
+            ("Observations", "ScreenshotHashesJson", "TEXT"),
+            ("PokemonRecords", "SemanticKey", "TEXT"),
+            ("PokemonRecords", "SemanticKeyCompleteness", "TEXT"),
+            ("Observations", "SemanticKey", "TEXT"),
+            ("Observations", "SemanticKeyCompleteness", "TEXT")
         })
         {
             await EnsureColumnAsync(connection, table, column, declaration, cancellationToken);
@@ -179,6 +183,7 @@ public sealed class InventoryPersistenceService
         var screenshotPathsJson = JsonSerializer.Serialize(record.ScreenshotPaths, jsonOptions);
         var screenshotHashesJson = JsonSerializer.Serialize(record.ScreenshotHashes, jsonOptions);
         var variantJson = JsonSerializer.Serialize(record.Observation.VariantIdentity, jsonOptions);
+        var semanticKey = SemanticIdentityKey.FromObservation(record.Observation);
 
         await using (var observation = connection.CreateCommand())
         {
@@ -190,11 +195,11 @@ public sealed class InventoryPersistenceService
                      Cp, AttackIv, DefenseIv, HpIv, CatchLocation, ScreenshotPath,
                      ScreenshotSha256, FingerprintSha256, ObservationJson,
                      FieldEvidenceJson, AppraisalEvidenceJson, ScreenshotPathsJson,
-                     ScreenshotHashesJson)
+                     ScreenshotHashesJson, SemanticKey, SemanticKeyCompleteness)
                 VALUES (@id, @run, @seq, @captured, 'CleanupProof', @status, @identity,
                         @protection, @species, @cp, @attack, @defense, @hp, @location,
                         @path, @sha, @fingerprint, @observation, @fields, @appraisal,
-                        @paths, @hashes);
+                        @paths, @hashes, @semanticKey, @semanticKeyCompleteness);
                 """;
             observation.Parameters.AddWithValue("@id", record.LocalPokemonId);
             observation.Parameters.AddWithValue("@run", record.RunId);
@@ -217,6 +222,8 @@ public sealed class InventoryPersistenceService
             observation.Parameters.AddWithValue("@appraisal", appraisalEvidenceJson);
             observation.Parameters.AddWithValue("@paths", screenshotPathsJson);
             observation.Parameters.AddWithValue("@hashes", screenshotHashesJson);
+            observation.Parameters.AddWithValue("@semanticKey", semanticKey.FullKey);
+            observation.Parameters.AddWithValue("@semanticKeyCompleteness", semanticKey.Completeness.ToString());
             await observation.ExecuteNonQueryAsync(cancellationToken);
         }
 
@@ -232,12 +239,14 @@ public sealed class InventoryPersistenceService
                      ProtectionConfidence, CurrentRecommendation, RecommendationReason,
                      LastScreenshotPath, LastScreenshotSha256, LastFingerprintSha256,
                      ObservationStatus, Nickname, ExistingTagsJson, FieldEvidenceJson,
-                     AppraisalEvidenceJson, VariantJson, ComparatorLocalPokemonId)
+                     AppraisalEvidenceJson, VariantJson, ComparatorLocalPokemonId,
+                     SemanticKey, SemanticKeyCompleteness)
                 VALUES (@id, 'Observed', @run, @run, @at, @at, @species, @cp, @attack,
                         @defense, @hp, @form, @costume, @background, @shiny, @shadow,
                         @lucky, @dynamax, @location, @identity, @protection, 'PENDING',
                         'Recommendation has not been generated.', @path, @sha, @fingerprint,
-                        @status, @nickname, @tags, @fields, @appraisal, @variant, NULL);
+                        @status, @nickname, @tags, @fields, @appraisal, @variant, NULL,
+                        @semanticKey, @semanticKeyCompleteness);
                 """;
             recordCommand.Parameters.AddWithValue("@id", record.LocalPokemonId);
             recordCommand.Parameters.AddWithValue("@run", record.RunId);
@@ -266,6 +275,8 @@ public sealed class InventoryPersistenceService
             recordCommand.Parameters.AddWithValue("@fields", fieldEvidenceJson);
             recordCommand.Parameters.AddWithValue("@appraisal", appraisalEvidenceJson);
             recordCommand.Parameters.AddWithValue("@variant", variantJson);
+            recordCommand.Parameters.AddWithValue("@semanticKey", semanticKey.FullKey);
+            recordCommand.Parameters.AddWithValue("@semanticKeyCompleteness", semanticKey.Completeness.ToString());
             await recordCommand.ExecuteNonQueryAsync(cancellationToken);
         }
 
@@ -345,7 +356,8 @@ public sealed class InventoryPersistenceService
                 UPDATE Observations
                 SET Cp = @cp, AttackIv = @attack, DefenseIv = @defense, HpIv = @hp,
                     ObservationJson = @observation, FieldEvidenceJson = @fields,
-                    AppraisalEvidenceJson = @appraisal
+                    AppraisalEvidenceJson = @appraisal, SemanticKey = @semanticKey,
+                    SemanticKeyCompleteness = @semanticKeyCompleteness
                 WHERE LocalPokemonId = @id AND RunId = @run;
                 """;
             AddEnrichmentParameters(command, runId, localPokemonId, observation,
@@ -358,7 +370,8 @@ public sealed class InventoryPersistenceService
             command.CommandText = """
                 UPDATE PokemonRecords
                 SET Cp = @cp, AttackIv = @attack, DefenseIv = @defense, HpIv = @hp,
-                    FieldEvidenceJson = @fields, AppraisalEvidenceJson = @appraisal
+                    FieldEvidenceJson = @fields, AppraisalEvidenceJson = @appraisal,
+                    SemanticKey = @semanticKey, SemanticKeyCompleteness = @semanticKeyCompleteness
                 WHERE LocalPokemonId = @id AND LastSeenRunId = @run;
                 """;
             AddEnrichmentParameters(command, runId, localPokemonId, observation,
@@ -396,7 +409,8 @@ public sealed class InventoryPersistenceService
                 UPDATE Observations
                 SET Cp = @cp, AttackIv = @attack, DefenseIv = @defense, HpIv = @hp,
                     CatchLocation = @location, ObservationJson = @observation,
-                    FieldEvidenceJson = @fields
+                    FieldEvidenceJson = @fields, SemanticKey = @semanticKey,
+                    SemanticKeyCompleteness = @semanticKeyCompleteness
                 WHERE LocalPokemonId = @id AND RunId = @run;
                 """;
             AddSemanticParameters(command, runId, localPokemonId, observation,
@@ -409,7 +423,8 @@ public sealed class InventoryPersistenceService
             command.CommandText = """
                 UPDATE PokemonRecords
                 SET Cp = @cp, AttackIv = @attack, DefenseIv = @defense, HpIv = @hp,
-                    CatchLocation = @location, FieldEvidenceJson = @fields
+                    CatchLocation = @location, FieldEvidenceJson = @fields,
+                    SemanticKey = @semanticKey, SemanticKeyCompleteness = @semanticKeyCompleteness
                 WHERE LocalPokemonId = @id AND LastSeenRunId = @run;
                 """;
             AddSemanticParameters(command, runId, localPokemonId, observation,
@@ -439,6 +454,9 @@ public sealed class InventoryPersistenceService
         command.Parameters.AddWithValue("@observation", observationJson);
         command.Parameters.AddWithValue("@fields", fieldsJson);
         command.Parameters.AddWithValue("@appraisal", appraisalJson);
+        var semanticKey = SemanticIdentityKey.FromObservation(observation);
+        command.Parameters.AddWithValue("@semanticKey", semanticKey.FullKey);
+        command.Parameters.AddWithValue("@semanticKeyCompleteness", semanticKey.Completeness.ToString());
     }
 
     private static void AddSemanticParameters(
@@ -458,6 +476,9 @@ public sealed class InventoryPersistenceService
         command.Parameters.AddWithValue("@location", (object?)observation.CatchLocation ?? DBNull.Value);
         command.Parameters.AddWithValue("@observation", observationJson);
         command.Parameters.AddWithValue("@fields", fieldsJson);
+        var semanticKey = SemanticIdentityKey.FromObservation(observation);
+        command.Parameters.AddWithValue("@semanticKey", semanticKey.FullKey);
+        command.Parameters.AddWithValue("@semanticKeyCompleteness", semanticKey.Completeness.ToString());
     }
 
     private static async Task InsertCleanupEventAsync(
@@ -493,7 +514,8 @@ public sealed class InventoryPersistenceService
                    o.ObservationStatus, o.Confidence, o.ProtectionConfidence,
                    o.FingerprintSha256, o.ObservationJson, o.FieldEvidenceJson,
                    o.AppraisalEvidenceJson, o.ScreenshotPathsJson, o.ScreenshotHashesJson,
-                   p.CurrentRecommendation, p.RecommendationReason, p.ComparatorLocalPokemonId
+                   p.CurrentRecommendation, p.RecommendationReason, p.ComparatorLocalPokemonId,
+                   o.SemanticKey, o.SemanticKeyCompleteness
             FROM Observations o
             JOIN PokemonRecords p ON p.LocalPokemonId = o.LocalPokemonId
             WHERE o.RunId = @run
@@ -524,7 +546,49 @@ public sealed class InventoryPersistenceService
                 FieldEvidenceSources = DeserializeDictionary(reader.IsDBNull(9) ? null : reader.GetString(9), options),
                 CurrentRecommendation = reader.GetString(13),
                 RecommendationReason = reader.GetString(14),
-                ComparatorLocalPokemonId = reader.IsDBNull(15) ? null : reader.GetString(15)
+                ComparatorLocalPokemonId = reader.IsDBNull(15) ? null : reader.GetString(15),
+                SemanticKey = reader.IsDBNull(16) ? null : reader.GetString(16),
+                SemanticKeyCompleteness = reader.IsDBNull(17) ? null : reader.GetString(17)
+            });
+        }
+        return rows;
+    }
+
+    /// <summary>
+    /// Loads a lightweight, run-independent view of every PokemonRecord in this
+    /// database. Used for offline cross-run re-identification: no observation
+    /// evidence blobs are loaded, only the fields needed to compare semantic
+    /// identity keys.
+    /// </summary>
+    public async Task<IReadOnlyList<PokemonRecordSemanticRow>> LoadAllPokemonRecordsAsync(
+        CancellationToken cancellationToken = default)
+    {
+        await InitializeAsync(cancellationToken);
+        await using var connection = Open();
+        await connection.OpenAsync(cancellationToken);
+        await using var command = connection.CreateCommand();
+        command.CommandText = """
+            SELECT LocalPokemonId, SpeciesName, Cp, AttackIv, DefenseIv, HpIv,
+                   SemanticKey, SemanticKeyCompleteness, FirstSeenRunId, LastSeenRunId
+            FROM PokemonRecords
+            ORDER BY LocalPokemonId;
+            """;
+        var rows = new List<PokemonRecordSemanticRow>();
+        await using var reader = await command.ExecuteReaderAsync(cancellationToken);
+        while (await reader.ReadAsync(cancellationToken))
+        {
+            rows.Add(new PokemonRecordSemanticRow
+            {
+                LocalPokemonId = reader.GetString(0),
+                SpeciesName = reader.IsDBNull(1) ? null : reader.GetString(1),
+                Cp = reader.IsDBNull(2) ? null : reader.GetInt32(2),
+                AttackIv = reader.IsDBNull(3) ? null : reader.GetInt32(3),
+                DefenseIv = reader.IsDBNull(4) ? null : reader.GetInt32(4),
+                HpIv = reader.IsDBNull(5) ? null : reader.GetInt32(5),
+                SemanticKey = reader.IsDBNull(6) ? null : reader.GetString(6),
+                SemanticKeyCompleteness = reader.IsDBNull(7) ? null : reader.GetString(7),
+                FirstSeenRunId = reader.GetString(8),
+                LastSeenRunId = reader.GetString(9)
             });
         }
         return rows;

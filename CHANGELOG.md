@@ -1,5 +1,37 @@
 # Changelog
 
+## Semantic foundation: header OCR, reference data, semantic identity — 2026-07-21
+
+- Added `PogoInventory.HeaderText` (OCR abstraction: `PokemonHeaderAnalyzer`
+  with species/CP/nickname extraction, multi-frame consensus, UI-label
+  blacklist, `SearchQueryClassifier` separating exact-species queries from
+  broad filters) and `PogoInventory.HeaderOcr` (Windows.Media.Ocr recognizer,
+  `net8.0-windows10.0.19041.0`). New CLI command `ocr-header-spike` analyzes a
+  directory of PNG frames offline and reports species/CP hit rates; it must be
+  run on the machine holding the real carousel evidence. See
+  `docs/HEADER_OCR.md`. Acceptance target: >=19/20 species and CP on the
+  20-item evidence.
+- Added versioned reference data `data/reference/species-reference.json`
+  (1025 species, gen 1-9, Legendary/Mythical/UltraBeast classification from
+  pogoapi.net) with `SpeciesReferenceLoader`, plus `RulePolicyLoader` and
+  `data/reference/rule-policy.default.json` for file-based policy
+  configuration. `InventoryAnalyzer` optionally overrides rarity
+  classification from reference data; unknown species never lose protection.
+- Added `SemanticIdentityKey` (normalized species/variant/IV/CP/nickname/
+  catch-date key with completeness classification) persisted on Observations
+  and PokemonRecords (schema v3, additive migration), `SemanticIdentityMatcher`
+  (exact comparable-key cross-run matching, ambiguous collisions never merged)
+  and CLI command `analyze-reidentification` comparing two run databases and
+  reporting the re-match rate for the double-scan acceptance test.
+- Fixed duplicate-group degeneration: `GroupKey` now groups by
+  species/form/costume/shiny/shadow/background when species is known instead
+  of falling back to a per-instance key.
+- Added `docs/kravspecifikation.md` (full requirements specification) and
+  `docs/MINIMAL_EFFORT_PLAN.md` (code review and minimal-effort plan).
+- Offline self-tests pass 193/193. No phone input, no real-phone acceptance
+  claim; the OCR spike and re-identification measurements require the other
+  machine's local evidence.
+
 ## Unreleased
 
 - Cleanup proof now keeps Appraisal open across ordinary Pokémon transitions,

@@ -21,6 +21,7 @@ using PogoInventory.CalcyProbe.Services;
 using PogoInventory.Core.Analysis;
 using PogoInventory.Core.Models;
 using PogoInventory.Core.Policy;
+using PogoInventory.Core.Reference;
 using PogoInventory.Core.Reporting;
 using PogoInventory.CropAtlas.Models;
 using PogoInventory.CropAtlas.Services;
@@ -32,6 +33,8 @@ using PogoInventory.Device.Errors;
 using PogoInventory.Device.Logging;
 using PogoInventory.Device.Models;
 using PogoInventory.Device.Transport;
+using PogoInventory.HeaderOcr;
+using PogoInventory.HeaderText;
 using PogoInventory.ImagePretest.Models;
 using PogoInventory.ImagePretest.Services;
 using PogoInventory.Exploration.Services;
@@ -181,6 +184,9 @@ static async Task<int> MainAsync(string[] args)
             "device-launch-pokemon-go" => await LaunchPokemonGoAsync(
                 args.Skip(1).ToArray(),
                 cancellationSource.Token),
+            "analyze-reidentification" => await AnalyzeReidentificationAsync(
+                args.Skip(1).ToArray(),
+                cancellationSource.Token),
             "inventory-db-init" => await InitializeInventoryDbAsync(
                 args.Skip(1).ToArray(),
                 cancellationSource.Token),
@@ -220,6 +226,9 @@ static async Task<int> MainAsync(string[] args)
             "calibration-capture-approve" => await ApproveCalibrationCaptureAsync(
                 args.Skip(1).ToArray(),
                 cancellationSource.Token),
+            "ocr-header-spike" => await RunOcrHeaderSpikeAsync(
+                args.Skip(1).ToArray(),
+                cancellationSource.Token),
             _ => UnknownCommand(args[0])
         };
     }
@@ -257,6 +266,31 @@ static async Task<int> MainAsync(string[] args)
     {
         Console.CancelKeyPress -= cancelHandler;
     }
+}
+
+static async Task<int> AnalyzeReidentificationAsync(
+    string[] args,
+    CancellationToken cancellationToken)
+{
+    var options = ParseOptions(args);
+    var databaseA = Require(options, "database-a");
+    var databaseB = Require(options, "database-b");
+    var outputDirectory = Require(options, "out");
+
+    var report = await new ReidentificationRunner().RunAsync(
+        databaseA,
+        databaseB,
+        outputDirectory,
+        cancellationToken);
+
+    Console.WriteLine("Cross-run re-identification analysis finished. No phone was accessed.");
+    Console.WriteLine($"Total A / Total B: {report.TotalA} / {report.TotalB}");
+    Console.WriteLine($"Matched: {report.MatchedCount}");
+    Console.WriteLine($"Ambiguous collisions (never auto-merged): {report.AmbiguousCollisionCount}");
+    Console.WriteLine($"Unmatched: {report.UnmatchedCount}");
+    Console.WriteLine($"Re-match rate: {report.ReMatchRatePercent:F2}%");
+    Console.WriteLine($"Report: {Path.Combine(Path.GetFullPath(outputDirectory), "reidentification-report.json")}");
+    return 0;
 }
 
 static async Task<int> InitializeInventoryDbAsync(
@@ -3494,6 +3528,7 @@ static void PrintHelp()
     Console.WriteLine("  tag-selector-detect-image --image <screen.png> --profile <tag-profile.json> --tag <name> --out <result.json>");
     Console.WriteLine("  device-open-appraisal --profile <automation.json> --appraisal-profile <appraisal.json> --out <directory>");
     Console.WriteLine("                        [--adb <adb.exe>] [--serial <serial>]");
+    Console.WriteLine("  analyze-reidentification --database-a <sqlite> --database-b <sqlite> --out <directory>");
     Console.WriteLine("  inventory-db-init [--db <pogo-inventory.db>]");
     Console.WriteLine("  inventory-db-summary [--db <pogo-inventory.db>]");
     Console.WriteLine("  inventory-scan --fake --profile <automation.json> --screen-profile <screen-profile.json>");
@@ -3564,5 +3599,242 @@ static void PrintHelp()
     Console.WriteLine("  calibration-capture-approve --workspace <private-local-directory> --id <capture-id>");
     Console.WriteLine("                              --reviewed-by <name> --confirm-private-review");
     Console.WriteLine();
+    Console.WriteLine("  ocr-header-spike --input <directory of PNGs> --screen <details|appraisal> --out <directory>");
+    Console.WriteLine("                   [--profile <header-analysis-profile.json>] [--language <tag>]");
+    Console.WriteLine("                   Offline OCR spike: reads species/CP/nickname per PNG and writes");
+    Console.WriteLine("                   ocr-spike-report.json/.md. Windows-only (Windows.Media.Ocr).");
+    Console.WriteLine();
     Console.WriteLine("Inventory scan uses only the allow-listed taps and swipe from the automation profile. It never transfers, powers up, evolves, purifies, catches or changes location.");
+}
+
+static async Task<int> RunOcrHeaderSpikeAsync(string[] args, CancellationToken cancellationToken)
+{
+    var options = ParseOptions(args);
+    var inputDirectory = Require(options, "input");
+    var outputDirectory = Require(options, "out");
+    var screenArgument = Require(options, "screen");
+    var screen = screenArgument.ToLowerInvariant() switch
+    {
+        "details" => HeaderScreenType.PokemonDetails,
+        "appraisal" => HeaderScreenType.AppraisalBars,
+        _ => throw new ArgumentException(
+            $"--screen must be 'details' or 'appraisal', got '{screenArgument}'.")
+    };
+    var languageTag = Optional(options, "language");
+    var profilePath = Optional(options, "profile");
+
+    var jsonOptions = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
+    var profile = profilePath is null
+        ? new HeaderAnalysisProfile()
+        : JsonSerializer.Deserialize<HeaderAnalysisProfile>(
+              await File.ReadAllTextAsync(profilePath, cancellationToken),
+              jsonOptions) ?? new HeaderAnalysisProfile();
+
+    var speciesReferencePath = Path.Combine("data", "reference", "species-reference.json");
+    var warnings = new List<string>();
+    ISpeciesReference speciesReference;
+    bool speciesReferenceLoaded;
+    if (File.Exists(speciesReferencePath))
+    {
+        var referenceData = SpeciesReferenceLoader.LoadFromFile(speciesReferencePath);
+        speciesReference = new StaticSpeciesReference(referenceData.Species.Select(entry => entry.Name));
+        speciesReferenceLoaded = true;
+    }
+    else
+    {
+        speciesReference = new StaticSpeciesReference(Array.Empty<string>());
+        speciesReferenceLoaded = false;
+        warnings.Add("SPECIES_REFERENCE_MISSING");
+    }
+
+    if (!WindowsMediaTextRecognizer.IsSupported(languageTag))
+    {
+        Console.Error.WriteLine(
+            "[ocr-header-spike] No OCR engine is available for the requested or user profile languages.");
+        return 1;
+    }
+
+    ITextRecognizer recognizer = new WindowsMediaTextRecognizer(languageTag);
+    var analyzer = new PokemonHeaderAnalyzer(recognizer, speciesReference, profile);
+
+    Directory.CreateDirectory(outputDirectory);
+
+    var files = Directory.Exists(inputDirectory)
+        ? Directory.GetFiles(inputDirectory, "*.png", SearchOption.TopDirectoryOnly)
+            .OrderBy(path => path, StringComparer.Ordinal)
+            .ToArray()
+        : throw new DirectoryNotFoundException($"Input directory not found: {inputDirectory}");
+
+    var fileResults = new List<OcrSpikeFileResult>();
+    foreach (var file in files)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        var fileName = Path.GetFileName(file);
+        try
+        {
+            var bytes = await File.ReadAllBytesAsync(file, cancellationToken);
+            var result = await analyzer.AnalyzeAsync(bytes, screen, cancellationToken);
+            fileResults.Add(new OcrSpikeFileResult
+            {
+                FileName = fileName,
+                Species = result.Species,
+                SpeciesCandidate = speciesReferenceLoaded ? null : result.Nickname,
+                Cp = result.Cp,
+                Nickname = result.Nickname,
+                SpeciesConfidence = result.SpeciesConfidence,
+                CpConfidence = result.CpConfidence,
+                FailureReasons = result.FailureReasons,
+                RawLines = result.RawLines.Select(line => new OcrSpikeRawLine
+                {
+                    Text = line.Text,
+                    Confidence = line.Confidence,
+                    Bounds = line.NormalizedBounds
+                }).ToArray()
+            });
+        }
+        catch (Exception exception) when (exception is not OperationCanceledException)
+        {
+            fileResults.Add(new OcrSpikeFileResult
+            {
+                FileName = fileName,
+                FailureReasons = new[] { $"ANALYZE_ERROR: {exception.Message}" }
+            });
+        }
+    }
+
+    var speciesReadCount = fileResults.Count(result => result.Species is not null);
+    var cpReadCount = fileResults.Count(result => result.Cp is not null);
+    var distinctSpecies = fileResults
+        .Where(result => result.Species is not null)
+        .Select(result => result.Species!)
+        .Distinct(StringComparer.Ordinal)
+        .OrderBy(name => name, StringComparer.Ordinal)
+        .ToArray();
+
+    var report = new OcrSpikeReport
+    {
+        Screen = screen.ToString(),
+        InputDirectory = Path.GetFullPath(inputDirectory),
+        FileCount = fileResults.Count,
+        SpeciesReadCount = speciesReadCount,
+        CpReadCount = cpReadCount,
+        DistinctSpeciesCount = distinctSpecies.Length,
+        DistinctSpecies = distinctSpecies,
+        Warnings = warnings,
+        Files = fileResults
+    };
+
+    var jsonPath = Path.Combine(outputDirectory, "ocr-spike-report.json");
+    await File.WriteAllTextAsync(
+        jsonPath,
+        JsonSerializer.Serialize(
+            report,
+            new JsonSerializerOptions
+            {
+                WriteIndented = true,
+                DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull
+            }),
+        cancellationToken);
+
+    var markdownPath = Path.Combine(outputDirectory, "ocr-spike-report.md");
+    await File.WriteAllTextAsync(markdownPath, BuildOcrSpikeMarkdown(report), cancellationToken);
+
+    var speciesRate = fileResults.Count == 0 ? 0d : (double)speciesReadCount / fileResults.Count;
+    var cpRate = fileResults.Count == 0 ? 0d : (double)cpReadCount / fileResults.Count;
+    Console.WriteLine($"OCR header spike: {fileResults.Count} file(s) processed.");
+    Console.WriteLine($"Species read: {speciesReadCount}/{fileResults.Count} ({speciesRate:P1}).");
+    Console.WriteLine($"CP read: {cpReadCount}/{fileResults.Count} ({cpRate:P1}).");
+    Console.WriteLine($"Distinct species: {distinctSpecies.Length}.");
+    foreach (var warning in warnings)
+    {
+        Console.WriteLine($"Warning: {warning}");
+    }
+
+    return 0;
+}
+
+static string BuildOcrSpikeMarkdown(OcrSpikeReport report)
+{
+    var speciesRate = report.FileCount == 0 ? 0d : (double)report.SpeciesReadCount / report.FileCount;
+    var cpRate = report.FileCount == 0 ? 0d : (double)report.CpReadCount / report.FileCount;
+
+    var builder = new System.Text.StringBuilder();
+    builder.AppendLine("# OCR Header Spike Report");
+    builder.AppendLine();
+    builder.AppendLine($"- Screen: {report.Screen}");
+    builder.AppendLine($"- Input directory: {report.InputDirectory}");
+    builder.AppendLine($"- Files processed: {report.FileCount}");
+    builder.AppendLine($"- Species read rate: {report.SpeciesReadCount}/{report.FileCount} ({speciesRate:P1})");
+    builder.AppendLine($"- CP read rate: {report.CpReadCount}/{report.FileCount} ({cpRate:P1})");
+    builder.AppendLine($"- Distinct species found: {report.DistinctSpeciesCount}");
+
+    if (report.Warnings.Count > 0)
+    {
+        builder.AppendLine();
+        builder.AppendLine("## Warnings");
+        foreach (var warning in report.Warnings)
+        {
+            builder.AppendLine($"- {warning}");
+        }
+    }
+
+    builder.AppendLine();
+    builder.AppendLine("## Distinct species");
+    foreach (var species in report.DistinctSpecies)
+    {
+        builder.AppendLine($"- {species}");
+    }
+
+    builder.AppendLine();
+    builder.AppendLine("## Per-file results");
+    builder.AppendLine();
+    builder.AppendLine("| File | Species | CP | Nickname | Failure reasons |");
+    builder.AppendLine("|---|---|---|---|---|");
+    foreach (var file in report.Files)
+    {
+        builder.AppendLine(
+            $"| {file.FileName} | {file.Species ?? file.SpeciesCandidate ?? "-"} | " +
+            $"{(file.Cp?.ToString(CultureInfo.InvariantCulture) ?? "-")} | {file.Nickname ?? "-"} | " +
+            $"{string.Join("; ", file.FailureReasons)} |");
+    }
+
+    return builder.ToString();
+}
+
+sealed record OcrSpikeReport
+{
+    public required string Screen { get; init; }
+    public required string InputDirectory { get; init; }
+    public required int FileCount { get; init; }
+    public required int SpeciesReadCount { get; init; }
+    public required int CpReadCount { get; init; }
+    public required int DistinctSpeciesCount { get; init; }
+    public IReadOnlyList<string> DistinctSpecies { get; init; } = Array.Empty<string>();
+    public IReadOnlyList<string> Warnings { get; init; } = Array.Empty<string>();
+    public IReadOnlyList<OcrSpikeFileResult> Files { get; init; } = Array.Empty<OcrSpikeFileResult>();
+}
+
+sealed record OcrSpikeFileResult
+{
+    public required string FileName { get; init; }
+    public string? Species { get; init; }
+
+    /// <summary>
+    /// Raw header text reported when species validation was skipped because
+    /// the species reference file is missing (SPECIES_REFERENCE_MISSING).
+    /// </summary>
+    public string? SpeciesCandidate { get; init; }
+    public int? Cp { get; init; }
+    public string? Nickname { get; init; }
+    public double SpeciesConfidence { get; init; }
+    public double CpConfidence { get; init; }
+    public IReadOnlyList<string> FailureReasons { get; init; } = Array.Empty<string>();
+    public IReadOnlyList<OcrSpikeRawLine> RawLines { get; init; } = Array.Empty<OcrSpikeRawLine>();
+}
+
+sealed record OcrSpikeRawLine
+{
+    public string? Text { get; init; }
+    public double? Confidence { get; init; }
+    public NormalizedRegion? Bounds { get; init; }
 }

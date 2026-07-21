@@ -55,6 +55,27 @@ public sealed record CleanupProofDatabaseRow
     public required string CurrentRecommendation { get; init; }
     public required string RecommendationReason { get; init; }
     public string? ComparatorLocalPokemonId { get; init; }
+    public string? SemanticKey { get; init; }
+    public string? SemanticKeyCompleteness { get; init; }
+}
+
+/// <summary>
+/// A lightweight, run-independent view of a persisted PokemonRecord row, used
+/// for offline cross-run semantic identity re-identification. Deliberately
+/// omits observation evidence blobs.
+/// </summary>
+public sealed record PokemonRecordSemanticRow
+{
+    public required string LocalPokemonId { get; init; }
+    public string? SpeciesName { get; init; }
+    public int? Cp { get; init; }
+    public int? AttackIv { get; init; }
+    public int? DefenseIv { get; init; }
+    public int? HpIv { get; init; }
+    public string? SemanticKey { get; init; }
+    public string? SemanticKeyCompleteness { get; init; }
+    public required string FirstSeenRunId { get; init; }
+    public required string LastSeenRunId { get; init; }
 }
 
 public sealed record CleanupProofSqlSummary

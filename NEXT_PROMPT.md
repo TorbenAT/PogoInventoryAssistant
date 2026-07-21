@@ -1,5 +1,29 @@
 # Continuation prompt
 
+## Semantic foundation checkpoint (2026-07-21)
+
+Offline semantic infrastructure is merged: header OCR abstraction plus
+Windows OCR spike command (`ocr-header-spike`), species reference data,
+file-based policy loading, semantic identity keys with schema v3 and the
+`analyze-reidentification` command. Self-tests 193/193.
+
+Next actions, in order (see `docs/MINIMAL_EFFORT_PLAN.md`):
+
+1. On the machine with `local-data`: run
+   `ocr-header-spike --input <appraisal-carousel-20 frames> --screen appraisal --out <dir>`
+   and inspect species/CP hit rates. Target >=19/20. Tune
+   `HeaderAnalysisProfile` ROIs if below target.
+2. Wire `PokemonHeaderAnalyzer` into `CleanupProofRunner` (replace the
+   query-as-species assignment at BuildObservation; populate Cp; set
+   FieldEvidence Automated on consensus) and add the offline
+   `analyze-cleanup-evidence` reprocess command for the accepted 20-item
+   evidence.
+3. Unlock IV Complete through multi-frame consensus without the Calcy
+   verification gate; park the Calcy pipeline.
+4. Run the double-scan re-identification acceptance (>=99 % re-match, zero
+   false merges) with `analyze-reidentification`.
+5. Then resume/chunking for the cleanup flow and the manifest-to-tag pipeline.
+
 ## Persistent Appraisal carousel checkpoint
 
 The cleanup-proof implementation now keeps Appraisal open while advancing

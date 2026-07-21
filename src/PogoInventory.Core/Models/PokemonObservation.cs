@@ -43,8 +43,43 @@ public sealed record PokemonObservation
 
     public bool IsPerfect => TotalIv == 45;
 
-    public string GroupKey => VariantIdentity?.VariantKey ??
-        $"unknown-variant|{Normalize(ExternalKey)}";
+    /// <summary>
+    /// The key used to bucket observations into duplicate-analysis groups.
+    ///
+    /// Prefers the fully resolved <see cref="PokemonVariantIdentity.VariantKey"/>.
+    /// When that is unavailable (VariantIdentity missing, or present but not
+    /// Exact), a known species still groups with other observations of the same
+    /// species and known semantic variant fields (form, costume, shiny,
+    /// shadow/purified, background) so that duplicate analysis can see them as
+    /// a group. Only when species itself is unknown does this fall back to a
+    /// per-instance key, since there is then no reliable basis for grouping.
+    /// </summary>
+    public string GroupKey
+    {
+        get
+        {
+            if (VariantIdentity?.VariantKey is { } variantKey)
+            {
+                return variantKey;
+            }
+
+            if (string.IsNullOrWhiteSpace(Species) ||
+                Species.Trim().Equals("unknown", StringComparison.OrdinalIgnoreCase))
+            {
+                return $"unknown-variant|{Normalize(ExternalKey)}";
+            }
+
+            return string.Join(
+                '|',
+                "semantic-variant",
+                Normalize(Species),
+                Normalize(Form),
+                Normalize(Costume),
+                BoolToken(IsShiny, "shiny", "not-shiny"),
+                ShadowPurifiedToken(),
+                BoolToken(IsBackground, "background", "not-background"));
+        }
+    }
 
     public bool HasKnownCriticalValues =>
         !string.IsNullOrWhiteSpace(Species) &&
@@ -72,4 +107,15 @@ public sealed record PokemonObservation
 
     private static string Normalize(string? value) =>
         string.IsNullOrWhiteSpace(value) ? "unknown" : value.Trim().ToLowerInvariant();
+
+    private static string BoolToken(bool? value, string trueToken, string falseToken) =>
+        value is null ? "unknown" : value.Value ? trueToken : falseToken;
+
+    private string ShadowPurifiedToken()
+    {
+        if (IsShadow is true) return "shadow";
+        if (IsPurified is true) return "purified";
+        if (IsShadow is false && IsPurified is false) return "normal";
+        return "unknown";
+    }
 }

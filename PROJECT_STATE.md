@@ -1,5 +1,26 @@
 # Project state
 
+## Semantic foundation checkpoint (2026-07-21)
+
+The semantic core now exists offline: `PokemonHeaderAnalyzer` extracts
+species/CP/nickname from header ROIs through an `ITextRecognizer` abstraction
+with a Windows.Media.Ocr production implementation (`ocr-header-spike` CLI),
+`SearchQueryClassifier` prevents broad queries such as `age0-1825` from ever
+becoming a species, `data/reference/species-reference.json` provides 1025
+validated species with rarity classification, `RulePolicyLoader` makes the
+policy file-configurable, and `SemanticIdentityKey`/`SemanticIdentityMatcher`
+(schema v3) provide cross-run identity with an `analyze-reidentification`
+measurement command. GroupKey no longer degenerates to singletons for known
+species. Offline self-tests pass 193/193.
+
+Not yet done: wiring the header analyzer into `CleanupProofRunner` (species is
+still the raw query there and CP still Unknown), IV Complete without the Calcy
+gate, offline reprocess of the accepted 20-item evidence, resume/chunking for
+the cleanup flow, and the recommendation-to-tag pipeline. The OCR spike and
+the double-scan re-identification acceptance (>=99 % re-match) must run on the
+machine that holds `local-data` evidence and the phone. See
+`docs/MINIMAL_EFFORT_PLAN.md` for the ordered plan.
+
 ## Persistent Appraisal carousel checkpoint
 
 The cleanup-proof runner now opens Appraisal once, captures and persists each

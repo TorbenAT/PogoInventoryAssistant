@@ -1,7 +1,8 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <OutputType>Exe</OutputType>
-    <TargetFramework>net8.0</TargetFramework>
+    <TargetFramework>net8.0-windows10.0.19041.0</TargetFramework>
+    <SupportedOSPlatformVersion>10.0.17763.0</SupportedOSPlatformVersion>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
@@ -22,5 +23,7 @@
     <ProjectReference Include="..\PogoInventory.Appraisal\PogoInventory.Appraisal.csproj" />
     <ProjectReference Include="..\PogoInventory.Application\PogoInventory.Application.csproj" />
     <ProjectReference Include="..\PogoInventory.Exploration\PogoInventory.Exploration.csproj" />
+    <ProjectReference Include="..\PogoInventory.HeaderText\PogoInventory.HeaderText.csproj" />
+    <ProjectReference Include="..\PogoInventory.HeaderOcr\PogoInventory.HeaderOcr.csproj" />
   </ItemGroup>
 </Project>

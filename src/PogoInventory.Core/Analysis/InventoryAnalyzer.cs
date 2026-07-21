@@ -1,10 +1,27 @@
 using PogoInventory.Core.Models;
 using PogoInventory.Core.Policy;
+using PogoInventory.Core.Reference;
 
 namespace PogoInventory.Core.Analysis;
 
 public sealed class InventoryAnalyzer
 {
+    private readonly SpeciesReferenceData? _speciesReference;
+
+    /// <summary>
+    /// Creates an analyzer. When <paramref name="speciesReference"/> is provided, and a
+    /// given observation's species name is recognised in the reference data, the
+    /// reference data's Legendary/Mythical/UltraBeast classification overrides the
+    /// observation's own IsLegendary/IsMythical/IsUltraBeast fields for that Pokémon.
+    /// When the species is not recognised (or no reference data is supplied), the
+    /// observation's own fields are used unchanged, exactly as before -- an unknown
+    /// species is never treated as "not protected".
+    /// </summary>
+    public InventoryAnalyzer(SpeciesReferenceData? speciesReference = null)
+    {
+        _speciesReference = speciesReference;
+    }
+
     public InventoryAnalysisResult Analyze(
         IReadOnlyCollection<PokemonObservation> observations,
         RulePolicy policy)
@@ -15,9 +32,13 @@ public sealed class InventoryAnalyzer
         ValidatePolicy(policy);
         ValidateObservations(observations);
 
-        var decisions = new List<PokemonDecision>(observations.Count);
+        var effectiveObservations = observations
+            .Select(ApplySpeciesReferenceOverride)
+            .ToList();
 
-        foreach (var group in observations
+        var decisions = new List<PokemonDecision>(effectiveObservations.Count);
+
+        foreach (var group in effectiveObservations
                      .OrderBy(x => x.SequenceNumber)
                      .GroupBy(x => x.GroupKey, StringComparer.Ordinal))
         {
@@ -27,6 +48,27 @@ public sealed class InventoryAnalyzer
         return new InventoryAnalysisResult
         {
             Decisions = decisions.OrderBy(x => x.SequenceNumber).ToList()
+        };
+    }
+
+    private PokemonObservation ApplySpeciesReferenceOverride(PokemonObservation pokemon)
+    {
+        if (_speciesReference is null || !_speciesReference.IsKnownSpecies(pokemon.Species))
+        {
+            return pokemon;
+        }
+
+        var classification = _speciesReference.Classification(pokemon.Species);
+        if (classification is null)
+        {
+            return pokemon;
+        }
+
+        return pokemon with
+        {
+            IsLegendary = classification == SpeciesClassification.Legendary,
+            IsMythical = classification == SpeciesClassification.Mythical,
+            IsUltraBeast = classification == SpeciesClassification.UltraBeast
         };
     }
 

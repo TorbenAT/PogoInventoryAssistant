@@ -24,5 +24,6 @@
     <ProjectReference Include="..\..\src\PogoInventory.Application\PogoInventory.Application.csproj" />
     <ProjectReference Include="..\..\src\PogoInventory.Exploration\PogoInventory.Exploration.csproj" />
     <ProjectReference Include="..\..\src\PogoInventory.Persistence\PogoInventory.Persistence.csproj" />
+    <ProjectReference Include="..\..\src\PogoInventory.HeaderText\PogoInventory.HeaderText.csproj" />
   </ItemGroup>
 </Project>
