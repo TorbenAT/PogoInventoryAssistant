@@ -157,6 +157,9 @@ static async Task<int> MainAsync(string[] args)
             "device-run-cleanup-proof" => await RunCleanupProofAsync(
                 args.Skip(1).ToArray(),
                 cancellationSource.Token),
+            "device-unwind-to-map" => await RunCanonicalUnwindAsync(
+                args.Skip(1).ToArray(),
+                cancellationSource.Token),
             "device-validate-navigation-safety" => await ValidateNavigationSafetyAsync(
                 args.Skip(1).ToArray(),
                 cancellationSource.Token),
@@ -1849,6 +1852,77 @@ static async Task<int> RunCleanupProofAsync(
         result.Status is "Completed" or "CompletedPartial" ? 0 : 1;
 }
 
+static async Task<int> RunCanonicalUnwindAsync(
+    string[] args,
+    CancellationToken cancellationToken)
+{
+    var options = ParseOptions(args);
+    var output = Path.GetFullPath(Require(options, "out"));
+    var requestedState = Optional(options, "create-state") ?? "current";
+    if (requestedState is not ("current" or "inventory" or "details" or "appraisal"))
+        throw new ArgumentException("--create-state must be current, inventory, details or appraisal.");
+    Directory.CreateDirectory(output);
+    var profilePath = Optional(options, "automation-profile") ??
+        Optional(options, "profile") ?? Path.Combine("local-data", "automation-profile.local.json");
+    var automationProfile = await AutomationProfileLoader.LoadAsync(profilePath, cancellationToken);
+    var appraisalPath = Optional(options, "appraisal-profile") ??
+        Path.Combine("local-data", "phone-preparation", "appraisal-profile.device.generated.json");
+    AppraisalVisualProfile? appraisalProfile = File.Exists(appraisalPath)
+        ? await AppraisalProfileLoader.LoadAsync(appraisalPath, cancellationToken)
+        : null;
+    var transport = CreateRealAndroidTransport(options);
+    var selected = DeviceSnapshotService.SelectDevice(
+        await transport.ListDevicesAsync(cancellationToken), Optional(options, "serial"));
+    var operations = new AndroidVerifiedInventoryNamedOperations(
+        transport,
+        selected.Serial,
+        automationProfile,
+        Path.Combine(output, "evidence"),
+        appraisalProfile);
+    var unwind = new CanonicalCloseUnwindService();
+
+    if (requestedState != "current")
+    {
+        var preparation = await unwind.UnwindToGameplayMapAsync(operations, cancellationToken);
+        await File.WriteAllTextAsync(
+            Path.Combine(output, "preparation-unwind.json"),
+            JsonSerializer.Serialize(preparation, new JsonSerializerOptions { WriteIndented = true }),
+            cancellationToken);
+        if (!preparation.Succeeded)
+        {
+            Console.Error.WriteLine($"PREPARATION_UNWIND_BLOCKED: {preparation.Blocker ?? preparation.Result}");
+            return 1;
+        }
+
+        var prepared = await operations.OpenInventoryAsync(cancellationToken);
+        if (prepared != VerifiedSequenceState.Inventory)
+            return 1;
+        if (requestedState is "details" or "appraisal")
+        {
+            prepared = await operations.OpenFirstPokemonAsync(cancellationToken);
+            if (prepared != VerifiedSequenceState.PokemonDetails)
+                return 1;
+        }
+        if (requestedState == "appraisal")
+        {
+            if (await operations.CaptureAppraisalAsync(cancellationToken) != "AppraisalBarsObserved")
+                return 1;
+        }
+    }
+
+    var result = await unwind.UnwindToGameplayMapAsync(operations, cancellationToken);
+    await File.WriteAllTextAsync(
+        Path.Combine(output, "start-state-recovery.json"),
+        JsonSerializer.Serialize(result, new JsonSerializerOptions { WriteIndented = true }),
+        cancellationToken);
+    await File.WriteAllTextAsync(
+        Path.Combine(output, "start-state-recovery.md"),
+        $"# Canonical close unwind\n\n- Create state: `{requestedState}`\n- Initial state: `{result.InitialState}`\n- Path: `{string.Join(" -> ", result.Path)}`\n- Canonical close inputs: `{result.InputCount}`\n- Final state: `{result.FinalState}`\n- Result: `{result.Result}`\n- Blocker: `{result.Blocker ?? "NONE"}`\n",
+        cancellationToken);
+    Console.WriteLine(JsonSerializer.Serialize(result, new JsonSerializerOptions { WriteIndented = true }));
+    return result.Succeeded ? 0 : 1;
+}
+
 static async Task<int> ValidateNavigationSafetyAsync(
     string[] args,
     CancellationToken cancellationToken)
@@ -3410,6 +3484,7 @@ static void PrintHelp()
     Console.WriteLine("  device-search-inventory --query <query> --out <directory> [--clear-after <true|false>]");
     Console.WriteLine("  device-run-index-sequence --query <query> --item-limit <n> --out <directory>");
     Console.WriteLine("  device-run-cleanup-proof --species <query> --item-limit <6-20> --database <sqlite> --out <directory> --continue-on-partial");
+    Console.WriteLine("  device-unwind-to-map --out <directory> [--create-state current|inventory|details|appraisal]");
     Console.WriteLine("                            [--adb <adb.exe>] [--serial <serial>] [--profile <automation.json>]");
     Console.WriteLine("                            [--appraisal-profile <appraisal.json>] [--resume] [--controlled-stop-after <n>]");
     Console.WriteLine("                            [--apply-index-tag --index-tag AI-Indexed]");
