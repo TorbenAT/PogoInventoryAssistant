@@ -367,3 +367,18 @@ The first three steps were completed on 2026-07-19 against the connected
 OnePlus A6013. Until the 20-case verification gate is passed, improve only
 diagnostics and verification scaffolding. Do not add location changes,
 transfer automation, anti-detection logic or arbitrary shell execution.
+
+## Android sequence real-phone acceptance checkpoint
+
+The repaired runtime was accepted on 2026-07-21 with the authorized OnePlus
+A6013 at `192.168.1.185:5555`. The clean three-item `age0-7` run completed
+ordinals 1, 2 and 3 with two observed transitions and three independent
+post-swipe Details frames per transition. The controlled-stop run stopped after
+2, replayed ordinal 2 for overlap comparison without recording it again, then
+made one new progression to ordinal 3 and completed in Inventory.
+
+The ten-item `age0-365` run remains partial and fail-closed: three items were
+recorded, then item 4 produced one verified `NO_EFFECT` swipe and entered
+`TerminalUnknown`; no second swipe was sent. A guarded recovery closed
+Inventory and verified `GameplayMap`. No tag mutation or destructive action
+occurred. Evidence is under `local-data/validation/android-sequence-host`.

@@ -432,3 +432,13 @@
 - Added offline `game-state-detect-image` regression command.
 - No phone input was sent; live acceptance remained open because the phone was
   in PokemonMenu during the read-only capture window.
+
+## Android sequence real-phone acceptance - 2026-07-21
+
+- Task 7 passed with three real records and two guarded observed transitions.
+- Task 8 passed controlled stop/resume with overlap comparison and no duplicate
+  recording of the overlap item.
+- Task 9 stopped fail-closed at a real no-effect swipe after three records;
+  no blind retry was sent. The final phone state was recovered to GameplayMap.
+- Evidence and failure notes are retained under the ignored Android sequence
+  validation root; no local phone data was committed.

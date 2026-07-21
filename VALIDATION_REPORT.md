@@ -348,3 +348,22 @@ Limitations observed during validation:
   AppraisalIntro at confidence 0.594 and stopped below the former 0.60 gate.
   One focused repair lowers the bounded gate to 0.58; the captured failure
   screen and state JSON are under `failures/ten-item-item4`.
+
+## Android sequence host real-phone acceptance on 2026-07-21
+
+- ADB preflight passed for `192.168.1.185:5555` using the bundled platform
+  tools; one bounded reconnect was sufficient.
+- Task 7 passed on a clean `age0-7`, limit-3, no-tag run: three records,
+  two observed transitions, three independent post frames per transition,
+  zero appraisal Back actions and zero tag mutations.
+- Task 8 passed with controlled stop after 2 and resume: ordinal 2 was used
+  only for overlap comparison, not recorded again, and one new progression
+  reached ordinal 3.
+- Task 9 is partial/fail-closed. After three records and two observed
+  transitions, one swipe at the fourth position had `NO_EFFECT`; the runtime
+  entered `TerminalUnknown` and sent no second swipe.
+- A guarded close-inventory recovery left the phone at verified
+  `GameplayMap`. No destructive operation or tag mutation occurred.
+- Final build and self-tests: PASS, 157/157. The evidence root is
+  `local-data/validation/android-sequence-host`; the ZIP is generated locally
+  and is intentionally not committed.

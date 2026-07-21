@@ -110,3 +110,15 @@ Next milestone on the fixed Android phone:
    appraisal provider.
 5. Add no new phone input action unless it is one of the existing four named
    actions and remains state validated.
+
+## Current Android sequence checkpoint
+
+Commits `8151add`, `383e60f` and `67e6bb2` are pushed on `main`. Build and
+self-tests are green at 157/157. Real-phone Task 7 (three items) and Task 8
+(controlled stop/resume) passed with no tag or destructive actions. Task 9
+stopped fail-closed after three items when one guarded progression swipe had
+no observed effect; do not issue a blind retry. The next concrete milestone is
+to improve bounded diagnosis of the age0-365 end-of-filter transition, then
+rerun only Task 9 after the transition evidence is explicit. Final phone state
+was verified as GameplayMap. This remains sequence-host acceptance evidence,
+not unrestricted appraisal-provider approval.
