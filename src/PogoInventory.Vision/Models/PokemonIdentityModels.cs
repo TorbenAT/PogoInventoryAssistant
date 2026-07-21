@@ -11,11 +11,11 @@ public sealed record PokemonIdentityFingerprintProfile
 {
     public NormalizedRegion HeaderRegion { get; init; } = new()
     {
-        X = 0.10, Y = 0.06, Width = 0.80, Height = 0.20
+        X = 0.24, Y = 0.42, Width = 0.52, Height = 0.045
     };
     public NormalizedRegion TagSearchRegion { get; init; } = new()
     {
-        X = 0.08, Y = 0.24, Width = 0.84, Height = 0.42
+        X = 0.08, Y = 0.44, Width = 0.84, Height = 0.21
     };
     public NormalizedRegion LowerAnchorSearchRegion { get; init; } = new()
     {
@@ -23,7 +23,7 @@ public sealed record PokemonIdentityFingerprintProfile
     };
     public NormalizedRegion LowerContentRegion { get; init; } = new()
     {
-        X = 0.10, Y = 0.02, Width = 0.80, Height = 0.28
+        X = 0.10, Y = 0.02, Width = 0.80, Height = 0.16
     };
     public int FingerprintWidth { get; init; } = 16;
     public int FingerprintHeight { get; init; } = 12;

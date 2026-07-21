@@ -448,3 +448,20 @@ The connected OnePlus A6013 has now exercised the real validation path:
 This confirms that the architecture's current read-only boundaries still hold
 on a real phone while the verified provider gate remains closed.
 
+## 2026-07-21 dynamic identity tuning
+
+`PokemonDetailsIdentityAnalyzer` keeps full screenshot SHA-256 as evidence and
+uses a separate stable fingerprint. The Android profile searches the observed
+Details tag band for bounded pill-shaped components, then detects a long
+near-gray divider below the mutable section. The stable lower ROI is sampled
+relative to that divider and is deliberately short enough to exclude fixed
+bottom navigation controls. The synthetic fixture covers zero, one and two
+tags with shifted lower content and passes with 155/155 package-free tests.
+
+The real captured zero/one/two-tag states produce tag counts 0/1/2. Their
+zero-tag versus tagged similarity is 0.9815 against the configured 0.965
+threshold, while one- and two-tag states share the same fingerprint. This is
+evidence for the guarded identity path, not a production provider gate or a
+real-phone Task 4 approval. A local five-frame Inventory capture is rejected
+as Unavailable rather than interpreted as Details.
+

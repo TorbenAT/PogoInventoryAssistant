@@ -63,17 +63,24 @@ remains the authoritative compiler and test runner.
 - real-phone sequence acceptance: NOT RUN; no named-operation host was bound
 - production raw ADB actions: 0
 
-## Task 4 dynamic identity checkpoint on 2026-07-20
+## Task 4 dynamic identity tuning checkpoint on 2026-07-21
 
 - implementation build: PASS for Vision, Automation, CLI and SelfTest
-- package-free self-tests: PASS, 154/154
-- CLI evidence reports: PASS, four five-frame real Details groups completed
+- package-free self-tests: PASS, 155/155
+- CLI evidence reports: PASS for three five-frame real Details groups; the
+  fourth local group was correctly rejected as Inventory/Unavailable
 - screenshot evidence hashes are retained separately from stable fingerprints
 - reversible named AI-Indexed and AI-Review add/remove: completed; wrong
   selections 0; final phone state unfiltered Inventory with no test tags
 - real Task 4 tag-layout acceptance: PARTIAL and explicitly not claimed green;
-  the new generic tag heuristic produced inconsistent counts on some older
-  Task 3 screenshots
+  the captured Task 3 zero/one/two-tag states now count 0/1/2, and the
+  zero-tag versus tagged stable fingerprint similarity is 0.9815 against the
+  0.965 threshold, but this is not the 20-Pokémon provider gate
+- one local five-frame evidence group was an Inventory screen and produced
+  `Unavailable` without guessing identity
+- required fake, synthetic, iPhone-pretest, appraisal-pretest and parser
+  scripts: PASS; `prepare-android-phone.ps1` was invoked read-only but the
+  environment reported `[AdbNotFound]` because no `adb.exe` is available
 - production raw ADB actions: 0
 
 ## Version

@@ -27,7 +27,7 @@ internal static class PokemonIdentityTests
         var results = new[] { 0, 1, 2 }.Select(tags =>
             analyzer.Analyze(PngEncoder.Encode(Frame("Eevee", 0, tags, false)))).ToArray();
         var decoded = PngDecoder.Decode(PngEncoder.Encode(Frame("Eevee", 0, 1, false)));
-        Assert(decoded.GetPixel(50, 105).G > decoded.GetPixel(50, 105).R, "tag pixels survive PNG");
+        Assert(decoded.GetPixel(50, 165).G == decoded.GetPixel(50, 165).R, "tag pixels survive PNG");
         Assert(results.All(item => item.Status == PokemonIdentityObservationStatus.Complete), "tag frames complete");
         Assert(results.Select(item => item.Tags.TagCount).SequenceEqual(new[] { 0, 1, 2 }),
             $"tag count: {string.Join(',', results.Select(item => item.Tags.TagCount))}");
@@ -77,26 +77,27 @@ internal static class PokemonIdentityTests
     private static PixelImage Frame(string species, int cpVariant, int tagCount, bool special)
     {
         const int width = 160;
-        const int height = 300;
+        const int height = 340;
         var rgba = Enumerable.Repeat((byte)245, width * height * 4).ToArray();
-        Fill(rgba, width, 0, 20, 160, 50, species == "Eevee" ? (30, 70, 190) : (190, 50, 40));
-        Fill(rgba, width, 18, 70, 142, 78, cpVariant == 0 ? (20, 20, 20) : (80, 20, 20));
+        Fill(rgba, width, 0, 128, 160, 145, species == "Eevee" ? (30, 70, 190) : (190, 50, 40));
+        Fill(rgba, width, 18, 150, 142, 158, cpVariant == 0 ? (20, 20, 20) : (80, 20, 20));
         for (var tag = 0; tag < tagCount; tag++)
         {
-            var top = 102 + tag * 16;
-            Fill(rgba, width, 28, top, 132, top + 10, tag == 0 ? (40, 160, 100) : (150, 100, 40));
+            var top = 162 + tag * 16;
+            Fill(rgba, width, 40, top, 120, top + 10, tag == 0 ? (180, 180, 180) : (200, 200, 200));
         }
         var shift = tagCount * 16;
-        Fill(rgba, width, 18, 148 + shift, 142, 153 + shift, special ? (15, 15, 15) : (40, 40, 40));
-        Fill(rgba, width, 25, 174 + shift, 135, 184 + shift, (70, 70, 70));
-        Fill(rgba, width, 32, 204 + shift, 128, 214 + shift, (90, 90, 90));
+        Fill(rgba, width, 10, 190 + shift, 150, 191 + shift, (205, 205, 205));
+        Fill(rgba, width, 18, 210 + shift, 142, 215 + shift, special ? (15, 15, 15) : (40, 40, 40));
+        Fill(rgba, width, 25, 230 + shift, 135, 240 + shift, (70, 70, 70));
+        Fill(rgba, width, 32, 260 + shift, 128, 270 + shift, (90, 90, 90));
         return new PixelImage(width, height, rgba);
     }
 
     private static void Fill(byte[] rgba, int width, int left, int top, int right, int bottom,
         (int R, int G, int B) color)
     {
-        for (var y = Math.Max(0, top); y < Math.Min(300, bottom); y++)
+        for (var y = Math.Max(0, top); y < Math.Min(340, bottom); y++)
         for (var x = left; x < right; x++)
         {
             var offset = (y * width + x) * 4;

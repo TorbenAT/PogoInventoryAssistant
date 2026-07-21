@@ -22,11 +22,14 @@ bounds, mutable tag observation, lower-content anchor evidence and three-frame
 consensus. `PokemonIdentityInstance` assigns `ScanRunId:ordinal` independently
 of both hashes, so identical fingerprints remain separate instances.
 
-Offline self-tests are 154/154. Four real five-frame Details groups were
-captured locally. Real-phone acceptance of the new tag detector is PARTIAL:
-the existing named tag workflow completed the reversible Ekans cycle, but the
-new heuristic is not yet stable on every Task 3 capture. No real-phone Task 4
-approval claim is made.
+Offline self-tests are 155/155. Three real five-frame Details groups complete
+with the tuned profile; a fourth captured group is Inventory rather than
+Details and is correctly Unavailable. The zero/one/two-tag Task 3 captures are
+counted as 0/1/2, and the zero-tag versus tagged stable fingerprint similarity
+is 0.9815 against the 0.965 threshold. Real-phone acceptance remains PARTIAL
+because the complete three-state acceptance set is not a 20-Pokémon provider
+gate and one local group is not a Details screen. No real-phone Task 4 approval
+claim is made.
 
 ## Verified tag selection by name accepted on 2026-07-20
 

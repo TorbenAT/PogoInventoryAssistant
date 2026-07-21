@@ -167,8 +167,13 @@ public sealed class PokemonDetailsIdentityAnalyzer
                     }
                 }
             }
+            var componentWidth = (right - left) / (double)image.Width;
+            var componentHeight = (bottom - top) / (double)image.Height;
+            var aspect = (right - left) / (double)Math.Max(1, bottom - top);
             if (count >= Math.Max(20, image.Width * image.Height / 3000) &&
-                right - left >= image.Width * 0.10 && bottom - top >= image.Height * 0.012)
+                componentWidth is >= 0.12 and <= 0.50 &&
+                componentHeight is >= 0.012 and <= 0.08 &&
+                aspect is >= 2.0 and <= 9.0)
                 components.Add((left, top, right, bottom));
         }
         var accepted = components.OrderBy(item => item.Top).Take(8).ToArray();
@@ -200,20 +205,35 @@ public sealed class PokemonDetailsIdentityAnalyzer
             start = Math.Max(start, tagPixels.Y + tagPixels.Height + Math.Max(2, image.Height / 100));
         }
         var bestScore = 0d;
+        var bestDividerScore = 0d;
         var bestY = -1;
         for (var y = start + 2; y < search.Y + search.Height - 2; y++)
         {
             var score = 0d;
+            var dividerScore = 0d;
             for (var x = search.X + 2; x < search.X + search.Width - 2; x += 2)
             {
                 var above = Luma(image.GetPixel(x, y - 1));
                 var current = Luma(image.GetPixel(x, y));
                 var below = Luma(image.GetPixel(x, y + 1));
-                score += Math.Abs(current - above) + Math.Abs(below - current);
+                var pixel = image.GetPixel(x, y);
+                var maximum = Math.Max(pixel.R, Math.Max(pixel.G, pixel.B));
+                var minimum = Math.Min(pixel.R, Math.Min(pixel.G, pixel.B));
+                var horizontalDividerPixel = maximum - minimum <= 14 &&
+                    current is >= 165 and <= 235 &&
+                    (above - current >= 6 || below - current >= 6);
+                if (horizontalDividerPixel) dividerScore++;
+                score += Math.Abs(current - above) + Math.Abs(below - current) * 0.05;
             }
-            if (score > bestScore) { bestScore = score; bestY = y; }
+            if (dividerScore > bestDividerScore ||
+                dividerScore == bestDividerScore && score > bestScore)
+            {
+                bestDividerScore = dividerScore;
+                bestScore = score;
+                bestY = y;
+            }
         }
-        return bestY < 0 || bestScore < image.Width * 2.0
+        return bestY < 0 || bestDividerScore < image.Width * 0.10
             ? null
             : bestY / (double)image.Height;
     }
@@ -236,7 +256,10 @@ public sealed class PokemonDetailsIdentityAnalyzer
         var maximum = Math.Max(pixel.R, Math.Max(pixel.G, pixel.B));
         var minimum = Math.Min(pixel.R, Math.Min(pixel.G, pixel.B));
         var gray = maximum - minimum <= 24 && maximum is >= 145 and <= 225;
-        var colored = maximum is >= 125 and <= 235 && maximum - minimum >= 18;
+        // Current accepted Android tags are gray pills. Keep colored support
+        // only for sufficiently bright, pill-shaped profiles; large colored
+        // action buttons are rejected by the component geometry gate above.
+        var colored = maximum is >= 150 and <= 225 && maximum - minimum >= 18;
         return pixel.A > 0 && (gray || colored);
     }
 

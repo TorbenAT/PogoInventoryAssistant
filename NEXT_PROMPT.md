@@ -41,10 +41,12 @@ Task 3 checkpoint.
 
 Task 4 implementation now exists locally: `PokemonDetailsIdentityAnalyzer` and
 `identity-fingerprint` provide separate evidence hashes, stable fingerprints,
-dynamic tag metadata, three-frame consensus and ordinal instance IDs. Offline
-tests are 154/154. Tune the device profile and repeat real zero/one/two-tag
-acceptance before calling Task 4 real-phone green; do not claim approval from
-the current partial evidence.
+dynamic tag metadata, three-frame consensus and ordinal instance IDs. The
+tuned profile passes 155/155 tests. Three real five-frame Details groups are
+Complete; one local group is Inventory and is Unavailable. The captured
+zero/one/two-tag states count 0/1/2 and the zero-tag versus tagged similarity
+is 0.9815 at a 0.965 threshold. Keep Task 4 real-phone acceptance PARTIAL
+until a broader verified set is available; do not claim approval.
 
 Use this after the 2026-07-19 real-phone validation run.
 

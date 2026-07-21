@@ -1,5 +1,19 @@
 # Changelog
 
+## Task 4 dynamic identity tuning - 2026-07-21
+
+- Narrowed the Android Details tag search to the observed tag band and bounded
+  accepted pill geometry, eliminating false tag counts on the captured
+  zero/one/two-tag states.
+- Prioritised a long, near-gray Details divider as the lower-content anchor and
+  reduced the stable lower ROI so fixed bottom controls are excluded.
+- Added synthetic coverage for shifted divider/content geometry. Self-tests pass
+  155/155. Real acceptance remains PARTIAL: the three captured Details groups
+  complete, the captured zero/one/two-tag states report 0/1/2 tags, and the
+  zero-tag versus tagged fingerprint similarity is 0.9815 against a 0.965
+  threshold; one fourth evidence group is Inventory rather than Details and is
+  correctly reported Unavailable. No real-phone Task 4 approval is claimed.
+
 ## Task 5 sequence orchestration checkpoint - 2026-07-20
 
 - Added `VerifiedInventoryTaskSequence` with named-operation boundaries,
