@@ -10,7 +10,11 @@ public enum VerifiedSequenceState
     Appraisal,
     Partial,
     Unknown,
-    Stopped
+    Stopped,
+    ControlledStopped,
+    TerminalUnknown,
+    TerminalFailure,
+    Completed
 }
 
 public sealed record VerifiedSequenceRequest

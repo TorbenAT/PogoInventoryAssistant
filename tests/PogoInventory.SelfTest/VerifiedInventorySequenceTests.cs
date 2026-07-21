@@ -15,7 +15,7 @@ internal static class VerifiedInventorySequenceTests
             Query = "age0-7", ItemLimit = 2, ApplyClassificationTag = false, OutputDirectory = output
         }, "run-sequence-test");
         Assert(result.Checkpoint.Items.Count == 2, "item limit");
-        Assert(result.Checkpoint.State == VerifiedSequenceState.Inventory, "inventory checkpoint");
+        Assert(result.Checkpoint.State == VerifiedSequenceState.Completed, "completed checkpoint");
         Assert(File.Exists(result.CheckpointPath), "checkpoint written");
         Assert(fake.Calls.All(call => !call.Contains("adb", StringComparison.OrdinalIgnoreCase)), "no raw adb");
         Assert(fake.Calls.Count(call => call == "open-first") == 1, "first card opened once");
@@ -27,12 +27,18 @@ internal static class VerifiedInventorySequenceTests
         }, "different-run-id");
         Assert(resumed.Checkpoint.Items.Select(item => item.Ordinal).SequenceEqual(new[] { 1, 2 }), "resume keeps ordinals");
 
+        var mismatchOutput = Path.Combine(output, "mismatch-resume");
+        await new VerifiedInventoryTaskSequence(new FakeOperations()).RunAsync(new VerifiedSequenceRequest
+        {
+            Query = "age0-7", ItemLimit = 3, ControlledStopAfter = 2, Resume = false,
+            ApplyClassificationTag = false, OutputDirectory = mismatchOutput
+        }, "mismatch-run-id");
         var mismatch = new FakeOperations { Fingerprint = "different" };
         var mismatchResult = await new VerifiedInventoryTaskSequence(mismatch).RunAsync(new VerifiedSequenceRequest
         {
-            Query = "age0-7", ItemLimit = 2, ApplyClassificationTag = false, OutputDirectory = output
+            Query = "age0-7", ItemLimit = 3, ApplyClassificationTag = false, OutputDirectory = mismatchOutput
         }, "different-run-id");
-        Assert(mismatchResult.Checkpoint.State == VerifiedSequenceState.Unknown, "resume overlap mismatch stops");
+        Assert(mismatchResult.Checkpoint.State == VerifiedSequenceState.TerminalUnknown, "resume overlap mismatch stops");
         Assert(mismatch.Calls.Count(call => call == "advance") == 1,
             "resume mismatch performs only the verified replay swipe");
 
@@ -46,7 +52,7 @@ internal static class VerifiedInventorySequenceTests
         {
             Query = "age0-7", ItemLimit = 3, ApplyClassificationTag = false, OutputDirectory = Path.Combine(output, "partial")
         }, "run-partial-test");
-        Assert(partialResult.Checkpoint.State == VerifiedSequenceState.Partial, "partial stops safely");
+        Assert(partialResult.Checkpoint.State == VerifiedSequenceState.TerminalFailure, "partial stops safely");
 
         var partialThenComplete = new FakeOperations
         {
@@ -66,8 +72,8 @@ internal static class VerifiedInventorySequenceTests
         Assert(continued.Checkpoint.Items.Count == 2, "partial item does not stop later items");
         Assert(continued.Checkpoint.Items[0].State == VerifiedSequenceState.Partial,
             "partial item is preserved");
-        Assert(continued.Checkpoint.State == VerifiedSequenceState.Inventory,
-            "partial continuation restores inventory");
+        Assert(continued.Checkpoint.State == VerifiedSequenceState.Completed,
+            "partial continuation completes safely");
         Assert(partialThenComplete.Calls.Count(call => call == "advance") == 1,
             "partial and complete items advance on the details cursor");
         Assert(partialThenComplete.Calls.Count(call => call == "open-first") == 1,
@@ -78,7 +84,7 @@ internal static class VerifiedInventorySequenceTests
         {
             Query = "age0-7", ItemLimit = 3, ApplyClassificationTag = false, OutputDirectory = Path.Combine(output, "unknown")
         }, "run-unknown-test");
-        Assert(unknownResult.Checkpoint.State == VerifiedSequenceState.Unknown, "unknown stop");
+        Assert(unknownResult.Checkpoint.State == VerifiedSequenceState.TerminalUnknown, "unknown stop");
         Assert(unknown.Calls.Last() == "open-first", "no input after unknown");
         var rejectedDelete = false;
         try
@@ -91,6 +97,49 @@ internal static class VerifiedInventorySequenceTests
         }
         catch (ArgumentException) { rejectedDelete = true; }
         Assert(rejectedDelete, "AI-Delete cannot be auto-applied");
+
+        var controlledOutput = Path.Combine(output, "controlled-resume");
+        var firstStop = await new VerifiedInventoryTaskSequence(new FakeOperations()).RunAsync(
+            new VerifiedSequenceRequest
+            {
+                Query = "age0-7", ItemLimit = 3, ControlledStopAfter = 2,
+                Resume = false, ApplyClassificationTag = false, OutputDirectory = controlledOutput
+            }, "controlled-resume-test");
+        Assert(firstStop.Checkpoint.State == VerifiedSequenceState.ControlledStopped,
+            "controlled stop is resumable");
+        Assert(firstStop.Checkpoint.Items.Select(item => item.Ordinal).SequenceEqual(new[] { 1, 2 }),
+            "controlled stop records only ordinals one and two");
+        var resumeOperations = new FakeOperations();
+        var resumedControlled = await new VerifiedInventoryTaskSequence(resumeOperations).RunAsync(
+            new VerifiedSequenceRequest
+            {
+                Query = "age0-7", ItemLimit = 3, Resume = true,
+                ApplyClassificationTag = false, OutputDirectory = controlledOutput
+            }, "ignored-run-id");
+        Assert(resumedControlled.Checkpoint.State == VerifiedSequenceState.Completed,
+            "controlled resume completes");
+        Assert(resumedControlled.Checkpoint.Items.Select(item => item.Ordinal).SequenceEqual(new[] { 1, 2, 3 }),
+            "controlled resume keeps exact ordinals");
+        Assert(resumedControlled.Checkpoint.Items.Select(item => item.StableFingerprintSha256)
+            .Distinct(StringComparer.Ordinal).Count() == 1 &&
+            resumedControlled.Checkpoint.Items.Select(item => item.InstanceId).Distinct(StringComparer.Ordinal).Count() == 3,
+            "identical fingerprints remain separate resumed instances");
+        Assert(resumeOperations.Calls.Count(call => call == "open-first") == 1,
+            "controlled resume opens first card once for replay");
+        Assert(resumeOperations.Calls.Count(call => call == "advance") == 2,
+            "controlled resume has one replay and one progression swipe");
+        Assert(resumeOperations.Calls.Count(call => call == "return") == 1,
+            "controlled resume returns only after completion");
+
+        var completedReplay = new FakeOperations();
+        var completedAgain = await new VerifiedInventoryTaskSequence(completedReplay).RunAsync(
+            new VerifiedSequenceRequest
+            {
+                Query = "age0-7", ItemLimit = 3, Resume = true,
+                ApplyClassificationTag = false, OutputDirectory = controlledOutput
+            }, "ignored-run-id");
+        Assert(completedAgain.Checkpoint.Items.Count == 3 && completedReplay.Calls.Count == 0,
+            "completed checkpoints are idempotent");
     }
 
     private sealed class FakeOperations : IVerifiedInventoryNamedOperations
@@ -126,7 +175,7 @@ internal static class VerifiedInventorySequenceTests
                 IgnoredFrameCount = 0
             });
         }
-        public Task<string> CaptureAppraisalAsync(CancellationToken cancellationToken) { Calls.Add("appraisal"); return Task.FromResult("Partial"); }
+        public Task<string> CaptureAppraisalAsync(CancellationToken cancellationToken) { Calls.Add("appraisal"); return Task.FromResult("AppraisalBarsObserved"); }
         public Task<VerifiedSequenceState> ExitAppraisalAsync(CancellationToken cancellationToken) { Calls.Add("exit"); return Task.FromResult(VerifiedSequenceState.PokemonDetails); }
         public Task<VerifiedSequenceState> ReturnToInventoryAsync(CancellationToken cancellationToken) { Calls.Add("return"); return Task.FromResult(ReturnState); }
         public Task<VerifiedTagObservation> ReadTagObservationAsync(CancellationToken cancellationToken)

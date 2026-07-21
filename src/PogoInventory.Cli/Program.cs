@@ -1773,7 +1773,7 @@ static async Task<int> RunIndexSequenceAsync(
     var result = await new VerifiedInventoryTaskSequence(operations).RunAsync(request, cancellationToken: cancellationToken);
     Console.WriteLine(JsonSerializer.Serialize(result.Checkpoint,
         new JsonSerializerOptions { WriteIndented = true, Converters = { new JsonStringEnumConverter() } }));
-    return result.Checkpoint.State is VerifiedSequenceState.Inventory or VerifiedSequenceState.Stopped ? 0 : 1;
+    return result.Checkpoint.State is VerifiedSequenceState.Completed or VerifiedSequenceState.ControlledStopped ? 0 : 1;
 }
 
 static async Task<int> StopKnownAppAsync(

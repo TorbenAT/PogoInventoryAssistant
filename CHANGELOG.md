@@ -1,5 +1,17 @@
 # Changelog
 
+## Repair Android sequence runtime - 2026-07-21
+
+- Appraisal now uses `GuardedInventoryRecovery` for one visual Intro continue
+  tap, stable Bars evidence and one visual Bars exit tap; Back is never sent on
+  appraisal overlays.
+- Cursor progression now requires observed transition evidence and captures
+  three independent post-swipe Details frames. Identical fingerprints are
+  allowed for separate adjacent instances; no-effect produces a fail-closed
+  result without a second swipe.
+- Controlled stops are resumable; terminal Unknown/Failure and Completed
+  checkpoints are distinct and idempotent. Offline self-tests pass 157/157.
+
 ## Android real-phone attempt blocked - 2026-07-21
 
 - The bounded Task E attempt found no authorized ADB device; reconnect to the

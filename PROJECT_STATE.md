@@ -1,5 +1,20 @@
 # Project state
 
+## Android runtime repair checkpoint
+
+`AndroidVerifiedInventoryNamedOperations` now delegates appraisal and return
+navigation to `GuardedInventoryRecovery`. Intro and Bars use the authorized
+visual ExitAppraisal target; Android Back is permitted only from verified
+Details or PokemonMenu states. Cursor advancement requires observed transition
+evidence, then captures three independent stable Details frames. Equal stable
+fingerprints no longer imply a failed swipe.
+
+`VerifiedInventoryTaskSequence` distinguishes `ControlledStopped`, terminal
+Unknown/Failure and `Completed`. A controlled checkpoint reopens the first card
+only for bounded replay, verifies the overlap item, then advances once to the
+next new ordinal. Completed checkpoints are idempotent. Offline self-tests:
+157/157. Real-phone acceptance remains pending ADB preflight.
+
 ## Android verified sequence host checkpoint
 
 `AndroidVerifiedInventoryNamedOperations` is now the concrete Android host

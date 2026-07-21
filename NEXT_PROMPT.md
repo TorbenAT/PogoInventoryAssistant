@@ -1,5 +1,13 @@
 # Continuation prompt
 
+Runtime repair is implemented but not yet committed: guarded appraisal uses
+visual Intro/Bars transitions, cursor swipes require observed transition
+evidence plus three independent post frames, equal fingerprints are allowed,
+and ControlledStopped checkpoints resume through overlap without duplicating
+an ordinal. Offline self-tests are 157/157. Commit as
+`Repair verified Android sequence runtime`, then perform the bounded ADB
+preflight and phone acceptance.
+
 The Android named-operation host and cursor sequence are implemented in
 `AndroidVerifiedInventoryNamedOperations` and exposed as
 `device-run-index-sequence`. First-card opening is single-use; normal items

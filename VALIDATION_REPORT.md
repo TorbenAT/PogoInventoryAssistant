@@ -328,3 +328,14 @@ Limitations observed during validation:
   expected Wi-Fi serial reconnect returned Windows socket error 10013, so the
   production host sent no phone input. Tasks E/F are blocked and Task G is
   ineligible; this is not real-phone acceptance.
+## Android sequence runtime repair on 2026-07-21
+
+- Appraisal host repair delegates Intro/Bars transitions and Inventory recovery
+  to `GuardedInventoryRecovery`; no Back action is authorized on appraisal
+  overlays.
+- Cursor repair requires observed transition evidence, one swipe maximum and
+  three independent post-swipe Details frames. Equal fingerprints remain
+  separate instances when transition evidence exists.
+- ControlledStopped checkpoints resume through overlap and Completed
+  checkpoints are idempotent. Offline self-tests: 157/157.
+- Real-phone acceptance has not started in this repair checkpoint.

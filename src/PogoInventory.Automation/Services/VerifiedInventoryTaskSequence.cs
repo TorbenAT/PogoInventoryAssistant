@@ -56,7 +56,10 @@ public sealed class VerifiedInventoryTaskSequence
                     $"index={existing.ApplyIndexTag}/{request.ApplyIndexTag}:{existing.IndexTag}/{request.IndexTag}, " +
                     $"classification={existing.ApplyClassificationTag}/{request.ApplyClassificationTag}:{existing.ClassificationTag}/{request.ClassificationTag}.");
             runId = existing.ScanRunId;
-            if (existing.State is VerifiedSequenceState.Unknown or VerifiedSequenceState.Stopped)
+            if (existing.State is VerifiedSequenceState.TerminalUnknown or
+                VerifiedSequenceState.TerminalFailure or VerifiedSequenceState.Stopped)
+                return new VerifiedSequenceResult { Checkpoint = existing, CheckpointPath = checkpointPath };
+            if (existing.State == VerifiedSequenceState.Completed)
                 return new VerifiedSequenceResult { Checkpoint = existing, CheckpointPath = checkpointPath };
         }
         var items = existing?.Items.ToList() ?? new List<VerifiedSequenceItem>();
@@ -97,6 +100,18 @@ public sealed class VerifiedInventoryTaskSequence
                             "Resume replay did not verify Details", cancellationToken);
                 }
             }
+            if (items.Count < request.ItemLimit)
+            {
+                var progression = await _operations.AdvanceToNextPokemonAsync(
+                    currentIdentity!, cancellationToken);
+                checkpoint = NewCheckpoint(runId, request, items, progression,
+                    "CheckpointAfterResumeSwipe", currentIdentity);
+                await SaveAsync(output, checkpoint, cancellationToken);
+                if (progression != VerifiedSequenceState.PokemonDetails)
+                    return await StopAsync(output, checkpoint, items, progression,
+                        "Resume progression did not verify Details", cancellationToken);
+                currentIdentity = await _operations.CaptureIdentityAsync(cancellationToken);
+            }
         }
         else
         {
@@ -130,6 +145,10 @@ public sealed class VerifiedInventoryTaskSequence
             else
             {
                 var appraisal = await _operations.CaptureAppraisalAsync(cancellationToken);
+                if (!string.Equals(appraisal, "AppraisalBarsObserved", StringComparison.Ordinal))
+                    return await StopAsync(output, checkpoint, items,
+                        VerifiedSequenceState.Partial,
+                        "Stable AppraisalBars was not verified", cancellationToken);
                 var afterAppraisal = await _operations.ExitAppraisalAsync(cancellationToken);
                 if (afterAppraisal == VerifiedSequenceState.Unknown)
                     return await StopAsync(output, checkpoint, items, afterAppraisal, "Unknown during appraisal exit", cancellationToken);
@@ -161,7 +180,7 @@ public sealed class VerifiedInventoryTaskSequence
             if (request.ControlledStopAfter == items.Count)
             {
                 var stopped = await _operations.ReturnToInventoryAsync(cancellationToken);
-                checkpoint = checkpoint with { State = VerifiedSequenceState.Stopped,
+                checkpoint = checkpoint with { State = VerifiedSequenceState.ControlledStopped,
                     LastVerifiedState = stopped, NextAction = "ControlledStopAfterItem" };
                 return await SaveResultAsync(output, checkpoint, cancellationToken);
             }
@@ -178,7 +197,8 @@ public sealed class VerifiedInventoryTaskSequence
         }
 
         var restored = await _operations.ReturnToInventoryAsync(cancellationToken);
-        checkpoint = NewCheckpoint(runId, request, items, restored, "Complete", currentIdentity);
+        checkpoint = NewCheckpoint(runId, request, items, VerifiedSequenceState.Completed, "Complete", currentIdentity)
+            with { LastVerifiedState = restored };
         return await SaveResultAsync(output, checkpoint, cancellationToken);
     }
 
@@ -208,7 +228,10 @@ public sealed class VerifiedInventoryTaskSequence
         IReadOnlyList<VerifiedSequenceItem> items, VerifiedSequenceState state, string detail,
         CancellationToken cancellationToken) => await SaveResultAsync(output, original with
     {
-        State = state, Items = items.ToArray(), NextAction = "ControlledStop:" + detail,
+        State = state == VerifiedSequenceState.Unknown
+            ? VerifiedSequenceState.TerminalUnknown
+            : VerifiedSequenceState.TerminalFailure,
+        LastVerifiedState = state, Items = items.ToArray(), NextAction = "TerminalStop:" + detail,
         UpdatedAtUtc = DateTimeOffset.UtcNow
     }, cancellationToken);
 
