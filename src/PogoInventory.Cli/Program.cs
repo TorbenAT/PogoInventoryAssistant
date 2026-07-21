@@ -1872,7 +1872,8 @@ static async Task<int> RunCleanupProofAsync(
     var speciesReferencePath = Optional(options, "species-reference") ??
         Path.Combine("data", "reference", "species-reference.json");
     var speciesReference = LoadSemanticSpeciesReference(speciesReferencePath);
-    var headerAnalyzer = TryCreateHeaderSemanticsAnalyzer(speciesReference);
+    var headerAnalyzer = TryCreateHeaderSemanticsAnalyzer(
+        speciesReference, tessDataDirectory: Optional(options, "tessdata"));
     var policyPath = Optional(options, "policy");
     var rulePolicy = policyPath is null ? new RulePolicy() : RulePolicyLoader.LoadFromFile(policyPath);
 
@@ -3534,11 +3535,13 @@ static void PrintHelp()
     Console.WriteLine("  device-run-index-sequence --query <query> --item-limit <n> --out <directory>");
     Console.WriteLine("  device-run-cleanup-proof --species <query> --item-limit <6-20> --database <sqlite> --out <directory> --continue-on-partial");
     Console.WriteLine("                           [--species-reference <species-reference.json>] [--policy <rule-policy.json>]");
+    Console.WriteLine("                           [--tessdata <directory>] (header OCR engine: Tesseract, default tools/tessdata-best)");
     Console.WriteLine("  analyze-cleanup-evidence --database <cleanup-proof.sqlite> --evidence-root <dir> --out <dir>");
     Console.WriteLine("                           [--species-reference <species-reference.json>] [--policy <rule-policy.json>]");
+    Console.WriteLine("                           [--tessdata <directory>] (default tools/tessdata-best)");
     Console.WriteLine("                           Offline reprocess: reruns header OCR + IV consensus over an existing");
     Console.WriteLine("                           cleanup-proof database's stored evidence and writes a NEW sqlite copy;");
-    Console.WriteLine("                           never modifies the original database. Windows-only (Windows.Media.Ocr).");
+    Console.WriteLine("                           never modifies the original database. Uses Tesseract for header OCR.");
     Console.WriteLine("  device-unwind-to-map --out <directory> [--create-state current|inventory|details|appraisal]");
     Console.WriteLine("                            [--adb <adb.exe>] [--serial <serial>] [--profile <automation.json>]");
     Console.WriteLine("                            [--appraisal-profile <appraisal.json>] [--resume] [--controlled-stop-after <n>]");
@@ -3644,21 +3647,31 @@ static ISpeciesReference LoadSemanticSpeciesReference(string speciesReferencePat
         : new StaticSpeciesReference(Array.Empty<string>());
 
 /// <summary>
-/// Builds a <see cref="PokemonHeaderAnalyzer"/> backed by the real Windows OCR
-/// engine when one is available (Windows host, installed language pack). When
-/// no engine is available (including on non-Windows hosts), returns null so
-/// callers fall back to their pre-OCR behaviour rather than failing.
+/// Builds a <see cref="PokemonHeaderAnalyzer"/> backed by Tesseract (the
+/// cleanup flow's OCR engine; WinRT stays available only via
+/// `ocr-header-spike --engine winrt` for comparison). Defaults to
+/// `tools/tessdata-best` (the measured iteration-4 winner, see
+/// docs/HEADER_OCR.md), overridable with <paramref name="tessDataDirectory"/>
+/// (the commands' `--tessdata`). When no usable tessdata is found, writes a
+/// clear stderr message and returns null so callers fall back to their
+/// pre-OCR behaviour rather than failing.
 /// </summary>
 static PokemonHeaderAnalyzer? TryCreateHeaderSemanticsAnalyzer(
     ISpeciesReference speciesReference,
     HeaderAnalysisProfile? profile = null,
-    string? languageTag = null)
+    string? languageTag = null,
+    string? tessDataDirectory = null)
 {
-    if (!WindowsMediaTextRecognizer.IsSupported(languageTag))
+    var resolvedTessData = Path.GetFullPath(
+        tessDataDirectory ?? Path.Combine("tools", "tessdata-best"));
+    if (!TesseractTextRecognizer.IsSupported(resolvedTessData, languageTag ?? "eng"))
     {
+        Console.Error.WriteLine(
+            $"[cleanup] No Tesseract engine could be created from '{resolvedTessData}'. " +
+            "Ensure it contains eng.traineddata (see docs/HEADER_OCR.md), or pass --tessdata.");
         return null;
     }
-    ITextRecognizer recognizer = new WindowsMediaTextRecognizer(languageTag);
+    ITextRecognizer recognizer = new TesseractTextRecognizer(resolvedTessData, languageTag ?? "eng");
     return new PokemonHeaderAnalyzer(recognizer, speciesReference, profile);
 }
 
@@ -3668,11 +3681,11 @@ static PokemonHeaderAnalyzer? TryCreateHeaderSemanticsAnalyzer(
 /// cleanup-proof.sqlite database, writes the corrected result to a NEW sqlite
 /// copy, reruns the recommendation and comparative analysis and regenerates
 /// the standard report set plus a species/CP coverage summary. Never touches
-/// the original database. Windows-only (needs Windows.Media.Ocr); on a
-/// non-Windows host or when no language pack is available, species/CP simply
-/// stay at whatever the original database already recorded (no OCR
-/// re-derivation), which is safe (never guessed) but produces no improvement.
-/// The substantive logic lives in
+/// the original database. Uses Tesseract (see
+/// <see cref="TryCreateHeaderSemanticsAnalyzer"/>); when no usable tessdata is
+/// found, species/CP simply stay at whatever the original database already
+/// recorded (no OCR re-derivation), which is safe (never guessed) but
+/// produces no improvement. The substantive logic lives in
 /// <see cref="PogoInventory.Application.CleanupEvidenceReprocessor"/> so it can
 /// also be exercised by PogoInventory.SelfTest without the Windows-only TFM;
 /// this command is a thin CLI wrapper around it.
@@ -3687,7 +3700,8 @@ static async Task<int> RunAnalyzeCleanupEvidenceAsync(string[] args, Cancellatio
     var speciesReferencePath = Optional(options, "species-reference") ??
         Path.Combine("data", "reference", "species-reference.json");
     var speciesReference = LoadSemanticSpeciesReference(speciesReferencePath);
-    var headerAnalyzer = TryCreateHeaderSemanticsAnalyzer(speciesReference);
+    var headerAnalyzer = TryCreateHeaderSemanticsAnalyzer(
+        speciesReference, tessDataDirectory: Optional(options, "tessdata"));
     var policyPath = Optional(options, "policy");
     var policy = policyPath is null ? new RulePolicy() : RulePolicyLoader.LoadFromFile(policyPath);
 

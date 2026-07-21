@@ -1,8 +1,11 @@
 # Header OCR (species / CP / nickname extraction)
 
-Status: infrastructure + offline spike only. No production wiring into the
-scan pipeline yet. Read-only: this command does not tap, swipe or change any
-device or game state.
+Status: wired into the cleanup flow (`device-run-cleanup-proof` and
+`analyze-cleanup-evidence`) as the header OCR engine, backed by Tesseract
+(see "Tesseract is now the cleanup-flow engine" below). `ocr-header-spike`
+remains the offline measurement tool, with `--engine winrt` kept available
+for comparison. Read-only: none of this taps, swipes or changes any device
+or game state.
 
 ## Why
 
@@ -93,16 +96,18 @@ resolve to the correct species.
 
 Spike-tuned against the real 20-item appraisal/details evidence set
 (`local-data/validation/ocr-spike/frames-appraisal` +
-`frames-details`, 60 frames total) -- these are no longer starting-point
-guesses, they are the values that reach 60/60 species reads and are
-committed as `HeaderAnalysisProfile`'s defaults (same shape as
-`local-data/validation/ocr-spike/profile-wide.json`):
+`frames-details`, 60 frames total) -- the CP region is now the Tesseract
+iteration-4 tuned ROI (tightened height, see "Measured iterations" below),
+committed as `HeaderAnalysisProfile`'s defaults since Tesseract is now the
+cleanup-flow OCR engine. The WinRT `ocr-header-spike` path can pass
+`--profile` with the old `Y=0.07,Height=0.07` CP region to reproduce its
+own prior 60/60 species measurement.
 
 | Region | X | Y | Width | Height |
 |---|---|---|---|---|
-| Details CP | 0.28 | 0.07 | 0.44 | 0.07 |
+| Details CP | 0.28 | 0.08 | 0.44 | 0.05 |
 | Details name/species | 0.15 | 0.41 | 0.70 | 0.08 |
-| Appraisal CP | 0.28 | 0.07 | 0.44 | 0.07 |
+| Appraisal CP | 0.28 | 0.08 | 0.44 | 0.05 |
 | Appraisal name/species | 0.15 | 0.41 | 0.70 | 0.08 |
 
 The name/species Y is still close to the original identity header region
@@ -255,10 +260,29 @@ capture set).
 
 Iteration 4 is the best-measured configuration: `--engine tesseract
 --tessdata tools/tessdata-best --profile <tightened-CP-ROI-profile>` (no
-`--binarize-cp`). It was not made the shipped `HeaderAnalysisProfile` default
-(that default is shared with the WinRT engine, already tuned to its own
-60/60 species baseline) -- the tightened ROI here is scoped to this
-Tesseract measurement only, via `--profile`.
+`--binarize-cp`). This is now the shipped `HeaderAnalysisProfile` default and
+the default tessdata for the cleanup flow (see below) -- Tesseract replaced
+WinRT as the cleanup flow's OCR engine, so its best-measured configuration
+took over the shared defaults. The WinRT `ocr-header-spike` path can pass
+`--profile` with the old `Y=0.07,Height=0.07` CP region to reproduce its own
+prior 60/60 species measurement.
+
+## Tesseract is now the cleanup-flow engine
+
+`device-run-cleanup-proof` and `analyze-cleanup-evidence` build their header
+OCR analyzer via `TryCreateHeaderSemanticsAnalyzer`, which now creates a
+`TesseractTextRecognizer` (previously `WindowsMediaTextRecognizer`/WinRT).
+Tessdata directory resolution: `--tessdata <directory>` on either command,
+default `tools/tessdata-best` (the iteration-4 winner above; gitignored, not
+committed -- see "tessdata choice" below to fetch it). When the resolved
+directory does not contain a usable `eng.traineddata`, the analyzer is not
+created (a clear `[cleanup] No Tesseract engine could be created from ...`
+message is written to stderr) and the command falls back to its pre-OCR
+behaviour (species/CP simply stay at whatever the query/database already
+had), the same safe degrade `TryCreateHeaderSemanticsAnalyzer` already used
+for a missing WinRT language pack. `ocr-header-spike` is unchanged: it still
+defaults `--tessdata` to `tools/tessdata` (`tessdata_fast`, committed) and
+still supports `--engine winrt` for side-by-side comparison.
 
 ### Verdict vs the acceptance target
 

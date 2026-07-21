@@ -4,16 +4,17 @@ namespace PogoInventory.HeaderText;
 
 /// <summary>
 /// Normalized regions of interest used to locate the CP text and the
-/// name/species text on each supported screen. Defaults are spike-tuned
-/// against the real 20-item appraisal/details evidence set (see
-/// local-data/validation/ocr-spike/profile-wide.json and
-/// docs/HEADER_OCR.md), not the original starting-point guesses.
+/// name/species text on each supported screen. Defaults are the Tesseract
+/// iteration-4 tuned CP ROI (tightened height, fixes the Volbeat 961->761
+/// false positive) against the real 20-item appraisal/details evidence set
+/// (see docs/HEADER_OCR.md); the WinRT spike path can override via
+/// --profile to reproduce its own prior 60/60 species measurement.
 /// </summary>
 public sealed record HeaderAnalysisProfile
 {
     public NormalizedRegion DetailsCpRegion { get; init; } = new()
     {
-        X = 0.28, Y = 0.07, Width = 0.44, Height = 0.07
+        X = 0.28, Y = 0.08, Width = 0.44, Height = 0.05
     };
 
     public NormalizedRegion DetailsNameRegion { get; init; } = new()
@@ -23,7 +24,7 @@ public sealed record HeaderAnalysisProfile
 
     public NormalizedRegion AppraisalCpRegion { get; init; } = new()
     {
-        X = 0.28, Y = 0.07, Width = 0.44, Height = 0.07
+        X = 0.28, Y = 0.08, Width = 0.44, Height = 0.05
     };
 
     public NormalizedRegion AppraisalNameRegion { get; init; } = new()

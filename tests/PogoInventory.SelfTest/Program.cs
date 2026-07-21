@@ -252,6 +252,7 @@ var tests = new (string Name, Func<Task> Run)[]
     ,("Cleanup runner IV disagreement keeps Partial and never guesses", HeaderSemanticsCleanupTests.IvDisagreementKeepsPartialAsync)
     ,("Cleanup runner and reprocessor honor a loaded rule policy", HeaderSemanticsCleanupTests.PolicyFileLoadingAffectsRecommendationsAsync)
     ,("Offline analyze-cleanup-evidence reprocesses a database without touching the original", HeaderSemanticsCleanupTests.AnalyzeCleanupEvidenceEndToEndAsync)
+    ,("Reprocess recomputes ObservationStatus from species+CP+IV completeness", HeaderSemanticsCleanupTests.ReprocessRecomputesObservationStatusAsync)
 };
 
 var failed = 0;

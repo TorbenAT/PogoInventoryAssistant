@@ -30,6 +30,7 @@ internal static class HeaderSemanticsCleanupTests
         await IvDisagreementKeepsPartialAsync();
         await PolicyFileLoadingAffectsRecommendationsAsync();
         await AnalyzeCleanupEvidenceEndToEndAsync();
+        await ReprocessRecomputesObservationStatusAsync();
     }
 
     public static async Task BroadQueryNeverStoredAsSpeciesAsync()
@@ -499,6 +500,126 @@ internal static class HeaderSemanticsCleanupTests
         {
             DeleteDirectory(root);
         }
+    }
+
+    /// <summary>
+    /// Reproduces the documented status-recompute defect: a row with species
+    /// and all three IVs known but CP unknown must downgrade from a
+    /// (incorrectly recorded) Complete to Partial after reprocess, while a
+    /// row with species + CP + all three IVs known stays/becomes Complete.
+    /// </summary>
+    public static async Task ReprocessRecomputesObservationStatusAsync()
+    {
+        var root = CreateTemporaryDirectory();
+        try
+        {
+            var evidenceRoot = Path.Combine(root, "evidence");
+            Directory.CreateDirectory(evidenceRoot);
+            var evidencePath = Path.Combine(evidenceRoot, "frame.png");
+            await File.WriteAllBytesAsync(evidencePath, CleanupProofTests.FixtureBytes());
+
+            var sourceDatabase = Path.Combine(root, "source", "cleanup-proof.sqlite");
+            Directory.CreateDirectory(Path.GetDirectoryName(sourceDatabase)!);
+            await BuildSyntheticStatusRecomputeDatabaseAsync(sourceDatabase, evidencePath);
+            Microsoft.Data.Sqlite.SqliteConnection.ClearAllPools();
+
+            var speciesReference = new StaticSpeciesReference(new[] { "Bulbasaur" });
+            var summary = await CleanupEvidenceReprocessor.ReprocessAsync(new CleanupEvidenceReprocessRequest
+            {
+                SourceDatabasePath = sourceDatabase,
+                EvidenceRoot = evidenceRoot,
+                OutputDirectory = Path.Combine(root, "reprocessed"),
+                SpeciesReference = speciesReference
+            });
+
+            var rows = await new InventoryPersistenceService(summary.NewDatabasePath)
+                .LoadCleanupProofRowsAsync("status-recompute-run-000001");
+            var incompleteCp = rows.Single(row => row.Ordinal == 1);
+            var allKnown = rows.Single(row => row.Ordinal == 2);
+
+            AssertEqual("Partial", incompleteCp.ObservationStatus,
+                "species+IVs known but CP unknown must downgrade to Partial");
+            AssertEqual("Complete", allKnown.ObservationStatus,
+                "species+CP+IVs all known stays Complete");
+        }
+        finally
+        {
+            DeleteDirectory(root);
+        }
+    }
+
+    private static async Task BuildSyntheticStatusRecomputeDatabaseAsync(string databasePath, string evidencePath)
+    {
+        var persistence = new InventoryPersistenceService(databasePath);
+        const string runId = "status-recompute-run-000001";
+        await persistence.StartCleanupRunAsync(new CleanupProofRunStart
+        {
+            RunId = runId,
+            SearchQuery = "Bulbasaur",
+            StartedAtUtc = DateTimeOffset.UtcNow,
+            DeviceSerial = "legacy-device",
+            RequestedItems = 2,
+            SourceDirectory = Path.GetDirectoryName(databasePath)!
+        });
+        var hash = Convert.ToHexString(SHA256.HashData(await File.ReadAllBytesAsync(evidencePath))).ToLowerInvariant();
+
+        // Ordinal 1: species+IVs known, CP unknown, but ORIGINALLY (mis)recorded
+        // as Complete -- the exact defect this recompute fixes.
+        await PersistStatusRecomputeRowAsync(
+            persistence, runId, ordinal: 1, cp: null, attack: 10, defense: 11, hp: 12,
+            originalStatus: "Complete", evidencePath, hash);
+        // Ordinal 2: species+CP+IVs all known, originally recorded as Partial.
+        await PersistStatusRecomputeRowAsync(
+            persistence, runId, ordinal: 2, cp: 987, attack: 13, defense: 14, hp: 15,
+            originalStatus: "Partial", evidencePath, hash);
+
+        await persistence.CompleteCleanupRunAsync(runId, 2, "Completed", "ItemLimitReached", DateTimeOffset.UtcNow);
+    }
+
+    private static async Task PersistStatusRecomputeRowAsync(
+        InventoryPersistenceService persistence,
+        string runId,
+        int ordinal,
+        int? cp,
+        int attack,
+        int defense,
+        int hp,
+        string originalStatus,
+        string evidencePath,
+        string hash)
+    {
+        var observation = new PokemonObservation
+        {
+            ExternalKey = $"{runId}:{ordinal:D6}",
+            SequenceNumber = ordinal,
+            Species = "Bulbasaur",
+            Cp = cp,
+            AttackIv = attack,
+            DefenseIv = defense,
+            HpIv = hp,
+            Tags = Array.Empty<string>()
+        };
+        var record = new CleanupProofObservationRecord
+        {
+            RunId = runId,
+            Ordinal = ordinal,
+            LocalPokemonId = $"{runId}:{ordinal:D6}",
+            CapturedAtUtc = DateTimeOffset.UtcNow,
+            Observation = observation,
+            ObservationStatus = originalStatus,
+            IdentityConfidenceValue = 0.9,
+            ProtectionConfidenceValue = 0.10,
+            StableFingerprint = $"status-recompute-fingerprint-{ordinal}",
+            ScreenshotPaths = new[] { evidencePath, evidencePath },
+            ScreenshotHashes = new[] { hash, hash },
+            AppraisalEvidence = new[] { "AppraisalStatus:Pending" },
+            FieldEvidenceSources = new Dictionary<string, string>(StringComparer.Ordinal)
+            {
+                ["Species"] = "QueryDerived",
+                ["Cp"] = cp is null ? "Unknown" : "Automated"
+            }
+        };
+        await persistence.RecordCleanupObservationAsync(record);
     }
 
     /// <summary>
