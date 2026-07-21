@@ -1,3 +1,17 @@
+## Cleanup startup stability repair checkpoint - 2026-07-21
+
+- Direct autonomous run `autonomous-pidgey-age0-365` stopped before input when
+  strict Details recovery evidence did not reach consensus; recovery input
+  count was 0 and no SQLite proof was created.
+- A read-only post-failure check detected `PokemonDetails` with full topology.
+- The focused repair saves start-state recovery frames and accepts three
+  independent same-state ordinary Details frames; strict appraisal ROI
+  consensus is unchanged.
+- Build: PASS.
+- Self-tests: PASS, 162/162.
+- The repaired phone run was intentionally not repeated in the same iteration.
+- Real Android value proof: pending; no acceptance claim.
+
 ## Autonomous cleanup start recovery checkpoint - 2026-07-21
 
 - `device-run-cleanup-proof` now calls the shared bounded `KnownGameStateNormalizer`.

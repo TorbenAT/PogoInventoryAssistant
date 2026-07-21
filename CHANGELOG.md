@@ -1,5 +1,16 @@
 # Changelog
 
+## Cleanup startup stability repair - 2026-07-21
+
+- Saved bounded start-state recovery frames under the ignored evidence root.
+- Ordinary Details startup now accepts three independent same-state topology
+  frames when strict evidence signatures vary during model settling; appraisal
+  ROI transitions retain the stricter consensus path.
+- The first direct phone attempt stopped with zero recovery inputs because the
+  original strict window was not stable. No phone acceptance is claimed and
+  the full run was not automatically repeated in this iteration.
+- Offline self-tests remain 162/162.
+
 ## Autonomous cleanup start recovery - 2026-07-21
 
 - `device-run-cleanup-proof` now calls the shared bounded

@@ -176,15 +176,25 @@ public sealed class AndroidVerifiedInventoryNamedOperations : ICleanupProofNamed
         CancellationToken cancellationToken)
     {
         var frames = await CaptureRecoveryFramesAsync(label, cancellationToken);
+        for (var index = 0; index < frames.Count; index++)
+        {
+            await SaveEvidenceAsync(
+                $"{label}-recovery-{index + 1}",
+                frames[index].Screenshot,
+                cancellationToken);
+        }
         if (!GuardedInventoryRecovery.TryGetStableFrame(frames, out var stable) || stable is null)
         {
-            return new CleanupStateObservation
+            if (!TryGetThreeStateStableFrame(frames, out stable) || stable is null)
             {
-                State = PokemonGoGameState.Unknown,
-                AppraisalKind = null,
-                ScreenshotSha256 = string.Empty,
-                Evidence = new[] { "NoThreeStableFrames" }
-            };
+                return new CleanupStateObservation
+                {
+                    State = PokemonGoGameState.Unknown,
+                    AppraisalKind = null,
+                    ScreenshotSha256 = string.Empty,
+                    Evidence = new[] { "NoThreeStableFrames" }
+                };
+            }
         }
 
         var state = stable.Detection.State;
@@ -208,6 +218,36 @@ public sealed class AndroidVerifiedInventoryNamedOperations : ICleanupProofNamed
             Evidence = stable.Detection.Evidence
         };
     }
+
+    private static bool TryGetThreeStateStableFrame(
+        IReadOnlyList<RecoveryFrame> frames,
+        out RecoveryFrame? stable)
+    {
+        stable = null;
+        var window = frames.TakeLast(3).ToArray();
+        if (window.Length != 3 || window.Any(frame =>
+                frame.Detection.State == PokemonGoGameState.Unknown ||
+                frame.Kind is RecoveryFrameKind.Unknown or RecoveryFrameKind.Conflicting ||
+                frame.HasConflictingAnchor))
+        {
+            return false;
+        }
+
+        if (window.Any(frame => frame.Detection.State != window[0].Detection.State ||
+                frame.Kind != window[0].Kind))
+        {
+            return false;
+        }
+
+        if (window[0].Kind is RecoveryFrameKind.AppraisalIntro or RecoveryFrameKind.AppraisalBars)
+        {
+            return false;
+        }
+
+        stable = window[^1];
+        return true;
+    }
+
 
     public async Task<CleanupStateActionResult> CloseMainMenuForCleanupAsync(
         CancellationToken cancellationToken)

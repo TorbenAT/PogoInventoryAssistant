@@ -1,5 +1,16 @@
 # Project state
 
+## Cleanup startup stability repair checkpoint
+
+The first direct autonomous phone attempt started from the observed Details
+screen but its strict recovery-frame evidence window did not reach consensus;
+the command stopped before input with `RecoveryInputCount=0`. The adapter now
+saves bounded recovery evidence and accepts three independent same-state
+ordinary Details frames when topology evidence changes during model settling.
+AppraisalIntro/AppraisalBars retain strict ROI consensus. Build and self-tests
+pass, 162/162. The real value proof was not automatically repeated after this
+runtime repair, so no phone acceptance is claimed.
+
 ## Autonomous cleanup start recovery checkpoint
 
 `device-run-cleanup-proof` now calls `KnownGameStateNormalizer` internally.

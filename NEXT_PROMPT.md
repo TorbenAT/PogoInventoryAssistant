@@ -1,5 +1,16 @@
 # Continuation prompt
 
+## Next action: bounded autonomous value proof
+
+The code checkpoint includes a focused startup stability repair. The previous
+direct phone attempt stopped before input because strict Details evidence did
+not reach consensus; `start-state-recovery.json` records `RecoveryInputCount=0`.
+The repair saves recovery frames and allows three same-state ordinary Details
+frames while retaining strict appraisal ROI rules. Build and self-tests are
+162/162. Run the single direct value proof once; do not manually prepare the
+phone, and do not claim acceptance unless the recovery report and reopened
+SQLite proof satisfy the acceptance fields.
+
 ## Autonomous cleanup start recovery checkpoint
 
 `device-run-cleanup-proof` now normalizes supported reversible starting states
