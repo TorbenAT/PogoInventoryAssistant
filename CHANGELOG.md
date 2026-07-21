@@ -1,5 +1,17 @@
 # Changelog
 
+## Task 5 Partial continuation hardening - 2026-07-21
+
+- A Partial identity observation is now checkpointed and passed through the
+  existing named `ReturnToInventory` operation before the bounded sequence
+  continues with the next item.
+- If Inventory is not verified after that recovery, the sequence remains
+  fail-closed and stops with the Partial evidence preserved. Unknown states
+  still stop immediately without further input.
+- Added regression coverage for both safe continuation and failed recovery;
+  package-free self-tests pass 155/155. Real-phone Task 5 acceptance remains
+  unclaimed because no named-operation host is bound in this environment.
+
 ## Task 4 dynamic identity tuning - 2026-07-21
 
 - Narrowed the Android Details tag search to the observed tag band and bounded

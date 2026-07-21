@@ -1,9 +1,10 @@
 # Continuation prompt
 
 Task 5 now has an offline `VerifiedInventoryTaskSequence` contract with
-checkpoint/resume and fail-closed tests at 155/155. Bind it to the existing
-validated named Android operations before any real-phone run; keep apply-tags
-false by default and never auto-apply AI-Delete.
+checkpoint/resume, Partial preservation plus bounded continuation after a
+verified Inventory restore, and fail-closed tests at 155/155. Bind it to the
+existing validated named Android operations before any real-phone run; keep
+apply-tags false by default and never auto-apply AI-Delete.
 
 The guarded appraisal recovery is accepted offline and on the real OnePlus
 A6013. Full-screen animation is excluded from stability; intro and bars use a

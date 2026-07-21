@@ -8,8 +8,10 @@ Appraisal, tag observation/application and return-to-Inventory. The sequence
 does not construct ADB commands, run parallel navigation, or expose delete.
 Every completed item is atomically checkpointed with query, state, ordinal
 instance ID, stable fingerprint, evidence hashes, appraisal and tags. Partial
-and Unknown states are preserved or controlled-stopped; resume requires a
-matching request and restored Inventory.
+states are preserved, passed through the named ReturnToInventory recovery and
+allowed to continue only after Inventory is verified. Unknown states and failed
+recovery are controlled-stopped; resume requires a matching request and
+restored Inventory.
 
 ## Dynamic Details identity
 

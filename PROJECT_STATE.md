@@ -9,10 +9,11 @@
 `VerifiedInventoryTaskSequence` composes only
 `IVerifiedInventoryNamedOperations`. It validates bounded limits and tags,
 atomically checkpoints each item, resumes only on matching request context,
-preserves Partial evidence, stops input on Unknown and assigns ordinal
-instance IDs independently of hashes. AI-Delete cannot be auto-applied and no
-delete operation is exposed. This checkpoint is offline-only; real-phone Task
-5 acceptance is not claimed.
+preserves Partial evidence, attempts the named ReturnToInventory recovery and
+continues only after Inventory is verified. It stops input on Unknown or failed
+Partial recovery and assigns ordinal instance IDs independently of hashes.
+AI-Delete cannot be auto-applied and no delete operation is exposed. This
+checkpoint is offline-only; real-phone Task 5 acceptance is not claimed.
 
 ## Task 4 dynamic identity implementation checkpoint
 

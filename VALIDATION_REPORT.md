@@ -58,7 +58,8 @@ remains the authoritative compiler and test runner.
 - build: PASS for Automation and SelfTest
 - self-tests: PASS, 155/155
 - bounded item limit, per-item atomic checkpoint and resume: PASS
-- Partial preservation and Unknown stop without further input: PASS
+- Partial preservation, bounded continuation after verified Inventory restore,
+  and Unknown stop without further input: PASS
 - tags disabled by default and AI-Delete auto-apply rejected: PASS
 - real-phone sequence acceptance: NOT RUN; no named-operation host was bound
 - production raw ADB actions: 0

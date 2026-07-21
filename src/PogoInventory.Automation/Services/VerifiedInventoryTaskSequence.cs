@@ -82,8 +82,25 @@ public sealed class VerifiedInventoryTaskSequence
                     Detail = "Identity consensus was Partial/Unavailable; item preserved and run stopped safely."
                 };
                 items.Add(partial);
-                checkpoint = NewCheckpoint(runId, request, items, VerifiedSequenceState.Partial, "RestoreInventory");
-                return await SaveResultAsync(output, checkpoint, cancellationToken);
+                var restoredAfterPartial = await _operations.ReturnToInventoryAsync(cancellationToken);
+                checkpoint = NewCheckpoint(
+                    runId,
+                    request,
+                    items,
+                    restoredAfterPartial,
+                    restoredAfterPartial == VerifiedSequenceState.Inventory
+                        ? "CheckpointAfterPartial"
+                        : "RestoreInventory");
+                await SaveAsync(output, checkpoint, cancellationToken);
+                if (restoredAfterPartial != VerifiedSequenceState.Inventory)
+                    return await StopAsync(
+                        output,
+                        checkpoint,
+                        items,
+                        restoredAfterPartial,
+                        "Partial identity preserved but Inventory was not restored",
+                        cancellationToken);
+                continue;
             }
 
             var appraisal = await _operations.CaptureAppraisalAsync(cancellationToken);
