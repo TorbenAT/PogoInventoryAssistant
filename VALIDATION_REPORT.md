@@ -1,3 +1,16 @@
+## Canonical close unwind checkpoint - 2026-07-21
+
+- Added screenshot-derived canonical lower-centre close locator and named
+  `close-canonical-screen` operation.
+- Added bounded five-input `UnwindToGameplayMapAsync` orchestration with fresh
+  target revalidation, one-tap transitions, stable changed-state postconditions
+  and no Android Back fallback.
+- Added synthetic positive/negative locator coverage, including clear-X and
+  arbitrary-cross rejection.
+- Build: PASS.
+- Self-tests: PASS, 162/162.
+- Real Android canonical unwind/value proof: pending; no acceptance claim.
+
 ## Cleanup startup stability repair checkpoint - 2026-07-21
 
 - Direct autonomous run `autonomous-pidgey-age0-365` stopped before input when
@@ -14,7 +27,7 @@
 
 ## Autonomous cleanup start recovery checkpoint - 2026-07-21
 
-- `device-run-cleanup-proof` now calls the shared bounded `KnownGameStateNormalizer`.
+- `device-run-cleanup-proof` now calls the shared bounded canonical-close unwind.
 - Supported reversible start states are normalized through named operations with stable pre/post frames, fresh input authorization, loop detection and a six-input budget.
 - AppraisalIntro continuation uses the locator target once and requires stable AppraisalBars; Unknown/unsafe states send zero input.
 - Baseline persistence precedes appraisal; appraisal and semantic-review enrichment are transactional.

@@ -2,10 +2,11 @@
 
 ## Cleanup value-proof transition
 
-The permanent value proof calls `KnownGameStateNormalizer` before inventory
-search. It captures three stable frames, follows only the bounded named graph
-from supported reversible game states, records every recovery transition and
-stops on unsafe/unknown/conflicting evidence, loops or six recovery inputs.
+The permanent value proof calls `CanonicalCloseUnwindService` before inventory
+search. `LocateCanonicalCloseControl` derives the lower-centre target from the
+current screenshot and requires three compatible targets, fresh revalidation,
+one tap and a stable changed post-state. The unwind stops on missing controls,
+unsafe ambiguity, loops or five inputs; it never falls back to Android Back.
 Once a Details identity and read-only tags
 are captured, the runner writes `ScanRuns`, `Observations`, `PokemonRecords`
 and an `Observed` event before it attempts appraisal. Appraisal is an

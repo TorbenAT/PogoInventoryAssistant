@@ -50,7 +50,7 @@ var tests = new (string Name, Func<Task> Run)[]
     ("Recovery ROI consensus ignores full-screen animation", GuardedInventoryRecoveryTests.RunRoiConsensusAsync),
     ("Guarded inventory recovery enforces stable bounded transitions", GuardedInventoryRecoveryTests.RunStateMachineAsync),
     ("Appraisal exit uses one tap per substate and Back only from Details", GuardedInventoryRecoveryTests.RunExitActionsAsync),
-    ("Known game state normalizer owns bounded cleanup startup graph", KnownGameStateNormalizerTests.RunAsync),
+    ("Canonical close locator rejects non-canonical X controls", CanonicalCloseLocatorTests.RunAsync),
     ("Perfect is kept", Sync(PerfectIsKept)),
     ("Trade nickname is kept", Sync(TradeNicknameIsKept)),
     ("Old Pokémon is kept", Sync(OldPokemonIsKept)),

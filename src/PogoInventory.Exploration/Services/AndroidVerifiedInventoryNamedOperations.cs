@@ -248,131 +248,210 @@ public sealed class AndroidVerifiedInventoryNamedOperations : ICleanupProofNamed
         return true;
     }
 
-
-    public async Task<CleanupStateActionResult> CloseMainMenuForCleanupAsync(
+    public async Task<CanonicalCloseOperationResult> CloseCanonicalScreenAsync(
         CancellationToken cancellationToken)
     {
-        LastCleanupRecoveryInputCount = 0;
-        var result = await PressBackForCleanupAsync(
-            PokemonGoGameState.MainMenu,
-            PokemonGoGameState.GameplayMap,
-            "close-main-menu",
-            cancellationToken);
-        return new CleanupStateActionResult
+        var precondition = await CaptureCanonicalClosePreconditionAsync(cancellationToken);
+        if (precondition is null)
         {
-            Succeeded = result,
-            State = result ? PokemonGoGameState.GameplayMap : PokemonGoGameState.Unknown,
-            InputCount = LastCleanupRecoveryInputCount,
-            Blocker = result ? null : "close-main-menu postcondition not verified"
-        };
-    }
-
-    public async Task<CleanupStateActionResult> CloseInventoryForCleanupAsync(
-        CancellationToken cancellationToken)
-    {
-        LastCleanupRecoveryInputCount = 0;
-        var state = await CloseInventoryAsync(cancellationToken);
-        var succeeded = state == PokemonGoGameState.GameplayMap.ToString();
-        return new CleanupStateActionResult
-        {
-            Succeeded = succeeded,
-            State = succeeded ? PokemonGoGameState.GameplayMap : PokemonGoGameState.Unknown,
-            InputCount = LastCleanupRecoveryInputCount,
-            Blocker = succeeded ? null : "close-inventory postcondition not verified"
-        };
-    }
-
-    public async Task<CleanupStateActionResult> ReturnToInventoryForCleanupAsync(
-        CancellationToken cancellationToken)
-    {
-        LastCleanupRecoveryInputCount = 0;
-        var state = await ReturnToInventoryAsync(cancellationToken);
-        return new CleanupStateActionResult
-        {
-            Succeeded = state == VerifiedSequenceState.Inventory,
-            State = state == VerifiedSequenceState.Inventory
-                ? PokemonGoGameState.Inventory
-                : PokemonGoGameState.Unknown,
-            InputCount = LastCleanupRecoveryInputCount,
-            Blocker = state == VerifiedSequenceState.Inventory
-                ? null : "guarded ReturnToInventory postcondition not verified"
-        };
-    }
-
-    public async Task<CleanupStateActionResult> ContinueAppraisalIntroForCleanupAsync(
-        CancellationToken cancellationToken)
-    {
-        LastCleanupRecoveryInputCount = 0;
-        var frames = await CaptureRecoveryFramesAsync("appraisal-intro-continue", cancellationToken);
-        var decision = GuardedInventoryRecovery.DecideAppraisalContinuation(frames, 0, false);
-        if (decision != AppraisalContinuationOutcome.TAP_INTRO_ONCE)
-        {
-            return new CleanupStateActionResult
+            return new CanonicalCloseOperationResult
             {
                 Succeeded = false,
-                State = PokemonGoGameState.Appraisal,
+                StateBefore = PokemonGoGameState.Unknown,
+                StateAfter = PokemonGoGameState.Unknown,
                 InputCount = 0,
-                Blocker = $"AppraisalIntro authorization: {decision}"
+                UnsafeSurfacePresent = false,
+                CanonicalCloseVerified = false,
+                Result = "CANONICAL_CLOSE_NOT_FOUND",
+                Blocker = "No compatible canonical close target was visually verified."
             };
         }
 
-        _recovery.Begin(frames);
-        var authorization = _recovery.AuthorizeNextAction();
-        if (authorization?.Action != RecoveryInputAction.ExitAppraisal || authorization.Target is null)
+        var fresh = await CaptureAsync("canonical-close-fresh-pre-input", cancellationToken);
+        var freshDetection = _detector.Detect(fresh, _appraisalProfile);
+        var freshState = EffectiveState(fresh, freshDetection);
+        var freshClose = _locator.LocateCanonicalCloseControl(fresh);
+        var freshUnsafe = _unsafeSurfaceDetector.Detect(fresh, "canonical-close-screen");
+        var freshTargetValid = freshClose is not null &&
+            Distance(freshClose.Target, precondition.Target) <= 0.035;
+        if (!freshTargetValid ||
+            (precondition.StateBefore != PokemonGoGameState.Unknown &&
+             freshState != precondition.StateBefore))
         {
-            return new CleanupStateActionResult
+            await WriteAuditAsync("close-canonical-screen", new
+            {
+                StateBefore = precondition.StateBefore,
+                LocatorEvidence = precondition.Locator.Evidence,
+                Target = precondition.Target,
+                PreconditionHashes = precondition.Hashes,
+                FreshFrameHash = freshDetection.ScreenshotSha256,
+                InputCount = 0,
+                StateAfter = freshState,
+                PostconditionResult = "DENIED_FRESH_CANONICAL_CLOSE_CHANGED",
+                UnsafeSurfacePresent = freshUnsafe.IsUnsafe,
+                CanonicalCloseVerified = false
+            }, cancellationToken);
+            return new CanonicalCloseOperationResult
             {
                 Succeeded = false,
-                State = PokemonGoGameState.Appraisal,
+                StateBefore = precondition.StateBefore,
+                StateAfter = freshState,
                 InputCount = 0,
-                Blocker = "AppraisalIntro continue locator authorization unavailable"
+                UnsafeSurfacePresent = freshUnsafe.IsUnsafe,
+                CanonicalCloseVerified = false,
+                Result = "CANONICAL_CLOSE_NOT_FOUND",
+                Blocker = "Fresh canonical close target or state changed before input."
             };
         }
 
-        await ExecuteRecoveryActionAsync(authorization, cancellationToken);
-        LastCleanupRecoveryInputCount = 1;
-        var post = await CaptureRecoveryFramesAsync("appraisal-intro-continue-post", cancellationToken);
-        var outcome = _recovery.ObservePostAction(post);
-        var succeeded = outcome == RecoveryOutcome.PROGRESSED &&
-            _recovery.Current?.Kind == RecoveryFrameKind.AppraisalBars;
-        return new CleanupStateActionResult
+        var visualFallback = freshDetection.State == PokemonGoGameState.Unknown &&
+            freshState != PokemonGoGameState.Unknown ? freshState : (PokemonGoGameState?)null;
+        if (_navigationTrace is not null)
         {
-            Succeeded = succeeded,
-            State = PokemonGoGameState.Appraisal,
+            await _navigationTrace.AuthorizeAsync(
+                "close-canonical-screen",
+                "changed-known-state-or-gameplay-map",
+                freshState.ToString(),
+                "AUTHORIZED",
+                fresh,
+                freshDetection,
+                visualFallback,
+                freshUnsafe.IsUnsafe ? freshUnsafe.Kind : null,
+                cancellationToken);
+        }
+
+        var (width, height) = await ScreenSizeAsync(cancellationToken);
+        var (x, y) = freshClose!.Target.ToPixels(width, height);
+        await _transport.TapAsync(_serial, x, y, cancellationToken);
+        if (_navigationTrace is not null)
+            await _navigationTrace.RecordInputSentAsync("Tap", $"({x},{y})", cancellationToken);
+        await WriteAuditAsync("close-canonical-screen", new
+        {
+            StateBefore = precondition.StateBefore,
+            LocatorEvidence = freshClose.Evidence,
+            Target = freshClose.Target,
+            Bounds = freshClose.Bounds,
+            PreconditionHashes = precondition.Hashes,
+            FreshFrameHash = freshDetection.ScreenshotSha256,
             InputCount = 1,
-            Blocker = succeeded ? null : "AppraisalBars stable postcondition not verified"
+            UnsafeSurfacePresent = freshUnsafe.IsUnsafe,
+            CanonicalCloseVerified = true,
+            OnlyCloseInputAuthorized = true,
+            ConfirmationCancelled = freshUnsafe.IsUnsafe,
+            InputSent = true
+        }, cancellationToken);
+
+        var post = await CaptureStableChangedStateAsync(
+            "canonical-close-post", precondition.StateBefore, cancellationToken);
+        await CompleteTraceAsync(post.State.ToString(), post.Succeeded ? "PASS" : post.Result,
+            cancellationToken);
+        await WriteAuditAsync("close-canonical-screen-postcondition", new
+        {
+            StateBefore = precondition.StateBefore,
+            StateAfter = post.State,
+            InputCount = 1,
+            PostconditionResult = post.Result,
+            PostFrameCount = post.FrameCount
+        }, cancellationToken);
+        return new CanonicalCloseOperationResult
+        {
+            Succeeded = post.Succeeded,
+            StateBefore = precondition.StateBefore,
+            StateAfter = post.State,
+            InputCount = 1,
+            UnsafeSurfacePresent = freshUnsafe.IsUnsafe,
+            CanonicalCloseVerified = true,
+            Result = post.Result,
+            Blocker = post.Succeeded ? null : "Canonical close postcondition did not establish a changed stable state."
         };
     }
 
-    public async Task<CleanupStateActionResult> ExitAppraisalForCleanupAsync(
+    private async Task<CanonicalClosePrecondition?> CaptureCanonicalClosePreconditionAsync(
         CancellationToken cancellationToken)
     {
-        LastCleanupRecoveryInputCount = 0;
-        var state = await ExitAppraisalAsync(cancellationToken);
-        return new CleanupStateActionResult
+        var frames = new List<CanonicalCloseFrame>(5);
+        for (var index = 0; index < 5; index++)
         {
-            Succeeded = state == VerifiedSequenceState.PokemonDetails,
-            State = state == VerifiedSequenceState.PokemonDetails
-                ? PokemonGoGameState.PokemonDetails
-                : PokemonGoGameState.Unknown,
-            InputCount = LastCleanupRecoveryInputCount,
-            Blocker = state == VerifiedSequenceState.PokemonDetails
-                ? null : "guarded appraisal exit did not establish Details"
-        };
+            var screenshot = await CaptureAsync($"canonical-close-pre-{index + 1}", cancellationToken);
+            var detection = _detector.Detect(screenshot, _appraisalProfile);
+            var state = EffectiveState(screenshot, detection);
+            var locator = _locator.LocateCanonicalCloseControl(screenshot);
+            var unsafeSurface = _unsafeSurfaceDetector.Detect(screenshot, "canonical-close-precondition");
+            await SaveEvidenceAsync($"canonical-close-pre-{index + 1}", screenshot, cancellationToken);
+            if (locator is not null)
+            {
+                frames.Add(new CanonicalCloseFrame(state, locator, detection.ScreenshotSha256));
+            }
+
+            var last = frames.TakeLast(3).ToArray();
+            if (last.Length == 3 &&
+                last.All(frame => frame.State == last[0].State) &&
+                last.All(frame => Distance(frame.Locator.Target, last[0].Locator.Target) <= 0.025))
+            {
+                return new CanonicalClosePrecondition
+                {
+                    StateBefore = last[^1].State,
+                    Locator = last[^1].Locator,
+                    Hashes = last.Select(frame => frame.Hash).ToArray()
+                };
+            }
+            if (index < 4)
+                await Task.Delay(_automationProfile.PostActionSettleMilliseconds, cancellationToken);
+        }
+        return null;
     }
 
-    public Task<CleanupStateActionResult> DismissKnownInformationalPopupForCleanupAsync(
+    private async Task<StableChangedState> CaptureStableChangedStateAsync(
+        string label,
+        PokemonGoGameState before,
         CancellationToken cancellationToken)
     {
-        cancellationToken.ThrowIfCancellationRequested();
-        return Task.FromResult(new CleanupStateActionResult
+        var states = new List<PokemonGoGameState>(5);
+        for (var index = 0; index < 5; index++)
         {
-            Succeeded = false,
-            State = PokemonGoGameState.KnownInformationalPopup,
-            InputCount = 0,
-            Blocker = "known popup dismissal requires a verified visual named control"
-        });
+            var screenshot = await CaptureAsync($"{label}-{index + 1}", cancellationToken);
+            var detection = _detector.Detect(screenshot, _appraisalProfile);
+            states.Add(EffectiveState(screenshot, detection));
+            await SaveEvidenceAsync($"{label}-{index + 1}", screenshot, cancellationToken);
+            var last = states.TakeLast(3).ToArray();
+            if (last.Length == 3 && last.All(state => state == last[0]) &&
+                last[0] != PokemonGoGameState.Unknown && last[0] != before)
+            {
+                return new StableChangedState(true, last[0], "CHANGED_STABLE_STATE", 3);
+            }
+            if (index < 4)
+                await Task.Delay(_automationProfile.PostActionSettleMilliseconds, cancellationToken);
+        }
+        return new StableChangedState(false, states.LastOrDefault(),
+            "NO_CHANGED_STABLE_STATE", states.Count);
     }
+
+    private PokemonGoGameState EffectiveState(
+        byte[] screenshot,
+        PokemonGoGameStateDetection detection) =>
+        detection.State == PokemonGoGameState.Unknown &&
+        _locator.LocateDetailsPageTopology(screenshot) is not null
+            ? PokemonGoGameState.PokemonDetails
+            : detection.State;
+
+    private sealed record CanonicalCloseFrame(
+        PokemonGoGameState State,
+        LocatedCanonicalCloseControl Locator,
+        string Hash);
+
+    private sealed record CanonicalClosePrecondition
+    {
+        public required PokemonGoGameState StateBefore { get; init; }
+        public required LocatedCanonicalCloseControl Locator { get; init; }
+        public required IReadOnlyList<string> Hashes { get; init; }
+        public NormalizedPoint Target => Locator.Target;
+    }
+
+    private sealed record StableChangedState(
+        bool Succeeded,
+        PokemonGoGameState State,
+        string Result,
+        int FrameCount);
 
     public async Task<VerifiedSequenceState> OpenFirstPokemonAsync(CancellationToken cancellationToken)
     {
@@ -1028,27 +1107,6 @@ public sealed class AndroidVerifiedInventoryNamedOperations : ICleanupProofNamed
             result.State == expected ? "PASS" : "FAIL",
             cancellationToken);
         if (result.State != expected) throw new InvalidOperationException($"{name} postcondition was not verified.");
-    }
-
-    private async Task<bool> PressBackForCleanupAsync(
-        PokemonGoGameState requiredState,
-        PokemonGoGameState expectedState,
-        string name,
-        CancellationToken cancellationToken)
-    {
-        await AuthorizeNonTapInputAsync(
-            name,
-            cancellationToken,
-            expectedState.ToString(),
-            requiredState);
-        await _transport.PressBackAsync(_serial, cancellationToken);
-        LastCleanupRecoveryInputCount = 1;
-        if (_navigationTrace is not null)
-            await _navigationTrace.RecordInputSentAsync("PressBack", "Back", cancellationToken);
-        var after = await WaitForStateAsync(new[] { expectedState }, cancellationToken);
-        await CompleteTraceAsync(expectedState.ToString(),
-            after.State == expectedState ? "PASS" : "FAIL", cancellationToken);
-        return after.State == expectedState;
     }
 
     private async Task TapNamedAsync(

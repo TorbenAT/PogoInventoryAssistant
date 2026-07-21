@@ -1,5 +1,16 @@
 # Continuation prompt
 
+## Next action: canonical-close phone acceptance
+
+The current code replaces the state-specific startup graph with
+`CanonicalCloseUnwindService`. Run the bounded diagnostic unwind from the
+phone's current reversible state, then the three program-created Inventory,
+PokemonDetails and Appraisal acceptance cycles, and only then run the SQLite
+value proof. The canonical close target must be visually located in three
+frames and freshly revalidated before every single tap. No fixed coordinate,
+Android Back fallback or automatic retry is allowed. Offline self-tests are
+162/162; no real-phone acceptance is claimed yet.
+
 ## Next action: bounded autonomous value proof
 
 The code checkpoint includes a focused startup stability repair. The previous
@@ -14,11 +25,9 @@ SQLite proof satisfy the acceptance fields.
 ## Autonomous cleanup start recovery checkpoint
 
 `device-run-cleanup-proof` now normalizes supported reversible starting states
-internally through `KnownGameStateNormalizer`; no manual GameplayMap
-preparation is required. The normalizer is bounded to six verified inputs,
-requires stable pre/post frames, records `start-state-recovery.json` and
-`start-state-recovery.md`, and stops on Unknown, unsafe, conflicting, repeated
-or exhausted recovery. Offline self-tests are 162/162.
+internally through canonical close unwind; no manual GameplayMap preparation
+is required. The unwind is bounded to five visually verified close inputs and
+stops on missing controls, unsafe ambiguity, loops or unchanged post-state.
 
 Run the one bounded real value proof directly from the phone's current state.
 Do not claim phone acceptance unless the recovery report and reopened SQLite

@@ -1,5 +1,7 @@
+using System.Security.Cryptography;
 using PogoInventory.Automation.Models;
 using PogoInventory.Vision.Imaging;
+using PogoInventory.Vision.Models;
 
 namespace PogoInventory.Exploration.Services;
 
@@ -9,6 +11,18 @@ public sealed record LocatedControl
     public required NormalizedPoint Target { get; init; }
     public required double Confidence { get; init; }
     public required IReadOnlyList<string> Evidence { get; init; }
+}
+
+public sealed record LocatedCanonicalCloseControl
+{
+    public required NormalizedPoint Target { get; init; }
+    public required double Confidence { get; init; }
+    public required double CircularControlConfidence { get; init; }
+    public required double XStrokeConfidence { get; init; }
+    public required double PositionConfidence { get; init; }
+    public required NormalizedRegion Bounds { get; init; }
+    public required IReadOnlyList<string> Evidence { get; init; }
+    public required string ScreenshotSha256 { get; init; }
 }
 
 public sealed class VisualControlLocator
@@ -179,6 +193,63 @@ public sealed class VisualControlLocator
         };
     }
 
+    public LocatedCanonicalCloseControl? LocateCanonicalCloseControl(byte[] screenshotPng)
+    {
+        ArgumentNullException.ThrowIfNull(screenshotPng);
+        var image = PngDecoder.Decode(screenshotPng);
+        var candidates = new List<CanonicalCandidate>();
+        var radius = Math.Max(10, image.Width / 18);
+        for (var y = (int)(image.Height * 0.74); y <= (int)(image.Height * 0.925); y += 2)
+        for (var x = (int)(image.Width * 0.32); x <= (int)(image.Width * 0.68); x += 4)
+        {
+            var candidate = ScoreCanonicalClose(image, x, y, radius);
+            if (candidate.Score >= 0.62)
+                candidates.Add(candidate);
+        }
+
+        var best = candidates.OrderByDescending(candidate => candidate.Score).FirstOrDefault();
+        if (best is null || best.Score < 0.70)
+            return null;
+
+        var conflicting = candidates.Any(candidate =>
+            candidate != best &&
+            Distance(candidate.X, candidate.Y, best.X, best.Y) > radius * 2.4 &&
+            candidate.Score >= best.Score - 0.05);
+        if (conflicting)
+            return null;
+
+        var bounds = new NormalizedRegion
+        {
+            X = (double)(best.X - radius) / image.Width,
+            Y = (double)(best.Y - radius) / image.Height,
+            Width = (double)(radius * 2) / image.Width,
+            Height = (double)(radius * 2) / image.Height
+        };
+        return new LocatedCanonicalCloseControl
+        {
+            Target = new NormalizedPoint
+            {
+                X = (double)best.X / (image.Width - 1),
+                Y = (double)best.Y / (image.Height - 1)
+            },
+            Confidence = best.Score,
+            CircularControlConfidence = best.CircularConfidence,
+            XStrokeConfidence = best.XStrokeConfidence,
+            PositionConfidence = best.PositionConfidence,
+            Bounds = bounds,
+            Evidence = new[]
+            {
+                "canonical-close-lower-centre-safe-zone",
+                "canonical-circular-shell",
+                "canonical-crossing-x-strokes",
+                "canonical-foreground-background-contrast",
+                "canonical-dimensions-verified",
+                "no-conflicting-canonical-close-target"
+            },
+            ScreenshotSha256 = Convert.ToHexString(SHA256.HashData(screenshotPng)).ToLowerInvariant()
+        };
+    }
+
     public LocatedControl? LocateMainMenuPokeball(byte[] screenshotPng)
     {
         var image = PngDecoder.Decode(screenshotPng);
@@ -315,8 +386,67 @@ public sealed class VisualControlLocator
         return new Candidate(x, y, checks.Count(value => value) / (double)checks.Length);
     }
 
+    private static CanonicalCandidate ScoreCanonicalClose(
+        PixelImage image, int x, int y, int radius)
+    {
+        var shellMatches = 0;
+        var shellTotal = 0;
+        var strokeMatches = 0;
+        var strokeTotal = 0;
+        var backgroundMatches = 0;
+        var backgroundTotal = 0;
+        for (var index = 0; index < 16; index++)
+        {
+            var angle = index * Math.PI * 2 / 16;
+            shellTotal++;
+            if (IsCanonicalShell(Sample(image,
+                    x + (int)(Math.Cos(angle) * radius),
+                    y + (int)(Math.Sin(angle) * radius))))
+                shellMatches++;
+
+            var outer = radius * 1.35;
+            backgroundTotal++;
+            if (!IsCanonicalShell(Sample(image,
+                    x + (int)(Math.Cos(angle) * outer),
+                    y + (int)(Math.Sin(angle) * outer))))
+                backgroundMatches++;
+        }
+
+        foreach (var sign in new[] { -1, 1 })
+        for (var fraction = 0.22; fraction <= 0.78; fraction += 0.14)
+        {
+            var offset = (int)(radius * fraction);
+            strokeTotal++;
+            if (IsCanonicalStroke(Sample(image, x + offset, y + sign * offset)))
+                strokeMatches++;
+            strokeTotal++;
+            if (IsCanonicalStroke(Sample(image, x - offset, y + sign * offset)))
+                strokeMatches++;
+        }
+
+        var circular = shellMatches / (double)shellTotal;
+        var strokes = strokeMatches / (double)strokeTotal;
+        var contrast = backgroundMatches / (double)backgroundTotal;
+        var position = x >= image.Width * 0.39 && x <= image.Width * 0.61 &&
+            y >= image.Height * 0.76 && y <= image.Height * 0.91 ? 1d : 0d;
+        var score = circular * 0.38 + strokes * 0.37 +
+            position * 0.15 + contrast * 0.10;
+        return new CanonicalCandidate(x, y, score, circular, strokes, position);
+    }
+
     private static Rgba32 Sample(PixelImage image, int x, int y) =>
         image.GetPixel(Math.Clamp(x, 0, image.Width - 1), Math.Clamp(y, 0, image.Height - 1));
+
+    private static bool IsCanonicalShell(Rgba32 pixel) =>
+        pixel.G >= 80 && pixel.B >= 80 && pixel.G >= pixel.R * 1.12 &&
+        pixel.B >= pixel.R * 1.04;
+
+    private static bool IsCanonicalStroke(Rgba32 pixel) =>
+        pixel.G >= 130 && pixel.B >= 120 && pixel.G >= pixel.R * 1.18 &&
+        pixel.B >= pixel.R * 1.05;
+
+    private static double Distance(int leftX, int leftY, int rightX, int rightY) =>
+        Math.Sqrt(Math.Pow(leftX - rightX, 2) + Math.Pow(leftY - rightY, 2));
 
     private static double RegionMatch(PixelImage image, double left, double top, double right, double bottom,
         Func<Rgba32, bool> predicate)
@@ -391,4 +521,12 @@ public sealed class VisualControlLocator
         pixel.B >= 105 && pixel.G >= 90 && pixel.R <= 130;
 
     private sealed record Candidate(int X, int Y, double Score);
+
+    private sealed record CanonicalCandidate(
+        int X,
+        int Y,
+        double Score,
+        double CircularConfidence,
+        double XStrokeConfidence,
+        double PositionConfidence);
 }

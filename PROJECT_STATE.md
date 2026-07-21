@@ -1,5 +1,16 @@
 # Project state
 
+## Canonical close unwind checkpoint
+
+Cleanup startup now uses `CanonicalCloseUnwindService` rather than a large
+state-specific recovery graph. `LocateCanonicalCloseControl` requires three
+compatible screenshot-derived lower-centre targets, fresh revalidation and a
+stable changed post-state after exactly one tap. The unwind stops on loops,
+missing canonical control, unsafe ambiguity or five inputs. A positively
+verified canonical close is the only input permitted on an unsafe confirmation
+surface; affirmative controls remain blocked. Offline self-tests pass
+162/162. No real-phone acceptance is claimed yet.
+
 ## Cleanup startup stability repair checkpoint
 
 The first direct autonomous phone attempt started from the observed Details
@@ -13,15 +24,8 @@ runtime repair, so no phone acceptance is claimed.
 
 ## Autonomous cleanup start recovery checkpoint
 
-`device-run-cleanup-proof` now calls `KnownGameStateNormalizer` internally.
-The normalizer detects three stable frames, executes only named verified
-transitions, records the recovery path, detects repeated state/action pairs and
-stops at six recovery inputs. GameplayMap, MainMenu, Inventory/search,
-PokemonDetails, PokemonMenu and AppraisalIntro/AppraisalBars are represented in
-the bounded graph; Unknown and unsafe states remain zero-input blockers.
-AppraisalIntro continuation uses the `VisualControlLocator` target exactly
-once and requires stable AppraisalBars. Offline self-tests pass 162/162.
-The real phone value proof is pending this code checkpoint and is not claimed.
+This checkpoint is superseded by the canonical-close unwind above. The real
+phone value proof remains pending and is not claimed.
 
 ## Cleanup proof pipeline implementation checkpoint
 

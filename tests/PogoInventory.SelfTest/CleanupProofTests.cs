@@ -73,7 +73,7 @@ internal static class CleanupProofTests
                 runnerSource.IndexOf("CaptureCleanupAppraisalAsync", StringComparison.Ordinal),
                 "baseline persistence precedes appraisal");
             var cliSource = File.ReadAllText(RepositoryPath("src", "PogoInventory.Cli", "Program.cs"));
-            AssertTrue(cliSource.Contains("KnownGameStateNormalizer", StringComparison.Ordinal), "cleanup CLI uses shared state normalizer");
+            AssertTrue(cliSource.Contains("CanonicalCloseUnwindService", StringComparison.Ordinal), "cleanup CLI uses canonical close unwind");
             var androidSource = File.ReadAllText(RepositoryPath("src", "PogoInventory.Exploration", "Services", "AndroidVerifiedInventoryNamedOperations.cs"));
             AssertTrue(androidSource.Contains("CapturePostExitDetailsFramesAsync", StringComparison.Ordinal), "post-exit fallback exists");
             AssertTrue(File.ReadAllText(RepositoryPath("src", "PogoInventory.Application", "CleanupProofComparativeModels.cs"))

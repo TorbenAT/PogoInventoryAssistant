@@ -1811,7 +1811,7 @@ static async Task<int> RunCleanupProofAsync(
     Directory.CreateDirectory(evidence);
     var operations = new AndroidVerifiedInventoryNamedOperations(
         transport, selected.Serial, automationProfile, evidence, appraisalProfile);
-    var recovery = await new KnownGameStateNormalizer().EnsureCleanupReadyAsync(
+    var recovery = await new CanonicalCloseUnwindService().UnwindToGameplayMapAsync(
         operations, cancellationToken);
     await File.WriteAllTextAsync(
         Path.Combine(output, "start-state-recovery.json"),
@@ -1819,9 +1819,9 @@ static async Task<int> RunCleanupProofAsync(
         cancellationToken);
     await File.WriteAllTextAsync(
         Path.Combine(output, "start-state-recovery.md"),
-        $"# Start-state recovery\n\n- Initial state: `{recovery.InitialState}`\n- Recovery path: `{string.Join(" -> ", recovery.RecoveryPath)}`\n- Actions: `{string.Join(", ", recovery.RecoveryActions)}`\n- Input count: `{recovery.RecoveryInputCount}`\n- Ready state: `{recovery.ReadyState}`\n- Result: `{recovery.Result}`\n- Blocker: `{recovery.Blocker ?? "NONE"}`\n",
+        $"# Start-state recovery\n\n- Initial state: `{recovery.InitialState}`\n- Recovery path: `{string.Join(" -> ", recovery.Path)}`\n- Actions: `{string.Join(", ", recovery.Actions)}`\n- Input count: `{recovery.InputCount}`\n- Ready state: `{recovery.FinalState}`\n- Result: `{recovery.Result}`\n- Blocker: `{recovery.Blocker ?? "NONE"}`\n",
         cancellationToken);
-    if (!recovery.IsReady)
+    if (!recovery.Succeeded)
     {
         Console.Error.WriteLine($"CLEANUP_START_RECOVERY_BLOCKED: {recovery.Blocker ?? recovery.Result}");
         return 1;

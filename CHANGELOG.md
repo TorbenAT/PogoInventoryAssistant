@@ -1,5 +1,20 @@
 # Changelog
 
+## Canonical close unwind for autonomous startup - 2026-07-21
+
+- Replaced cleanup startup's state-specific normalizer with bounded
+  `CanonicalCloseUnwindService` and the named `close-canonical-screen`
+  operation.
+- Added screenshot-derived lower-centre canonical close detection with shell,
+  crossing-stroke, position, dimension and contrast evidence; no fixed
+  coordinate fallback is available.
+- Canonical close uses three compatible targets, fresh revalidation, one tap,
+  stable changed-state postcondition and a five-input loop/budget limit.
+- A verified canonical close is the only allowed input on unsafe confirmation
+  surfaces; affirmative/destructive controls remain blocked.
+- Added synthetic positive/negative locator tests. Offline self-tests pass
+  162/162. Real-phone acceptance is not claimed yet.
+
 ## Cleanup startup stability repair - 2026-07-21
 
 - Saved bounded start-state recovery frames under the ignored evidence root.
@@ -13,15 +28,9 @@
 
 ## Autonomous cleanup start recovery - 2026-07-21
 
-- `device-run-cleanup-proof` now calls the shared bounded
-  `KnownGameStateNormalizer` before inventory search; manual GameplayMap
-  preparation is no longer a product requirement.
-- Known reversible Details, Menu, AppraisalIntro/AppraisalBars, Inventory and
-  search states use named operations with three stable frames, fresh
-  revalidation, postconditions, loop detection and a six-input budget.
-- AppraisalIntro continue uses the visually located target exactly once and
-  requires stable AppraisalBars; unknown and unsafe states remain zero-input
-  blockers.
+- `device-run-cleanup-proof` now calls the shared bounded canonical-close
+  unwind before inventory search; manual GameplayMap preparation is no longer
+  a product requirement.
 - Identity and read-only tags are persisted transactionally before appraisal;
   appraisal is best-effort and enriches an already durable row.
 - Appraisal exit has one bounded, topology-scoped Details postcondition
