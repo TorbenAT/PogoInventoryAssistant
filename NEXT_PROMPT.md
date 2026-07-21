@@ -1,5 +1,15 @@
 # Continuation prompt
 
+## Current checkpoint: canonical close accepted; value proof blocked by query
+
+Canonical close is pushed through `5a5ffc1`; the real phone diagnostic and
+Inventory, Details and Appraisal cycles all returned safely to GameplayMap.
+The required direct value-proof query `pidgey&age0-365` returned no Pokémon,
+so the run safely stopped before Details with SQLite integrity `ok` and zero
+persisted rows. Do not claim a value proof or change the requested query
+without a new controller decision. Evidence is under
+`local-data/validation/cleanup-value-proof`.
+
 ## Next action: rerun canonical-close diagnostic once
 
 The first diagnostic stopped with zero input after visually showing the real

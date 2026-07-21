@@ -1,5 +1,14 @@
 # Changelog
 
+## Unreleased
+
+- Repaired real Android canonical-close scale/position evidence and integrated
+  the existing guarded Appraisal exit into autonomous startup unwind.
+- Accepted bounded read-only phone unwinds from current state, Inventory,
+  Details and Appraisal. The requested `pidgey&age0-365` value proof found no
+  results and safely persisted an empty, integrity-checked SQLite run; no
+  value-proof acceptance is claimed.
+
 ## Canonical close Android scale repair - 2026-07-21
 
 - The first real diagnostic found the canonical Details X visually present but

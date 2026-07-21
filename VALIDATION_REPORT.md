@@ -102,6 +102,21 @@ remains the authoritative compiler and test runner.
 
 # Validation report
 
+## Canonical close and cleanup value-proof checkpoint — 2026-07-21
+
+- Code commits: `2c34f70` and `5a5ffc1`, both pushed to `main`.
+- Build: PASS. Self-tests: PASS, 162/162. `git diff --check`: PASS.
+- Real phone: the direct unwind and three program-created Inventory, Details
+  and Appraisal cycles returned to GameplayMap. Appraisal used the existing
+  guarded named exit before canonical-close layers; no raw ADB input, blind
+  retry, destructive confirmation, tag mutation or affirmative input occurred.
+- Value proof: `device-run-cleanup-proof` ran with query
+  `pidgey&age0-365`, item limit 6 and continue-on-partial. The query showed no
+  results, so first-card Details verification was not attempted. The reopened
+  SQLite database reported integrity `ok`, with 0 observations and 0 Pokémon
+  records. No real value-proof acceptance is claimed.
+- Evidence root: `local-data/validation/cleanup-value-proof`.
+
 ## Cleanup proof pipeline implementation on 2026-07-21
 
 - wrong-screen CI packaging fix: PASS; synthetic `PixelImage`/`PngEncoder`

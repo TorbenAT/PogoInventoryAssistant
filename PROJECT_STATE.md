@@ -1,5 +1,19 @@
 # Project state
 
+## Canonical close phone acceptance and bounded value-proof result
+
+The canonical-close locator was repaired for the real OnePlus A6013 scale and
+requires the lower-centre position, circular shell, crossing X evidence and
+stable target revalidation. The direct diagnostic and all three program-created
+cycles reached GameplayMap with no affirmative, destructive or tag inputs.
+Appraisal bars use the existing guarded named appraisal exit because that
+surface has no lower-centre canonical X; Details, Inventory and remaining
+layers use canonical close. The direct value-proof command reached the exact
+query `pidgey&age0-365`, which produced zero results; it stopped before the
+first-card action, preserved SQLite integrity `ok`, and wrote zero observation
+and Pokémon-record rows. No real value proof with persisted Pokémon data is
+claimed.
+
 ## Canonical close Android scale repair checkpoint
 
 The first direct canonical-close diagnostic captured the actual Details
