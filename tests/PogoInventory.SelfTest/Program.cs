@@ -239,6 +239,14 @@ var tests = new (string Name, Func<Task> Run)[]
     ,("Header OCR parses and validates CP", HeaderOcrTests.RunCpParsingAsync)
     ,("Header OCR tolerates case and single-character OCR noise", HeaderOcrTests.RunTolerantSpeciesNormalizationAsync)
     ,("Search query classifier distinguishes exact species from broad filters", HeaderOcrTests.RunSearchQueryClassifierAsync)
+    ,("Cleanup runner never stores a broad-filter query as species", HeaderSemanticsCleanupTests.BroadQueryNeverStoredAsSpeciesAsync)
+    ,("Cleanup runner treats an exact species query as QueryDerived species", HeaderSemanticsCleanupTests.ExactQueryProducesQueryDerivedSpeciesAsync)
+    ,("Cleanup runner header OCR consensus produces Automated species and CP", HeaderSemanticsCleanupTests.HeaderConsensusProducesAutomatedSpeciesAndCpAsync)
+    ,("Cleanup runner conflicting header frames produce Unknown species", HeaderSemanticsCleanupTests.ConflictingHeaderFramesProduceUnknownSpeciesAsync)
+    ,("Cleanup runner IV multi-frame consensus unlocks Complete", HeaderSemanticsCleanupTests.IvConsensusProducesCompleteObservationAsync)
+    ,("Cleanup runner IV disagreement keeps Partial and never guesses", HeaderSemanticsCleanupTests.IvDisagreementKeepsPartialAsync)
+    ,("Cleanup runner and reprocessor honor a loaded rule policy", HeaderSemanticsCleanupTests.PolicyFileLoadingAffectsRecommendationsAsync)
+    ,("Offline analyze-cleanup-evidence reprocesses a database without touching the original", HeaderSemanticsCleanupTests.AnalyzeCleanupEvidenceEndToEndAsync)
 };
 
 var failed = 0;

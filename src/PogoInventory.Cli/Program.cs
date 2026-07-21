@@ -1,4 +1,5 @@
-using System.Globalization;
+﻿using System.Globalization;
+using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Xml.Linq;
@@ -227,6 +228,9 @@ static async Task<int> MainAsync(string[] args)
                 args.Skip(1).ToArray(),
                 cancellationSource.Token),
             "ocr-header-spike" => await RunOcrHeaderSpikeAsync(
+                args.Skip(1).ToArray(),
+                cancellationSource.Token),
+            "analyze-cleanup-evidence" => await RunAnalyzeCleanupEvidenceAsync(
                 args.Skip(1).ToArray(),
                 cancellationSource.Token),
             _ => UnknownCommand(args[0])
@@ -1864,6 +1868,13 @@ static async Task<int> RunCleanupProofAsync(
         return 1;
     }
 
+    var speciesReferencePath = Optional(options, "species-reference") ??
+        Path.Combine("data", "reference", "species-reference.json");
+    var speciesReference = LoadSemanticSpeciesReference(speciesReferencePath);
+    var headerAnalyzer = TryCreateHeaderSemanticsAnalyzer(speciesReference);
+    var policyPath = Optional(options, "policy");
+    var rulePolicy = policyPath is null ? new RulePolicy() : RulePolicyLoader.LoadFromFile(policyPath);
+
     var request = new CleanupProofRequest
     {
         SpeciesQuery = species,
@@ -1874,7 +1885,10 @@ static async Task<int> RunCleanupProofAsync(
         ContinueOnPartial = true,
         MaximumCaptureFrames = ParsePositiveInt(options, "maximum-capture-frames", 8),
         MinimumCompleteFrames = ParsePositiveInt(options, "minimum-complete-frames", 3),
-        MinimumPartialFrames = ParsePositiveInt(options, "minimum-partial-frames", 2)
+        MinimumPartialFrames = ParsePositiveInt(options, "minimum-partial-frames", 2),
+        SpeciesReference = speciesReference,
+        HeaderAnalyzer = headerAnalyzer,
+        Policy = rulePolicy
     };
     var result = await new CleanupProofRunner().RunAsync(operations, request, cancellationToken);
     Console.WriteLine(JsonSerializer.Serialize(result, new JsonSerializerOptions
@@ -3518,6 +3532,12 @@ static void PrintHelp()
     Console.WriteLine("  device-search-inventory --query <query> --out <directory> [--clear-after <true|false>]");
     Console.WriteLine("  device-run-index-sequence --query <query> --item-limit <n> --out <directory>");
     Console.WriteLine("  device-run-cleanup-proof --species <query> --item-limit <6-20> --database <sqlite> --out <directory> --continue-on-partial");
+    Console.WriteLine("                           [--species-reference <species-reference.json>] [--policy <rule-policy.json>]");
+    Console.WriteLine("  analyze-cleanup-evidence --database <cleanup-proof.sqlite> --evidence-root <dir> --out <dir>");
+    Console.WriteLine("                           [--species-reference <species-reference.json>] [--policy <rule-policy.json>]");
+    Console.WriteLine("                           Offline reprocess: reruns header OCR + IV consensus over an existing");
+    Console.WriteLine("                           cleanup-proof database's stored evidence and writes a NEW sqlite copy;");
+    Console.WriteLine("                           never modifies the original database. Windows-only (Windows.Media.Ocr).");
     Console.WriteLine("  device-unwind-to-map --out <directory> [--create-state current|inventory|details|appraisal]");
     Console.WriteLine("                            [--adb <adb.exe>] [--serial <serial>] [--profile <automation.json>]");
     Console.WriteLine("                            [--appraisal-profile <appraisal.json>] [--resume] [--controlled-stop-after <n>]");
@@ -3605,6 +3625,82 @@ static void PrintHelp()
     Console.WriteLine("                   ocr-spike-report.json/.md. Windows-only (Windows.Media.Ocr).");
     Console.WriteLine();
     Console.WriteLine("Inventory scan uses only the allow-listed taps and swipe from the automation profile. It never transfers, powers up, evolves, purifies, catches or changes location.");
+}
+
+/// <summary>
+/// Loads the committed species reference data used for both search-query
+/// classification (ExactSpecies vs BroadFilter) and header OCR validation. When
+/// the file is missing, an empty reference is returned so callers degrade to
+/// "cannot validate species" rather than throwing -- consistent with
+/// ocr-header-spike's own fallback.
+/// </summary>
+static ISpeciesReference LoadSemanticSpeciesReference(string speciesReferencePath) =>
+    File.Exists(speciesReferencePath)
+        ? new StaticSpeciesReference(SpeciesReferenceLoader.LoadFromFile(speciesReferencePath).Species.Select(entry => entry.Name))
+        : new StaticSpeciesReference(Array.Empty<string>());
+
+/// <summary>
+/// Builds a <see cref="PokemonHeaderAnalyzer"/> backed by the real Windows OCR
+/// engine when one is available (Windows host, installed language pack). When
+/// no engine is available (including on non-Windows hosts), returns null so
+/// callers fall back to their pre-OCR behaviour rather than failing.
+/// </summary>
+static PokemonHeaderAnalyzer? TryCreateHeaderSemanticsAnalyzer(
+    ISpeciesReference speciesReference,
+    HeaderAnalysisProfile? profile = null,
+    string? languageTag = null)
+{
+    if (!WindowsMediaTextRecognizer.IsSupported(languageTag))
+    {
+        return null;
+    }
+    ITextRecognizer recognizer = new WindowsMediaTextRecognizer(languageTag);
+    return new PokemonHeaderAnalyzer(recognizer, speciesReference, profile);
+}
+
+/// <summary>
+/// Offline reprocess: reruns header OCR (species/CP/nickname) and IV
+/// consensus against the stored evidence screenshots of an existing
+/// cleanup-proof.sqlite database, writes the corrected result to a NEW sqlite
+/// copy, reruns the recommendation and comparative analysis and regenerates
+/// the standard report set plus a species/CP coverage summary. Never touches
+/// the original database. Windows-only (needs Windows.Media.Ocr); on a
+/// non-Windows host or when no language pack is available, species/CP simply
+/// stay at whatever the original database already recorded (no OCR
+/// re-derivation), which is safe (never guessed) but produces no improvement.
+/// The substantive logic lives in
+/// <see cref="PogoInventory.Application.CleanupEvidenceReprocessor"/> so it can
+/// also be exercised by PogoInventory.SelfTest without the Windows-only TFM;
+/// this command is a thin CLI wrapper around it.
+/// </summary>
+static async Task<int> RunAnalyzeCleanupEvidenceAsync(string[] args, CancellationToken cancellationToken)
+{
+    var options = ParseOptions(args);
+    var sourceDatabase = Path.GetFullPath(Require(options, "database"));
+    var evidenceRoot = Path.GetFullPath(Require(options, "evidence-root"));
+    var outputDirectory = Path.GetFullPath(Require(options, "out"));
+
+    var speciesReferencePath = Optional(options, "species-reference") ??
+        Path.Combine("data", "reference", "species-reference.json");
+    var speciesReference = LoadSemanticSpeciesReference(speciesReferencePath);
+    var headerAnalyzer = TryCreateHeaderSemanticsAnalyzer(speciesReference);
+    var policyPath = Optional(options, "policy");
+    var policy = policyPath is null ? new RulePolicy() : RulePolicyLoader.LoadFromFile(policyPath);
+
+    var summary = await CleanupEvidenceReprocessor.ReprocessAsync(
+        new CleanupEvidenceReprocessRequest
+        {
+            SourceDatabasePath = sourceDatabase,
+            EvidenceRoot = evidenceRoot,
+            OutputDirectory = outputDirectory,
+            SpeciesReference = speciesReference,
+            HeaderAnalyzer = headerAnalyzer,
+            Policy = policy
+        },
+        cancellationToken);
+
+    Console.WriteLine(JsonSerializer.Serialize(summary, new JsonSerializerOptions { WriteIndented = true }));
+    return summary.RowsWithQueryAsSpecies == 0 ? 0 : 1;
 }
 
 static async Task<int> RunOcrHeaderSpikeAsync(string[] args, CancellationToken cancellationToken)

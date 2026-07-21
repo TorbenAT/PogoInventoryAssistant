@@ -7,6 +7,7 @@ using PogoInventory.Automation.Services;
 using PogoInventory.Core.Analysis;
 using PogoInventory.Core.Models;
 using PogoInventory.Core.Policy;
+using PogoInventory.HeaderText;
 using PogoInventory.Persistence;
 
 namespace PogoInventory.Application;
@@ -22,6 +23,27 @@ public sealed record CleanupProofRequest
     public int MaximumCaptureFrames { get; init; } = 8;
     public int MinimumCompleteFrames { get; init; } = 3;
     public int MinimumPartialFrames { get; init; } = 2;
+
+    /// <summary>
+    /// Optional species reference used to classify <see cref="SpeciesQuery"/> as
+    /// <see cref="SearchQueryKind.ExactSpecies"/> versus
+    /// <see cref="SearchQueryKind.BroadFilter"/>, and to validate OCR'd header
+    /// text against known species. When null, the query is always treated as a
+    /// broad filter (so the raw query is never trusted as a species name) and
+    /// header OCR species text cannot be validated.
+    /// </summary>
+    public ISpeciesReference? SpeciesReference { get; init; }
+
+    /// <summary>
+    /// Optional header (species/CP/nickname) OCR analyzer. When null (e.g. on a
+    /// non-Windows host, or when no OCR engine is available), the runner
+    /// behaves exactly as before except species assignment follows the
+    /// query-classification rule instead of the raw query text.
+    /// </summary>
+    public PokemonHeaderAnalyzer? HeaderAnalyzer { get; init; }
+
+    /// <summary>Rule policy used for the recommendation analysis. Defaults to built-in defaults when null.</summary>
+    public RulePolicy? Policy { get; init; }
 
     public void Validate()
     {
@@ -132,7 +154,10 @@ public sealed class CleanupProofRunner
                 }
 
                 var tags = await operations.ReadTagObservationAsync(cancellationToken);
-                var observation = BuildObservation(runId, ordinal, request.SpeciesQuery, identity, tags);
+                var headerScreen = ordinal == 1 ? HeaderScreenType.PokemonDetails : HeaderScreenType.AppraisalBars;
+                var extraction = await BuildSemanticExtractionAsync(
+                    runId, ordinal, request, identity, tags, headerScreen, cancellationToken);
+                var observation = extraction.Observation;
                 var record = new CleanupProofObservationRecord
                 {
                     RunId = runId,
@@ -147,7 +172,10 @@ public sealed class CleanupProofRunner
                     ScreenshotPaths = identity.ScreenshotPaths,
                     ScreenshotHashes = identity.ScreenshotHashes,
                     AppraisalEvidence = new[] { "AppraisalStatus:Pending" },
-                    FieldEvidenceSources = FieldEvidence(observation, tags, "Pending")
+                    FieldEvidenceSources = FieldEvidence(
+                        observation, tags, "Pending",
+                        extraction.SpeciesEvidence, extraction.CpEvidence,
+                        "Unknown", "Unknown", "Unknown")
                 };
                 captures.Add(record);
                 await persistence.RecordCleanupObservationAsync(record, cancellationToken);
@@ -176,14 +204,25 @@ public sealed class CleanupProofRunner
                     };
                 }
 
-                var enrichedObservation = ApplyAppraisal(observation, appraisal);
+                var appraisalOutcome = ApplyAppraisal(observation, appraisal);
+                var enrichedObservation = appraisalOutcome.Observation;
+                var criticalTripleKnown =
+                    !string.Equals(enrichedObservation.Species, "Unknown", StringComparison.Ordinal) &&
+                    enrichedObservation.Cp is not null &&
+                    enrichedObservation.AttackIv is not null &&
+                    enrichedObservation.DefenseIv is not null &&
+                    enrichedObservation.HpIv is not null;
                 var enrichedRecord = record with
                 {
                     Observation = enrichedObservation,
+                    ObservationStatus = criticalTripleKnown ? "Complete" : record.ObservationStatus,
                     AppraisalEvidence = appraisal.EvidencePaths.Count == 0
                         ? new[] { "AppraisalStatus:" + appraisal.Status }
                         : appraisal.EvidencePaths,
-                    FieldEvidenceSources = FieldEvidence(enrichedObservation, tags, appraisal.Status)
+                    FieldEvidenceSources = FieldEvidence(
+                        enrichedObservation, tags, appraisal.Status,
+                        extraction.SpeciesEvidence, extraction.CpEvidence,
+                        appraisalOutcome.AttackEvidence, appraisalOutcome.DefenseEvidence, appraisalOutcome.HpEvidence)
                 };
                 await persistence.EnrichCleanupAppraisalAsync(
                     runId,
@@ -191,7 +230,8 @@ public sealed class CleanupProofRunner
                     enrichedObservation,
                     appraisal,
                     enrichedRecord.FieldEvidenceSources,
-                    cancellationToken);
+                    cancellationToken,
+                    enrichedRecord.ObservationStatus);
                 captures[^1] = enrichedRecord;
 
                 if (ordinal >= request.ItemLimit)
@@ -251,44 +291,197 @@ public sealed class CleanupProofRunner
         }
     }
 
-    private static PokemonObservation BuildObservation(
+    private sealed record SemanticExtractionResult(
+        PokemonObservation Observation,
+        string SpeciesEvidence,
+        string CpEvidence);
+
+    private sealed record AppraisalApplicationResult(
+        PokemonObservation Observation,
+        string AttackEvidence,
+        string DefenseEvidence,
+        string HpEvidence);
+
+    /// <summary>
+    /// Resolves Species/Cp/Nickname for one captured item.
+    ///
+    /// Species resolution order:
+    /// 1. The search query classifies as <see cref="SearchQueryKind.ExactSpecies"/>
+    ///    (a single species token, optionally combined with non-species filters) ->
+    ///    Species is the validated species, evidence "QueryDerived".
+    /// 2. Otherwise, header OCR multi-frame consensus (&gt;= 2 of the captured
+    ///    frames agree) resolves a species -> evidence "Automated".
+    /// 3. Otherwise Species stays "Unknown" (never guessed), evidence "Unknown".
+    ///
+    /// The raw query text itself is never persisted as Species: a broad-filter
+    /// query (e.g. "age0-1825") can only ever reach case 3.
+    /// </summary>
+    private static async Task<SemanticExtractionResult> BuildSemanticExtractionAsync(
         string runId,
         int ordinal,
-        string species,
+        CleanupProofRequest request,
         CleanupProofIdentityCapture identity,
-        VerifiedTagObservation tags) => new()
+        VerifiedTagObservation tags,
+        HeaderScreenType headerScreen,
+        CancellationToken cancellationToken)
     {
-        ExternalKey = $"{runId}:{ordinal:D6}",
-        SequenceNumber = ordinal,
-        Species = species,
-        Tags = tags.NamesComplete ? tags.KnownTagNames : Array.Empty<string>(),
-        IdentityConfidence = identity.Status switch
-        {
-            CleanupProofObservationStatus.Complete => IdentityConfidence.HighConfidence,
-            CleanupProofObservationStatus.Partial => IdentityConfidence.Medium,
-            _ => IdentityConfidence.Unknown
-        }
-    };
+        var speciesReference = request.SpeciesReference ?? new StaticSpeciesReference(Array.Empty<string>());
+        var classification = SearchQueryClassifier.Classify(request.SpeciesQuery, speciesReference);
 
-    private static PokemonObservation ApplyAppraisal(
-        PokemonObservation observation,
-        CleanupProofAppraisalCapture appraisal) => observation with
+        PokemonHeaderConsensusResult? headerConsensus = null;
+        if (request.HeaderAnalyzer is not null && identity.ScreenshotPaths.Count >= 2)
         {
-            AttackIv = appraisal.AttackIv,
-            DefenseIv = appraisal.DefenseIv,
-            HpIv = appraisal.HpIv
+            headerConsensus = await AnalyzeHeaderConsensusAsync(
+                request.HeaderAnalyzer, identity.ScreenshotPaths, headerScreen, cancellationToken);
+        }
+
+        var species = "Unknown";
+        var speciesEvidence = "Unknown";
+        if (classification is { Kind: SearchQueryKind.ExactSpecies, Species: not null })
+        {
+            species = classification.Species;
+            speciesEvidence = "QueryDerived";
+        }
+        else if (headerConsensus?.Species is not null)
+        {
+            species = headerConsensus.Species;
+            speciesEvidence = "Automated";
+        }
+
+        // Hard guard: a broad-filter query (e.g. "age0-1825") must never be
+        // persisted as the species. Species can only come from an explicit
+        // ExactSpecies query classification or a validated OCR consensus; this
+        // is a defensive regression check against reintroducing the raw-query
+        // assignment bug.
+        if (classification.Kind == SearchQueryKind.BroadFilter &&
+            string.Equals(species, request.SpeciesQuery, StringComparison.OrdinalIgnoreCase))
+        {
+            throw new InvalidOperationException(
+                $"Refusing to persist the raw broad-filter search query '{request.SpeciesQuery}' as Species.");
+        }
+
+        int? cp = null;
+        var cpEvidence = "Unknown";
+        if (headerConsensus?.Cp is not null)
+        {
+            cp = headerConsensus.Cp;
+            cpEvidence = "Automated";
+        }
+
+        string? nickname = null;
+        if (headerConsensus is not null && headerConsensus.Species is null)
+        {
+            nickname = headerConsensus.Frames
+                .Select(frame => frame.Nickname)
+                .Where(text => !string.IsNullOrWhiteSpace(text))
+                .GroupBy(text => text, StringComparer.Ordinal)
+                .Where(group => group.Count() >= 2)
+                .OrderByDescending(group => group.Count())
+                .Select(group => group.Key)
+                .FirstOrDefault();
+        }
+
+        var observation = new PokemonObservation
+        {
+            ExternalKey = $"{runId}:{ordinal:D6}",
+            SequenceNumber = ordinal,
+            Species = species,
+            Nickname = nickname,
+            Cp = cp,
+            Tags = tags.NamesComplete ? tags.KnownTagNames : Array.Empty<string>(),
+            IdentityConfidence = identity.Status switch
+            {
+                CleanupProofObservationStatus.Complete => IdentityConfidence.HighConfidence,
+                CleanupProofObservationStatus.Partial => IdentityConfidence.Medium,
+                _ => IdentityConfidence.Unknown
+            }
         };
+        return new SemanticExtractionResult(observation, speciesEvidence, cpEvidence);
+    }
+
+    private static async Task<PokemonHeaderConsensusResult?> AnalyzeHeaderConsensusAsync(
+        PokemonHeaderAnalyzer analyzer,
+        IReadOnlyList<string> screenshotPaths,
+        HeaderScreenType screen,
+        CancellationToken cancellationToken)
+    {
+        var frames = new List<PokemonHeaderResult>();
+        foreach (var path in screenshotPaths)
+        {
+            byte[] bytes;
+            try
+            {
+                bytes = await File.ReadAllBytesAsync(path, cancellationToken);
+            }
+            catch (IOException)
+            {
+                continue;
+            }
+            frames.Add(await analyzer.AnalyzeAsync(bytes, screen, cancellationToken));
+        }
+        return frames.Count < 2 ? null : PokemonHeaderAnalyzer.Consensus(frames);
+    }
+
+    /// <summary>
+    /// Accepts measured IVs as trusted only when multi-frame consensus holds:
+    /// at least two of the independently analyzed appraisal evidence frames
+    /// agree on the same (attack, defense, hp) triple and each of those
+    /// agreeing frames met the per-bar confidence threshold
+    /// (<see cref="AppraisalFrameIv.BarsConfident"/>). This deliberately does
+    /// not depend on <c>AppraisalAnalyzer</c>'s own Calcy-verified-profile
+    /// gate (which is left untouched) - consensus is computed here instead.
+    /// </summary>
+    private static AppraisalApplicationResult ApplyAppraisal(
+        PokemonObservation observation,
+        CleanupProofAppraisalCapture appraisal)
+    {
+        var consensus = ComputeIvConsensus(appraisal);
+        if (consensus is null)
+        {
+            return new AppraisalApplicationResult(observation, "Unknown", "Unknown", "Unknown");
+        }
+
+        var updated = observation with
+        {
+            AttackIv = consensus.Value.Attack,
+            DefenseIv = consensus.Value.Defense,
+            HpIv = consensus.Value.Hp
+        };
+        return new AppraisalApplicationResult(updated, "Automated", "Automated", "Automated");
+    }
+
+    private static (int Attack, int Defense, int Hp)? ComputeIvConsensus(CleanupProofAppraisalCapture appraisal)
+    {
+        var confidentTriples = appraisal.Frames
+            .Where(frame => frame.BarsConfident &&
+                frame.AttackIv is not null && frame.DefenseIv is not null && frame.HpIv is not null)
+            .Select(frame => (Attack: frame.AttackIv!.Value, Defense: frame.DefenseIv!.Value, Hp: frame.HpIv!.Value))
+            .ToArray();
+        if (confidentTriples.Length < 2) return null;
+
+        var groups = confidentTriples
+            .GroupBy(triple => triple)
+            .Where(group => group.Count() >= 2)
+            .OrderByDescending(group => group.Count())
+            .ToArray();
+        return groups.Length == 0 ? null : groups[0].Key;
+    }
 
     private static IReadOnlyDictionary<string, string> FieldEvidence(
         PokemonObservation observation,
         VerifiedTagObservation tags,
-        string appraisalStatus) => new Dictionary<string, string>(StringComparer.Ordinal)
+        string appraisalStatus,
+        string speciesEvidence,
+        string cpEvidence,
+        string attackEvidence,
+        string defenseEvidence,
+        string hpEvidence) => new Dictionary<string, string>(StringComparer.Ordinal)
     {
-        ["Species"] = "QueryDerived",
-        ["Cp"] = "Unknown",
-        ["AttackIv"] = appraisalStatus == "AppraisalBarsObserved" ? "Unknown" : "Unknown",
-        ["DefenseIv"] = appraisalStatus == "AppraisalBarsObserved" ? "Unknown" : "Unknown",
-        ["HpIv"] = appraisalStatus == "AppraisalBarsObserved" ? "Unknown" : "Unknown",
+        ["Species"] = speciesEvidence,
+        ["Cp"] = cpEvidence,
+        ["AttackIv"] = attackEvidence,
+        ["DefenseIv"] = defenseEvidence,
+        ["HpIv"] = hpEvidence,
         ["Form"] = "Unknown",
         ["Costume"] = "Unknown",
         ["Background"] = "Unknown",
@@ -296,7 +489,7 @@ public sealed class CleanupProofRunner
         ["Shadow"] = "Unknown",
         ["Lucky"] = "Unknown",
         ["Dynamax"] = "Unknown",
-        ["Nickname"] = "Unknown",
+        ["Nickname"] = observation.Nickname is null ? "Unknown" : "Automated",
         ["CatchDateOrAge"] = "Unknown",
         ["CatchLocation"] = "Unknown",
         ["ExistingTags"] = tags.NamesComplete ? "EvidenceReviewed" : "Unknown",
@@ -338,7 +531,7 @@ public sealed class CleanupProofRunner
         var reloadedBeforeAnalysis = await reloadedPersistence.LoadCleanupProofRowsAsync(runId, cancellationToken);
         var analysis = new InventoryAnalyzer().Analyze(
             reloadedBeforeAnalysis.Select(row => row.Observation).ToArray(),
-            new RulePolicy());
+            request.Policy ?? new RulePolicy());
         foreach (var decision in analysis.Decisions)
             await reloadedPersistence.UpdateRecommendationAsync(runId, decision, cancellationToken);
 
@@ -346,7 +539,7 @@ public sealed class CleanupProofRunner
             .LoadCleanupProofRowsAsync(runId, cancellationToken);
         var sqlSummary = await new InventoryPersistenceService(Path.GetFullPath(request.DatabasePath))
             .ReadCleanupProofSqlSummaryAsync(cancellationToken);
-        var comparative = BuildComparativeSuggestions(rows);
+        var comparative = CleanupProofComparativeAnalyzer.BuildComparativeSuggestions(rows);
         ValidateReports(rows, sqlSummary, request.OutputDirectory);
         await WriteReportsAsync(request, runId, status, stopReason, captures, rows, sqlSummary, comparative, cancellationToken);
         var counts = rows.GroupBy(row => row.CurrentRecommendation, StringComparer.Ordinal)
@@ -511,8 +704,8 @@ public sealed class CleanupProofRunner
         proof.AppendLine();
         proof.AppendLine("## Limitations");
         proof.AppendLine();
-        proof.AppendLine("- Species is QueryDerived from the exact search; CP, IVs, variant fields, nickname, catch date and location remain Unknown unless separately evidence-reviewed.");
-        proof.AppendLine("- Appraisal bars are captured as evidence, but no verified semantic IV provider is selected and no Calcy surface is used.");
+        proof.AppendLine("- Species is QueryDerived from an exact species search, or Automated from >=2-frame header OCR consensus; CP is Automated from header OCR consensus; variant fields, catch date and location remain Unknown unless separately evidence-reviewed.");
+        proof.AppendLine("- IVs are Automated only when >=2 independently analyzed appraisal evidence frames agree on the same (attack, defense, hp) triple with per-bar confidence at or above the visual profile threshold; no Calcy surface is used.");
         proof.AppendLine("- No tag, transfer, delete, power-up, evolve, purify, purchase or location-changing action is exposed by this command.");
         await File.WriteAllTextAsync(Path.Combine(output, "proof-summary.md"), proof.ToString(), cancellationToken);
     }
@@ -529,8 +722,16 @@ public sealed class CleanupProofRunner
         };
         var fields = new Dictionary<string, object>(StringComparer.Ordinal)
         {
-            ["Species"] = Field(row.Observation.Species, "QueryDerived", evidence, "Exact species query; not OCR."),
-            ["Cp"] = Field(null, "Unknown", string.Empty, "Requires bounded human evidence review."),
+            ["Species"] = Field(
+                string.Equals(row.Observation.Species, "Unknown", StringComparison.Ordinal) ? null : row.Observation.Species,
+                row.FieldEvidenceSources.TryGetValue("Species", out var speciesSource) ? speciesSource : "Unknown",
+                evidence,
+                "QueryDerived from an exact species search, or Automated from >=2-frame header OCR consensus."),
+            ["Cp"] = Field(
+                row.Observation.Cp?.ToString(CultureInfo.InvariantCulture),
+                row.FieldEvidenceSources.TryGetValue("Cp", out var cpSource) ? cpSource : "Unknown",
+                row.Observation.Cp is null ? string.Empty : evidence,
+                "Automated from >=2-frame header OCR consensus; otherwise requires bounded human evidence review."),
             ["AttackIv"] = Field(row.Observation.AttackIv?.ToString(CultureInfo.InvariantCulture), row.Observation.AttackIv is null ? "Unknown" : "Automated", row.AppraisalEvidence.FirstOrDefault() ?? string.Empty, "Verified appraisal only when profile accepted Complete."),
             ["DefenseIv"] = Field(row.Observation.DefenseIv?.ToString(CultureInfo.InvariantCulture), row.Observation.DefenseIv is null ? "Unknown" : "Automated", row.AppraisalEvidence.FirstOrDefault() ?? string.Empty, "Verified appraisal only when profile accepted Complete."),
             ["HpIv"] = Field(row.Observation.HpIv?.ToString(CultureInfo.InvariantCulture), row.Observation.HpIv is null ? "Unknown" : "Automated", row.AppraisalEvidence.FirstOrDefault() ?? string.Empty, "Verified appraisal only when profile accepted Complete."),
@@ -553,66 +754,6 @@ public sealed class CleanupProofRunner
         };
         return new { row.LocalPokemonId, row.Ordinal, Fields = fields, Query = query };
     }
-
-    private static IReadOnlyList<CleanupProofComparativeSuggestion> BuildComparativeSuggestions(
-        IReadOnlyList<CleanupProofDatabaseRow> rows)
-    {
-        var result = new List<CleanupProofComparativeSuggestion>();
-        foreach (var group in rows.GroupBy(row => row.Observation.GroupKey, StringComparer.Ordinal))
-        {
-            var ranked = group.OrderByDescending(row => row.Observation.TotalIv ?? -1)
-                .ThenByDescending(row => row.Observation.Cp ?? -1)
-                .ThenBy(row => row.Ordinal)
-                .ToArray();
-            foreach (var row in ranked)
-            {
-                var comparator = ranked.FirstOrDefault(candidate => candidate.LocalPokemonId != row.LocalPokemonId);
-                var missing = ProtectionFields(row.Observation);
-                var exactReviewed = row.Observation.HasKnownCriticalValues &&
-                    row.Observation.IdentityConfidence == IdentityConfidence.Exact &&
-                    row.Observation.VariantIdentity?.VariantKey is not null;
-                var protectedKnown = row.Observation.IsFavorite is true || row.Observation.IsShiny is true ||
-                    row.Observation.IsBackground is true || row.Observation.IsShadow is true ||
-                    row.Observation.IsPurified is true || row.Observation.IsLucky is true ||
-                    row.Observation.IsCostume is true || row.Observation.IsDynamax is true ||
-                    row.Observation.IsGigantamax is true;
-                var better = comparator is not null &&
-                    comparator.Observation.TotalIv is not null && row.Observation.TotalIv is not null &&
-                    (comparator.Observation.TotalIv > row.Observation.TotalIv ||
-                     comparator.Observation.TotalIv == row.Observation.TotalIv && comparator.Observation.Cp > row.Observation.Cp);
-                var isRetained = row.LocalPokemonId == ranked[0].LocalPokemonId;
-                var classification = isRetained && exactReviewed
-                    ? "RETAINED_COMPARATOR"
-                    : comparator is null || !exactReviewed || protectedKnown || !better
-                        ? "INSUFFICIENT_COMPARISON_DATA"
-                        : "LIKELY_DELETE_SUGGESTION";
-                result.Add(new CleanupProofComparativeSuggestion
-                {
-                    LocalPokemonId = row.LocalPokemonId,
-                    Species = row.Observation.Species,
-                    Classification = classification,
-                    ComparatorLocalPokemonId = better ? comparator!.LocalPokemonId : null,
-                    Cp = row.Observation.Cp,
-                    TotalIv = row.Observation.TotalIv,
-                    Ordinal = row.Ordinal,
-                    MissingProtectionChecks = missing
-                });
-            }
-        }
-        return result.OrderBy(item => item.Ordinal).ToArray();
-    }
-
-    private static IReadOnlyList<string> ProtectionFields(PokemonObservation observation) =>
-        new (string Name, bool? Value)[]
-        {
-            ("Favorite", observation.IsFavorite), ("Shiny", observation.IsShiny),
-            ("Background", observation.IsBackground), ("Shadow", observation.IsShadow),
-            ("Purified", observation.IsPurified), ("Lucky", observation.IsLucky),
-            ("Costume", observation.IsCostume), ("Dynamax", observation.IsDynamax),
-            ("Gigantamax", observation.IsGigantamax), ("SpecialMove", observation.HasSpecialMove),
-            ("Xxl", observation.IsXxl), ("Xxs", observation.IsXxs), ("Nickname", string.IsNullOrWhiteSpace(observation.Nickname) ? null : true),
-            ("CatchDate", observation.CatchDate is null ? null : true)
-        }.Where(item => item.Value is null).Select(item => item.Name).ToArray();
 
     private static int Count(IReadOnlyDictionary<string, int> counts, string key) =>
         counts.TryGetValue(key, out var value) ? value : 0;

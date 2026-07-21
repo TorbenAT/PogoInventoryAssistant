@@ -1,5 +1,26 @@
 # Changelog
 
+## Semantic integration: OCR wired into cleanup flow — 2026-07-21
+
+- `CleanupProofRunner` now derives species through `SearchQueryClassifier`
+  (exact single-species query => QueryDerived) or `PokemonHeaderAnalyzer`
+  consensus over captured frames (=> Automated), never from a broad filter
+  query; a defensive guard throws if a broad query would persist as species.
+  The raw query remains only in `ScanRuns.SearchQuery`. CP and nickname come
+  from header consensus. Per-frame IV measurements
+  (`CleanupProofAppraisalCapture.Frames`) are accepted on >=2-frame exact
+  agreement, independent of the Calcy `Verified` gate, and
+  `ObservationStatus` upgrades to Complete only when species, CP and all
+  three IVs are known.
+- New offline command `analyze-cleanup-evidence` reprocesses an existing
+  cleanup database into a new copy (original untouched) with corrected
+  species/CP/IV/semantic keys, regenerated reports and
+  `species-cp-coverage.json`.
+- `device-run-cleanup-proof` gained `--policy` and `--species-reference`
+  options; comparative-suggestion logic extracted to
+  `CleanupProofComparativeAnalyzer` shared by runner and reprocessor.
+- Offline self-tests pass 201/201. No phone input in this increment.
+
 ## Semantic foundation: header OCR, reference data, semantic identity — 2026-07-21
 
 - Added `PogoInventory.HeaderText` (OCR abstraction: `PokemonHeaderAnalyzer`

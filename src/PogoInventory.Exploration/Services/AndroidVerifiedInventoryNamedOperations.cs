@@ -668,8 +668,58 @@ public sealed class AndroidVerifiedInventoryNamedOperations : ICleanupProofNamed
             EvidencePaths = _lastCleanupAppraisalEvidence.ToArray(),
             FailureReasons = analysis.Status == AppraisalAnalysisStatus.Complete
                 ? Array.Empty<string>()
-                : new[] { analysis.Detail }
+                : new[] { analysis.Detail },
+            Frames = AnalyzeEvidenceFrames(_lastCleanupAppraisalEvidence, _appraisalProfile)
         };
+    }
+
+    /// <summary>
+    /// Analyzes every saved appraisal evidence screenshot independently (not
+    /// just the single "stable" frame) so a caller can require multi-frame
+    /// agreement on the IV triple before trusting it as Complete. Uses the
+    /// same bar-confidence definition <c>AppraisalAnalyzer</c> uses internally
+    /// to gate Complete, without touching that gate itself.
+    /// </summary>
+    private static IReadOnlyList<AppraisalFrameIv> AnalyzeEvidenceFrames(
+        IReadOnlyList<string> evidencePaths,
+        AppraisalVisualProfile profile)
+    {
+        var frames = new List<AppraisalFrameIv>();
+        foreach (var path in evidencePaths)
+        {
+            byte[] bytes;
+            try
+            {
+                bytes = File.ReadAllBytes(path);
+            }
+            catch (IOException)
+            {
+                continue;
+            }
+
+            AppraisalAnalysisResult analysis;
+            try
+            {
+                analysis = new AppraisalAnalyzer().Analyze(PngDecoder.Decode(bytes), profile, allowComplete: false);
+            }
+            catch (Exception exception) when (exception is InvalidOperationException or ScreenVisionException)
+            {
+                continue;
+            }
+
+            var barsConfident = analysis.Bars.Count == 3 && analysis.Bars.All(bar =>
+                bar.TrackDetected &&
+                bar.EstimatedIv is not null &&
+                bar.Confidence >= profile.CompleteBarConfidenceMinimum);
+            frames.Add(new AppraisalFrameIv
+            {
+                AttackIv = analysis.AttackIv,
+                DefenseIv = analysis.DefenseIv,
+                HpIv = analysis.HpIv,
+                BarsConfident = barsConfident
+            });
+        }
+        return frames;
     }
 
     public async Task<CleanupProofIdentityCapture> CaptureCleanupAppraisalIdentityAsync(
@@ -789,7 +839,8 @@ public sealed class AndroidVerifiedInventoryNamedOperations : ICleanupProofNamed
             AttackIv = analysis.AttackIv, DefenseIv = analysis.DefenseIv, HpIv = analysis.HpIv,
             Confidence = analysis.Confidence,
             EvidencePaths = _lastCleanupAppraisalEvidence.ToArray(),
-            FailureReasons = analysis.Status == AppraisalAnalysisStatus.Complete ? Array.Empty<string>() : new[] { analysis.Detail }
+            FailureReasons = analysis.Status == AppraisalAnalysisStatus.Complete ? Array.Empty<string>() : new[] { analysis.Detail },
+            Frames = AnalyzeEvidenceFrames(_lastCleanupAppraisalEvidence, _appraisalProfile)
         };
     }
 

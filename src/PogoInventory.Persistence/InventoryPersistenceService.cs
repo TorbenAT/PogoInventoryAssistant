@@ -330,7 +330,8 @@ public sealed class InventoryPersistenceService
         PokemonObservation observation,
         CleanupProofAppraisalCapture appraisal,
         IReadOnlyDictionary<string, string> fieldEvidenceSources,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken = default,
+        string? observationStatus = null)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(runId);
         ArgumentException.ThrowIfNullOrWhiteSpace(localPokemonId);
@@ -349,12 +350,13 @@ public sealed class InventoryPersistenceService
                 : appraisal.EvidencePaths,
             options);
         var appraisalDetailJson = JsonSerializer.Serialize(appraisal, options);
+        var statusClause = observationStatus is null ? string.Empty : "ObservationStatus = @status, ";
         await using (var command = connection.CreateCommand())
         {
             command.Transaction = transaction;
-            command.CommandText = """
+            command.CommandText = $"""
                 UPDATE Observations
-                SET Cp = @cp, AttackIv = @attack, DefenseIv = @defense, HpIv = @hp,
+                SET {statusClause}Cp = @cp, AttackIv = @attack, DefenseIv = @defense, HpIv = @hp,
                     ObservationJson = @observation, FieldEvidenceJson = @fields,
                     AppraisalEvidenceJson = @appraisal, SemanticKey = @semanticKey,
                     SemanticKeyCompleteness = @semanticKeyCompleteness
@@ -362,20 +364,22 @@ public sealed class InventoryPersistenceService
                 """;
             AddEnrichmentParameters(command, runId, localPokemonId, observation,
                 observationJson, fieldsJson, appraisalJson);
+            if (observationStatus is not null) command.Parameters.AddWithValue("@status", observationStatus);
             await command.ExecuteNonQueryAsync(cancellationToken);
         }
         await using (var command = connection.CreateCommand())
         {
             command.Transaction = transaction;
-            command.CommandText = """
+            command.CommandText = $"""
                 UPDATE PokemonRecords
-                SET Cp = @cp, AttackIv = @attack, DefenseIv = @defense, HpIv = @hp,
+                SET {statusClause}Cp = @cp, AttackIv = @attack, DefenseIv = @defense, HpIv = @hp,
                     FieldEvidenceJson = @fields, AppraisalEvidenceJson = @appraisal,
                     SemanticKey = @semanticKey, SemanticKeyCompleteness = @semanticKeyCompleteness
                 WHERE LocalPokemonId = @id AND LastSeenRunId = @run;
                 """;
             AddEnrichmentParameters(command, runId, localPokemonId, observation,
                 observationJson, fieldsJson, appraisalJson);
+            if (observationStatus is not null) command.Parameters.AddWithValue("@status", observationStatus);
             await command.ExecuteNonQueryAsync(cancellationToken);
         }
         await InsertCleanupEventAsync(connection, transaction, localPokemonId, runId,
@@ -638,6 +642,125 @@ public sealed class InventoryPersistenceService
             await eventCommand.ExecuteNonQueryAsync(cancellationToken);
         }
         await transaction.CommitAsync(cancellationToken);
+    }
+
+    /// <summary>
+    /// Lists every CleanupProof run id present in this database, ordered for
+    /// deterministic reprocessing. Used by the offline
+    /// <c>analyze-cleanup-evidence</c> reprocess command, which does not know
+    /// in advance how many runs an existing database contains.
+    /// </summary>
+    public async Task<IReadOnlyList<string>> LoadAllCleanupRunIdsAsync(
+        CancellationToken cancellationToken = default)
+    {
+        await InitializeAsync(cancellationToken);
+        await using var connection = Open();
+        await connection.OpenAsync(cancellationToken);
+        await using var command = connection.CreateCommand();
+        command.CommandText = "SELECT RunId FROM ScanRuns WHERE RunType = 'CleanupProof' ORDER BY RunId;";
+        var ids = new List<string>();
+        await using var reader = await command.ExecuteReaderAsync(cancellationToken);
+        while (await reader.ReadAsync(cancellationToken))
+            ids.Add(reader.GetString(0));
+        return ids;
+    }
+
+    /// <summary>Reads the original <c>--species</c> search query recorded for a run.</summary>
+    public async Task<string> ReadCleanupRunSearchQueryAsync(
+        string runId,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(runId);
+        await InitializeAsync(cancellationToken);
+        await using var connection = Open();
+        await connection.OpenAsync(cancellationToken);
+        await using var command = connection.CreateCommand();
+        command.CommandText = "SELECT SearchQuery FROM ScanRuns WHERE RunId = @run;";
+        command.Parameters.AddWithValue("@run", runId);
+        var value = await command.ExecuteScalarAsync(cancellationToken);
+        return value is null or DBNull ? string.Empty : (string)value;
+    }
+
+    /// <summary>
+    /// Transactionally overwrites Species/Cp/IVs/Nickname/FieldEvidence and the
+    /// semantic identity key for one row's Observation and PokemonRecord, used
+    /// by the offline <c>analyze-cleanup-evidence</c> reprocess command after
+    /// re-running header OCR / IV consensus against stored evidence. Unlike
+    /// <see cref="EnrichCleanupSemanticReviewAsync"/> this also rewrites the
+    /// <c>SpeciesName</c> and <c>Nickname</c> columns, since reprocessing can
+    /// change species from the original (possibly incorrect) raw-query value.
+    /// </summary>
+    public async Task ReprocessCleanupSemanticsAsync(
+        string runId,
+        string localPokemonId,
+        PokemonObservation observation,
+        IReadOnlyDictionary<string, string> fieldEvidenceSources,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(runId);
+        ArgumentException.ThrowIfNullOrWhiteSpace(localPokemonId);
+        ArgumentNullException.ThrowIfNull(observation);
+        await InitializeAsync(cancellationToken);
+        await using var connection = Open();
+        await connection.OpenAsync(cancellationToken);
+        await using var transaction = (SqliteTransaction)await connection.BeginTransactionAsync(cancellationToken);
+        var options = JsonOptions();
+        var observationJson = JsonSerializer.Serialize(observation, options);
+        var fieldsJson = JsonSerializer.Serialize(fieldEvidenceSources, options);
+        var semanticKey = SemanticIdentityKey.FromObservation(observation);
+
+        await using (var command = connection.CreateCommand())
+        {
+            command.Transaction = transaction;
+            command.CommandText = """
+                UPDATE Observations
+                SET SpeciesName = @species, Cp = @cp, AttackIv = @attack, DefenseIv = @defense, HpIv = @hp,
+                    ObservationJson = @observation, FieldEvidenceJson = @fields,
+                    SemanticKey = @semanticKey, SemanticKeyCompleteness = @semanticKeyCompleteness
+                WHERE LocalPokemonId = @id AND RunId = @run;
+                """;
+            AddReprocessParameters(command, runId, localPokemonId, observation, observationJson, fieldsJson, semanticKey);
+            await command.ExecuteNonQueryAsync(cancellationToken);
+        }
+        await using (var command = connection.CreateCommand())
+        {
+            command.Transaction = transaction;
+            command.CommandText = """
+                UPDATE PokemonRecords
+                SET SpeciesName = @species, Cp = @cp, AttackIv = @attack, DefenseIv = @defense, HpIv = @hp,
+                    Nickname = @nickname, FieldEvidenceJson = @fields,
+                    SemanticKey = @semanticKey, SemanticKeyCompleteness = @semanticKeyCompleteness
+                WHERE LocalPokemonId = @id AND LastSeenRunId = @run;
+                """;
+            AddReprocessParameters(command, runId, localPokemonId, observation, observationJson, fieldsJson, semanticKey);
+            await command.ExecuteNonQueryAsync(cancellationToken);
+        }
+        await InsertCleanupEventAsync(connection, transaction, localPokemonId, runId,
+            "SemanticReprocessed", fieldsJson, cancellationToken);
+        await transaction.CommitAsync(cancellationToken);
+    }
+
+    private static void AddReprocessParameters(
+        SqliteCommand command,
+        string runId,
+        string localPokemonId,
+        PokemonObservation observation,
+        string observationJson,
+        string fieldsJson,
+        SemanticIdentityKey semanticKey)
+    {
+        command.Parameters.AddWithValue("@run", runId);
+        command.Parameters.AddWithValue("@id", localPokemonId);
+        command.Parameters.AddWithValue("@species", (object?)observation.Species ?? DBNull.Value);
+        command.Parameters.AddWithValue("@nickname", (object?)observation.Nickname ?? DBNull.Value);
+        command.Parameters.AddWithValue("@cp", (object?)observation.Cp ?? DBNull.Value);
+        command.Parameters.AddWithValue("@attack", (object?)observation.AttackIv ?? DBNull.Value);
+        command.Parameters.AddWithValue("@defense", (object?)observation.DefenseIv ?? DBNull.Value);
+        command.Parameters.AddWithValue("@hp", (object?)observation.HpIv ?? DBNull.Value);
+        command.Parameters.AddWithValue("@observation", observationJson);
+        command.Parameters.AddWithValue("@fields", fieldsJson);
+        command.Parameters.AddWithValue("@semanticKey", semanticKey.FullKey);
+        command.Parameters.AddWithValue("@semanticKeyCompleteness", semanticKey.Completeness.ToString());
     }
 
     public async Task<CleanupProofSqlSummary> ReadCleanupProofSqlSummaryAsync(

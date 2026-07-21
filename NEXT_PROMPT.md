@@ -1,28 +1,54 @@
 # Continuation prompt
 
-## Semantic foundation checkpoint (2026-07-21)
+## Semantic integration checkpoint (2026-07-21) — HANDOVER TO EVIDENCE MACHINE
 
-Offline semantic infrastructure is merged: header OCR abstraction plus
-Windows OCR spike command (`ocr-header-spike`), species reference data,
-file-based policy loading, semantic identity keys with schema v3 and the
-`analyze-reidentification` command. Self-tests 193/193.
+Waves 1+2 of `docs/MINIMAL_EFFORT_PLAN.md` are merged and offline-green at
+201/201 self-tests. The semantic core is implemented AND wired into the
+cleanup flow:
 
-Next actions, in order (see `docs/MINIMAL_EFFORT_PLAN.md`):
+- `PokemonHeaderAnalyzer` (species/CP/nickname, multi-frame consensus) +
+  `WindowsMediaTextRecognizer` + `ocr-header-spike` command.
+- `CleanupProofRunner` no longer stores the search query as species (guarded
+  regression: broad query as species now throws). Species evidence is
+  QueryDerived (exact single-species query) / Automated (OCR consensus) /
+  Unknown. CP and IVs become Automated on >=2-frame consensus;
+  ObservationStatus upgrades to Complete only when species, CP and all three
+  IVs are known. The Calcy Verified gate is untouched and parked.
+- `analyze-cleanup-evidence` reprocesses an existing cleanup-proof.sqlite
+  offline into a NEW database copy + reports + species-cp-coverage.json.
+- Reference data (`data/reference/species-reference.json`, 1025 species),
+  `--policy` / `--species-reference` CLI options, `RulePolicyLoader`.
+- `SemanticIdentityKey` (schema v3), `SemanticIdentityMatcher`,
+  `analyze-reidentification` for the double-scan acceptance.
 
-1. On the machine with `local-data`: run
-   `ocr-header-spike --input <appraisal-carousel-20 frames> --screen appraisal --out <dir>`
-   and inspect species/CP hit rates. Target >=19/20. Tune
-   `HeaderAnalysisProfile` ROIs if below target.
-2. Wire `PokemonHeaderAnalyzer` into `CleanupProofRunner` (replace the
-   query-as-species assignment at BuildObservation; populate Cp; set
-   FieldEvidence Automated on consensus) and add the offline
-   `analyze-cleanup-evidence` reprocess command for the accepted 20-item
-   evidence.
-3. Unlock IV Complete through multi-frame consensus without the Calcy
-   verification gate; park the Calcy pipeline.
-4. Run the double-scan re-identification acceptance (>=99 % re-match, zero
-   false merges) with `analyze-reidentification`.
-5. Then resume/chunking for the cleanup flow and the manifest-to-tag pipeline.
+All remaining work requires the machine that holds `local-data` and the
+phone (ADB `C:\Data\PokemonGo\tools\platform-tools\adb.exe`, device
+`192.168.1.185:5555`, OnePlus 6T). Run in this order; stop at the first
+failed gate:
+
+1. OCR spike against the accepted 20-item evidence frames:
+   `dotnet run --project src\PogoInventory.Cli -- ocr-header-spike
+    --input local-data\validation\cleanup-value-proof\appraisal-carousel-20\<frames dir>
+    --screen appraisal --out local-data\validation\ocr-spike`
+   Gate: >=19/20 species and CP. Below target: tune `HeaderAnalysisProfile`
+   ROIs (docs/HEADER_OCR.md) using the raw line bounds in the spike report;
+   do not proceed on red.
+2. Offline reprocess of the accepted 20-item database:
+   `analyze-cleanup-evidence --database <appraisal-carousel-20>\cleanup-proof.sqlite
+    --evidence-root <appraisal-carousel-20> --out <...>\appraisal-carousel-20-semantic`
+   Gate: species >=19/20, CP >=19/20, rowsWithQueryAsSpecies = 0, SQLite
+   integrity ok. The original database must remain untouched.
+3. One bounded real-phone regression, query `age0-1825`, limit 50, through
+   `device-run-cleanup-proof` (now with OCR + optional --policy). Gate:
+   >=48/50 species+CP+IV, zero query-as-species rows, zero destructive/tag
+   actions, final GameplayMap.
+4. Double-scan re-identification: scan the same stable scope twice (program
+   restart between), then
+   `analyze-reidentification --database-a <run1>.sqlite --database-b <run2>.sqlite --out <dir>`
+   Gate: >=99 % re-match, zero false merges. This gate blocks all cleanup/
+   tagging work (kravspec ID-006).
+5. Only after gates 1-4: resume/chunking for the cleanup flow (plan step 5)
+   and the manifest-to-tag pipeline (plan step 7).
 
 ## Persistent Appraisal carousel checkpoint
 

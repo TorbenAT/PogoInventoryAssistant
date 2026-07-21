@@ -217,13 +217,15 @@ internal static class CleanupProofTests
         return await new CleanupProofRunner().RunAsync(fake, request);
     }
 
-    private sealed class FakeCleanupOperations : ICleanupProofNamedOperations
+    /// <summary>Internal (not private) so other test files in this assembly (e.g. HeaderSemanticsCleanupTests) can reuse it.</summary>
+    internal sealed class FakeCleanupOperations : ICleanupProofNamedOperations
     {
         private readonly string _evidence;
         private readonly bool _partial;
         private readonly bool _unresolved;
         private readonly Func<Task>? _beforeAppraisal;
         private readonly bool _throwAppraisal;
+        private readonly Func<CleanupProofAppraisalCapture>? _appraisalOverride;
         public int AdvanceCount { get; private set; }
         public int AppraisalOpenCount { get; private set; }
         public int CurrentAppraisalCaptureCount { get; private set; }
@@ -237,13 +239,15 @@ internal static class CleanupProofTests
             bool partial,
             bool unresolved = false,
             Func<Task>? beforeAppraisal = null,
-            bool throwAppraisal = false)
+            bool throwAppraisal = false,
+            Func<CleanupProofAppraisalCapture>? appraisalOverride = null)
         {
             _evidence = evidence;
             _partial = partial;
             _unresolved = unresolved;
             _beforeAppraisal = beforeAppraisal;
             _throwAppraisal = throwAppraisal;
+            _appraisalOverride = appraisalOverride;
         }
 
         public Task<VerifiedSequenceState> EnsureFilteredInventoryAsync(string query, CancellationToken cancellationToken) =>
@@ -280,7 +284,7 @@ internal static class CleanupProofTests
                 await _beforeAppraisal();
             if (_throwAppraisal)
                 throw new InvalidOperationException("synthetic appraisal failure");
-            return new CleanupProofAppraisalCapture { Status = "Partial", EvidencePaths = new[] { _evidence } };
+            return _appraisalOverride?.Invoke() ?? new CleanupProofAppraisalCapture { Status = "Partial", EvidencePaths = new[] { _evidence } };
         }
 
         public Task<CleanupProofIdentityCapture> CaptureCleanupAppraisalIdentityAsync(CancellationToken cancellationToken) =>
@@ -298,7 +302,7 @@ internal static class CleanupProofTests
         private Task<CleanupProofAppraisalCapture> CaptureCurrentAsync()
         {
             CurrentAppraisalCaptureCount++;
-            return Task.FromResult(new CleanupProofAppraisalCapture { Status = "Partial", EvidencePaths = new[] { _evidence } });
+            return Task.FromResult(_appraisalOverride?.Invoke() ?? new CleanupProofAppraisalCapture { Status = "Partial", EvidencePaths = new[] { _evidence } });
         }
 
         public Task<AppraisalCarouselAdvanceResult> AdvanceToNextPokemonInAppraisalAsync(string previousAppraisalFingerprint, CancellationToken cancellationToken)
@@ -398,7 +402,7 @@ internal static class CleanupProofTests
         }
     };
 
-    private static byte[] FixtureBytes() => File.ReadAllBytes(RepositoryPath("data", "screen-fixtures", "PokemonDetails.png"));
+    internal static byte[] FixtureBytes() => File.ReadAllBytes(RepositoryPath("data", "screen-fixtures", "PokemonDetails.png"));
 
     private static async Task<string> CreateEvidenceAsync(string root)
     {
@@ -408,9 +412,9 @@ internal static class CleanupProofTests
         return path;
     }
 
-    private static string Hash(string path) => Convert.ToHexString(SHA256.HashData(File.ReadAllBytes(path))).ToLowerInvariant();
+    internal static string Hash(string path) => Convert.ToHexString(SHA256.HashData(File.ReadAllBytes(path))).ToLowerInvariant();
 
-    private static string RepositoryPath(params string[] parts)
+    internal static string RepositoryPath(params string[] parts)
     {
         var directory = new DirectoryInfo(Directory.GetCurrentDirectory());
         while (directory is not null && !File.Exists(Path.Combine(directory.FullName, "PogoInventoryAssistant.sln")))
@@ -419,14 +423,14 @@ internal static class CleanupProofTests
         return parts.Aggregate(directory.FullName, Path.Combine);
     }
 
-    private static string CreateTemporaryDirectory()
+    internal static string CreateTemporaryDirectory()
     {
         var path = Path.Combine(Path.GetTempPath(), "PogoInventoryAssistant", Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(path);
         return path;
     }
 
-    private static void DeleteDirectory(string path)
+    internal static void DeleteDirectory(string path)
     {
         SqliteConnection.ClearAllPools();
         if (Directory.Exists(path)) Directory.Delete(path, recursive: true);

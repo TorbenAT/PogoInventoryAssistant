@@ -13,13 +13,18 @@ policy file-configurable, and `SemanticIdentityKey`/`SemanticIdentityMatcher`
 measurement command. GroupKey no longer degenerates to singletons for known
 species. Offline self-tests pass 193/193.
 
-Not yet done: wiring the header analyzer into `CleanupProofRunner` (species is
-still the raw query there and CP still Unknown), IV Complete without the Calcy
-gate, offline reprocess of the accepted 20-item evidence, resume/chunking for
-the cleanup flow, and the recommendation-to-tag pipeline. The OCR spike and
-the double-scan re-identification acceptance (>=99 % re-match) must run on the
-machine that holds `local-data` evidence and the phone. See
-`docs/MINIMAL_EFFORT_PLAN.md` for the ordered plan.
+The header analyzer is now wired into `CleanupProofRunner`: broad queries can
+never persist as species (guarded), species/CP/nickname come from OCR
+consensus with Automated evidence, IVs accept two-frame exact consensus
+independent of the parked Calcy gate, and Complete requires species+CP+all
+IVs. `analyze-cleanup-evidence` reprocesses existing databases offline into a
+new copy with coverage reporting. Self-tests 201/201.
+
+Not yet done (requires the evidence/phone machine — see NEXT_PROMPT.md for
+the gated order): OCR spike hit-rate + ROI tuning on the real 20-item frames,
+offline reprocess acceptance, 50-item real-phone regression, double-scan
+re-identification acceptance (>=99 %), then resume/chunking and the
+manifest-to-tag pipeline. See `docs/MINIMAL_EFFORT_PLAN.md`.
 
 ## Persistent Appraisal carousel checkpoint
 
