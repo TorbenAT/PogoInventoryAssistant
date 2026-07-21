@@ -45,6 +45,7 @@ public sealed class AndroidVerifiedInventoryNamedOperations : ICleanupProofNamed
     private int _evidenceOrdinal;
     private readonly List<string> _lastCleanupAppraisalEvidence = new();
     private byte[]? _lastCleanupAppraisalScreenshot;
+    public int LastCleanupRecoveryInputCount { get; private set; }
 
     public AndroidVerifiedInventoryNamedOperations(
         IAndroidAutomationTransport transport,
@@ -168,6 +169,169 @@ public sealed class AndroidVerifiedInventoryNamedOperations : ICleanupProofNamed
         return filtered.State == PokemonGoGameState.Inventory
             ? VerifiedSequenceState.Inventory
             : VerifiedSequenceState.Unknown;
+    }
+
+    public async Task<CleanupStateObservation> CaptureStableCleanupStateAsync(
+        string label,
+        CancellationToken cancellationToken)
+    {
+        var frames = await CaptureRecoveryFramesAsync(label, cancellationToken);
+        if (!GuardedInventoryRecovery.TryGetStableFrame(frames, out var stable) || stable is null)
+        {
+            return new CleanupStateObservation
+            {
+                State = PokemonGoGameState.Unknown,
+                AppraisalKind = null,
+                ScreenshotSha256 = string.Empty,
+                Evidence = new[] { "NoThreeStableFrames" }
+            };
+        }
+
+        var state = stable.Detection.State;
+        if (state == PokemonGoGameState.Inventory)
+        {
+            var search = _searchAnalyzer.Analyze(stable.Screenshot);
+            state = search.SearchFieldVisible && search.KeyboardVisible
+                ? PokemonGoGameState.InventorySearchOpen
+                : search.SearchFieldVisible && search.QueryVisible
+                    ? PokemonGoGameState.InventoryFiltered
+                    : PokemonGoGameState.Inventory;
+        }
+
+        return new CleanupStateObservation
+        {
+            State = state,
+            AppraisalKind = stable.Kind is RecoveryFrameKind.AppraisalIntro or RecoveryFrameKind.AppraisalBars
+                ? stable.Kind
+                : null,
+            ScreenshotSha256 = stable.Detection.ScreenshotSha256,
+            Evidence = stable.Detection.Evidence
+        };
+    }
+
+    public async Task<CleanupStateActionResult> CloseMainMenuForCleanupAsync(
+        CancellationToken cancellationToken)
+    {
+        LastCleanupRecoveryInputCount = 0;
+        var result = await PressBackForCleanupAsync(
+            PokemonGoGameState.MainMenu,
+            PokemonGoGameState.GameplayMap,
+            "close-main-menu",
+            cancellationToken);
+        return new CleanupStateActionResult
+        {
+            Succeeded = result,
+            State = result ? PokemonGoGameState.GameplayMap : PokemonGoGameState.Unknown,
+            InputCount = LastCleanupRecoveryInputCount,
+            Blocker = result ? null : "close-main-menu postcondition not verified"
+        };
+    }
+
+    public async Task<CleanupStateActionResult> CloseInventoryForCleanupAsync(
+        CancellationToken cancellationToken)
+    {
+        LastCleanupRecoveryInputCount = 0;
+        var state = await CloseInventoryAsync(cancellationToken);
+        var succeeded = state == PokemonGoGameState.GameplayMap.ToString();
+        return new CleanupStateActionResult
+        {
+            Succeeded = succeeded,
+            State = succeeded ? PokemonGoGameState.GameplayMap : PokemonGoGameState.Unknown,
+            InputCount = LastCleanupRecoveryInputCount,
+            Blocker = succeeded ? null : "close-inventory postcondition not verified"
+        };
+    }
+
+    public async Task<CleanupStateActionResult> ReturnToInventoryForCleanupAsync(
+        CancellationToken cancellationToken)
+    {
+        LastCleanupRecoveryInputCount = 0;
+        var state = await ReturnToInventoryAsync(cancellationToken);
+        return new CleanupStateActionResult
+        {
+            Succeeded = state == VerifiedSequenceState.Inventory,
+            State = state == VerifiedSequenceState.Inventory
+                ? PokemonGoGameState.Inventory
+                : PokemonGoGameState.Unknown,
+            InputCount = LastCleanupRecoveryInputCount,
+            Blocker = state == VerifiedSequenceState.Inventory
+                ? null : "guarded ReturnToInventory postcondition not verified"
+        };
+    }
+
+    public async Task<CleanupStateActionResult> ContinueAppraisalIntroForCleanupAsync(
+        CancellationToken cancellationToken)
+    {
+        LastCleanupRecoveryInputCount = 0;
+        var frames = await CaptureRecoveryFramesAsync("appraisal-intro-continue", cancellationToken);
+        var decision = GuardedInventoryRecovery.DecideAppraisalContinuation(frames, 0, false);
+        if (decision != AppraisalContinuationOutcome.TAP_INTRO_ONCE)
+        {
+            return new CleanupStateActionResult
+            {
+                Succeeded = false,
+                State = PokemonGoGameState.Appraisal,
+                InputCount = 0,
+                Blocker = $"AppraisalIntro authorization: {decision}"
+            };
+        }
+
+        _recovery.Begin(frames);
+        var authorization = _recovery.AuthorizeNextAction();
+        if (authorization?.Action != RecoveryInputAction.ExitAppraisal || authorization.Target is null)
+        {
+            return new CleanupStateActionResult
+            {
+                Succeeded = false,
+                State = PokemonGoGameState.Appraisal,
+                InputCount = 0,
+                Blocker = "AppraisalIntro continue locator authorization unavailable"
+            };
+        }
+
+        await ExecuteRecoveryActionAsync(authorization, cancellationToken);
+        LastCleanupRecoveryInputCount = 1;
+        var post = await CaptureRecoveryFramesAsync("appraisal-intro-continue-post", cancellationToken);
+        var outcome = _recovery.ObservePostAction(post);
+        var succeeded = outcome == RecoveryOutcome.PROGRESSED &&
+            _recovery.Current?.Kind == RecoveryFrameKind.AppraisalBars;
+        return new CleanupStateActionResult
+        {
+            Succeeded = succeeded,
+            State = PokemonGoGameState.Appraisal,
+            InputCount = 1,
+            Blocker = succeeded ? null : "AppraisalBars stable postcondition not verified"
+        };
+    }
+
+    public async Task<CleanupStateActionResult> ExitAppraisalForCleanupAsync(
+        CancellationToken cancellationToken)
+    {
+        LastCleanupRecoveryInputCount = 0;
+        var state = await ExitAppraisalAsync(cancellationToken);
+        return new CleanupStateActionResult
+        {
+            Succeeded = state == VerifiedSequenceState.PokemonDetails,
+            State = state == VerifiedSequenceState.PokemonDetails
+                ? PokemonGoGameState.PokemonDetails
+                : PokemonGoGameState.Unknown,
+            InputCount = LastCleanupRecoveryInputCount,
+            Blocker = state == VerifiedSequenceState.PokemonDetails
+                ? null : "guarded appraisal exit did not establish Details"
+        };
+    }
+
+    public Task<CleanupStateActionResult> DismissKnownInformationalPopupForCleanupAsync(
+        CancellationToken cancellationToken)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        return Task.FromResult(new CleanupStateActionResult
+        {
+            Succeeded = false,
+            State = PokemonGoGameState.KnownInformationalPopup,
+            InputCount = 0,
+            Blocker = "known popup dismissal requires a verified visual named control"
+        });
     }
 
     public async Task<VerifiedSequenceState> OpenFirstPokemonAsync(CancellationToken cancellationToken)
@@ -391,6 +555,7 @@ public sealed class AndroidVerifiedInventoryNamedOperations : ICleanupProofNamed
 
     public async Task<VerifiedSequenceState> ExitAppraisalAsync(CancellationToken cancellationToken)
     {
+        LastCleanupRecoveryInputCount = 0;
         var frames = await CaptureRecoveryFramesAsync("exit-appraisal", cancellationToken);
         _recovery.Begin(frames);
         for (var attempt = 0; attempt < GuardedInventoryRecovery.MaxAppraisalTotalActions; attempt++)
@@ -400,6 +565,7 @@ public sealed class AndroidVerifiedInventoryNamedOperations : ICleanupProofNamed
             if (authorization.Action != RecoveryInputAction.ExitAppraisal || authorization.Target is null)
                 return VerifiedSequenceState.Unknown;
             await ExecuteRecoveryActionAsync(authorization, cancellationToken);
+            LastCleanupRecoveryInputCount++;
             await WriteRecoveryAuditAsync(authorization, "PokemonDetails", cancellationToken);
             frames = await CaptureRecoveryFramesAsync("exit-appraisal-post", cancellationToken);
             var outcome = _recovery.ObservePostAction(frames);
@@ -530,6 +696,7 @@ public sealed class AndroidVerifiedInventoryNamedOperations : ICleanupProofNamed
 
     public async Task<VerifiedSequenceState> ReturnToInventoryAsync(CancellationToken cancellationToken)
     {
+        LastCleanupRecoveryInputCount = 0;
         var frames = await CaptureRecoveryFramesAsync("return-to-inventory", cancellationToken);
         var begin = _recovery.Begin(frames);
         if (begin == RecoveryOutcome.SUCCEEDED) return VerifiedSequenceState.Inventory;
@@ -540,6 +707,7 @@ public sealed class AndroidVerifiedInventoryNamedOperations : ICleanupProofNamed
             var authorization = _recovery.AuthorizeNextAction();
             if (authorization is null) return VerifiedSequenceState.Unknown;
             await ExecuteRecoveryActionAsync(authorization, cancellationToken);
+            LastCleanupRecoveryInputCount++;
             await WriteRecoveryAuditAsync(authorization, "Inventory", cancellationToken);
             frames = await CaptureRecoveryFramesAsync("return-to-inventory-post", cancellationToken);
             var outcome = _recovery.ObservePostAction(frames);
@@ -557,6 +725,7 @@ public sealed class AndroidVerifiedInventoryNamedOperations : ICleanupProofNamed
 
     public async Task<string> CloseInventoryAsync(CancellationToken cancellationToken)
     {
+        LastCleanupRecoveryInputCount = 0;
         var before = await WaitForStateAsync(
             new[] { PokemonGoGameState.Inventory }, cancellationToken);
         var detection = _detector.Detect(before.Screenshot, _appraisalProfile);
@@ -564,8 +733,10 @@ public sealed class AndroidVerifiedInventoryNamedOperations : ICleanupProofNamed
             return PokemonGoGameState.Unknown.ToString();
 
         await AuthorizeNonTapInputAsync(
-            "close-inventory", cancellationToken, PokemonGoGameState.GameplayMap.ToString());
+            "close-inventory", cancellationToken, PokemonGoGameState.GameplayMap.ToString(),
+            PokemonGoGameState.Inventory);
         await _transport.PressBackAsync(_serial, cancellationToken);
+        LastCleanupRecoveryInputCount = 1;
         if (_navigationTrace is not null)
             await _navigationTrace.RecordInputSentAsync("PressBack", "Back", cancellationToken);
         var after = await WaitForStateAsync(
@@ -662,7 +833,21 @@ public sealed class AndroidVerifiedInventoryNamedOperations : ICleanupProofNamed
         {
             if (authorization.Target is null)
                 throw new InvalidOperationException("Guarded appraisal action had no visual target.");
-            await TapNamedAsync(authorization.Target, "guarded-exit-appraisal", cancellationToken);
+            var fresh = await CaptureAsync("pre-guarded-exit-appraisal", cancellationToken);
+            var detection = _detector.Detect(fresh, _appraisalProfile);
+            if (detection.State != PokemonGoGameState.Appraisal)
+                throw new InvalidOperationException("Guarded appraisal action lost the Appraisal state before input.");
+            await TapNamedAsync(
+                authorization.Target,
+                "guarded-exit-appraisal",
+                cancellationToken,
+                new NamedInputAuthorization
+                {
+                    RequiredState = PokemonGoGameState.Appraisal,
+                    PreconditionScreenshotSha256 = detection.ScreenshotSha256,
+                    FreshPreTapScreenshotSha256 = detection.ScreenshotSha256,
+                    FreshScreenshot = fresh
+                });
             return;
         }
 
@@ -805,6 +990,27 @@ public sealed class AndroidVerifiedInventoryNamedOperations : ICleanupProofNamed
         if (result.State != expected) throw new InvalidOperationException($"{name} postcondition was not verified.");
     }
 
+    private async Task<bool> PressBackForCleanupAsync(
+        PokemonGoGameState requiredState,
+        PokemonGoGameState expectedState,
+        string name,
+        CancellationToken cancellationToken)
+    {
+        await AuthorizeNonTapInputAsync(
+            name,
+            cancellationToken,
+            expectedState.ToString(),
+            requiredState);
+        await _transport.PressBackAsync(_serial, cancellationToken);
+        LastCleanupRecoveryInputCount = 1;
+        if (_navigationTrace is not null)
+            await _navigationTrace.RecordInputSentAsync("PressBack", "Back", cancellationToken);
+        var after = await WaitForStateAsync(new[] { expectedState }, cancellationToken);
+        await CompleteTraceAsync(expectedState.ToString(),
+            after.State == expectedState ? "PASS" : "FAIL", cancellationToken);
+        return after.State == expectedState;
+    }
+
     private async Task TapNamedAsync(
         NormalizedPoint point,
         string name,
@@ -885,7 +1091,8 @@ public sealed class AndroidVerifiedInventoryNamedOperations : ICleanupProofNamed
     private async Task<byte[]> AuthorizeNonTapInputAsync(
         string name,
         CancellationToken cancellationToken,
-        string? expectedPostcondition = null)
+        string? expectedPostcondition = null,
+        PokemonGoGameState? requiredState = null)
     {
         var screenshot = await CaptureAsync($"pre-{name}", cancellationToken);
         await EnsureNoUnsafeConfirmationAsync(name, screenshot, cancellationToken);
@@ -894,6 +1101,20 @@ public sealed class AndroidVerifiedInventoryNamedOperations : ICleanupProofNamed
             _locator.LocateDetailsPageTopology(screenshot) is not null
                 ? PokemonGoGameState.PokemonDetails
                 : (PokemonGoGameState?)null;
+        if (requiredState is { } required && detection.State != required &&
+            visualFallbackState != required)
+        {
+            await WriteAuditAsync($"{name}-authorization", new
+            {
+                Action = name,
+                RequiredState = required,
+                StrictDetectedState = detection.State,
+                VisualFallbackState = visualFallbackState,
+                AuthorizationResult = "DENIED_REQUIRED_STATE_CHANGED",
+                InputSent = false
+            }, cancellationToken);
+            throw new InvalidOperationException($"Input '{name}' was not authorized from {required}.");
+        }
         if (_navigationTrace is not null)
             await _navigationTrace.AuthorizeAsync(
                 name,

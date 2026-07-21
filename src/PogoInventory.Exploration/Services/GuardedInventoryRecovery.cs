@@ -193,7 +193,7 @@ public sealed class GuardedInventoryRecovery
             HasConflictingAnchor = conflicting,
             LocatorConfidence = hasIntro ? intro!.Confidence : null,
             LocatorTarget = hasIntro
-                ? new NormalizedPoint { X = 0.1001, Y = 0.5002 }
+                ? intro!.Target
                 : null,
             StableRegions = stableRegions,
             Bars = bars
@@ -343,7 +343,9 @@ public sealed class GuardedInventoryRecovery
             ExpectedState = expected,
             ExpectedFrameKind = _pendingExpectedKind,
             Target = action == RecoveryInputAction.ExitAppraisal
-                ? new NormalizedPoint { X = 0.1001, Y = 0.5002 }
+                ? _current.Kind == RecoveryFrameKind.AppraisalIntro
+                    ? _current.LocatorTarget
+                    : new NormalizedPoint { X = 0.1001, Y = 0.5002 }
                 : null,
             Detail = action == RecoveryInputAction.ExitAppraisal
                 ? "One state-validated normalized ExitAppraisal tap."

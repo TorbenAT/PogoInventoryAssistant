@@ -1,13 +1,13 @@
-## Cleanup value-proof implementation checkpoint - 2026-07-21
+## Autonomous cleanup start recovery checkpoint - 2026-07-21
 
-- Abandoned recovery diff saved under ignored `local-data/validation/cleanup-value-proof/abandoned-recovery.diff`.
-- The two tracked recovery experiment files were restored to `1216404`; `.worktrees/` was preserved.
-- Manual GameplayMap preflight now fails with `MANUAL_SAFE_START_REQUIRED` and zero phone input from other states.
+- `device-run-cleanup-proof` now calls the shared bounded `KnownGameStateNormalizer`.
+- Supported reversible start states are normalized through named operations with stable pre/post frames, fresh input authorization, loop detection and a six-input budget.
+- AppraisalIntro continuation uses the locator target once and requires stable AppraisalBars; Unknown/unsafe states send zero input.
 - Baseline persistence precedes appraisal; appraisal and semantic-review enrichment are transactional.
 - Build: PASS.
-- Self-tests: PASS, 161/161.
-- `git diff --check`: pending before code checkpoint commit.
-- Real Android value proof: not yet run; no acceptance claim.
+- Self-tests: PASS, 162/162.
+- `git diff --check`: PASS.
+- Real Android value proof: pending code checkpoint; no acceptance claim.
 
 ## Version 0.14.3 compile correction
 

@@ -2,9 +2,11 @@
 
 ## Cleanup value-proof transition
 
-The permanent value proof has a strict manual start contract: the CLI captures
-three stable GameplayMap frames, rejects unsafe/conflicting state and sends no
-input when the phone is elsewhere. Once a Details identity and read-only tags
+The permanent value proof calls `KnownGameStateNormalizer` before inventory
+search. It captures three stable frames, follows only the bounded named graph
+from supported reversible game states, records every recovery transition and
+stops on unsafe/unknown/conflicting evidence, loops or six recovery inputs.
+Once a Details identity and read-only tags
 are captured, the runner writes `ScanRuns`, `Observations`, `PokemonRecords`
 and an `Observed` event before it attempts appraisal. Appraisal is an
 enrichment, not a persistence gate. A single authorized appraisal-exit tap may

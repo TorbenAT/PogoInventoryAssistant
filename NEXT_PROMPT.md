@@ -1,16 +1,18 @@
 # Continuation prompt
 
-## Cleanup value-proof implementation checkpoint
+## Autonomous cleanup start recovery checkpoint
 
-The abandoned post-1216404 recovery experiment is saved locally at
-`local-data/validation/cleanup-value-proof/abandoned-recovery.diff`; the two
-tracked experiment files were restored. The value-proof code now requires a
-manual three-frame GameplayMap start and returns
-`MANUAL_SAFE_START_REQUIRED` with zero phone input from any other state.
-Identity/tag rows are persisted before best-effort appraisal, with transactional
-appraisal and semantic-review enrichment. Offline self-tests are 161/161.
-Run the real proof only after Torben manually leaves the phone on GameplayMap.
-No real result is claimed yet.
+`device-run-cleanup-proof` now normalizes supported reversible starting states
+internally through `KnownGameStateNormalizer`; no manual GameplayMap
+preparation is required. The normalizer is bounded to six verified inputs,
+requires stable pre/post frames, records `start-state-recovery.json` and
+`start-state-recovery.md`, and stops on Unknown, unsafe, conflicting, repeated
+or exhausted recovery. Offline self-tests are 162/162.
+
+Run the one bounded real value proof directly from the phone's current state.
+Do not claim phone acceptance unless the recovery report and reopened SQLite
+proof satisfy the acceptance fields. Preserve local evidence under ignored
+`local-data/validation/cleanup-value-proof`.
 
 ## Cleanup proof implementation checkpoint
 

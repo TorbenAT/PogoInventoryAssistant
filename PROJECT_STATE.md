@@ -1,16 +1,16 @@
 # Project state
 
-## Cleanup value-proof implementation checkpoint
+## Autonomous cleanup start recovery checkpoint
 
-The failed arbitrary-state recovery experiment was saved to
-`local-data/validation/cleanup-value-proof/abandoned-recovery.diff` and its two
-tracked files were restored to the prior checkpoint before the value-proof
-changes. `device-run-cleanup-proof` now requires three stable GameplayMap
-frames and performs zero input when that manual precondition is absent. Each
-identity/tag baseline is persisted before best-effort appraisal; appraisal
-enrichment, semantic-review enrichment and recommendations are transactional.
-Strict policy output remains separate from advisory comparative suggestions.
-Offline self-tests pass 161/161. No real-phone value proof is claimed yet.
+`device-run-cleanup-proof` now calls `KnownGameStateNormalizer` internally.
+The normalizer detects three stable frames, executes only named verified
+transitions, records the recovery path, detects repeated state/action pairs and
+stops at six recovery inputs. GameplayMap, MainMenu, Inventory/search,
+PokemonDetails, PokemonMenu and AppraisalIntro/AppraisalBars are represented in
+the bounded graph; Unknown and unsafe states remain zero-input blockers.
+AppraisalIntro continuation uses the `VisualControlLocator` target exactly
+once and requires stable AppraisalBars. Offline self-tests pass 162/162.
+The real phone value proof is pending this code checkpoint and is not claimed.
 
 ## Cleanup proof pipeline implementation checkpoint
 

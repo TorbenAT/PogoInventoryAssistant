@@ -1,9 +1,16 @@
 # Changelog
 
-## Cleanup value-proof persistence and advisory comparison - 2026-07-21
+## Autonomous cleanup start recovery - 2026-07-21
 
-- Cleanup proof now requires three stable GameplayMap frames as a manual safe
-  start and reports `MANUAL_SAFE_START_REQUIRED` without phone input otherwise.
+- `device-run-cleanup-proof` now calls the shared bounded
+  `KnownGameStateNormalizer` before inventory search; manual GameplayMap
+  preparation is no longer a product requirement.
+- Known reversible Details, Menu, AppraisalIntro/AppraisalBars, Inventory and
+  search states use named operations with three stable frames, fresh
+  revalidation, postconditions, loop detection and a six-input budget.
+- AppraisalIntro continue uses the visually located target exactly once and
+  requires stable AppraisalBars; unknown and unsafe states remain zero-input
+  blockers.
 - Identity and read-only tags are persisted transactionally before appraisal;
   appraisal is best-effort and enriches an already durable row.
 - Appraisal exit has one bounded, topology-scoped Details postcondition
@@ -11,7 +18,8 @@
 - Added semantic-review templates, strict recommendation exports and separate
   human-review-only comparative cleanup suggestions. No real-phone result is
   claimed in this checkpoint.
-- Offline self-tests pass 161/161.
+- Offline self-tests pass 162/162. Real-phone acceptance is pending this
+  checkpoint and is not claimed from tests alone.
 
 ## Cleanup proof pipeline implementation - 2026-07-21
 

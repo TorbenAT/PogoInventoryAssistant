@@ -1809,29 +1809,24 @@ static async Task<int> RunCleanupProofAsync(
         await transport.ListDevicesAsync(cancellationToken), Optional(options, "serial"));
     var evidence = Path.Combine(output, "evidence");
     Directory.CreateDirectory(evidence);
-    var detector = new PokemonGoGameStateDetector();
-    var preflightPassed = true;
-    for (var index = 1; index <= 3; index++)
+    var operations = new AndroidVerifiedInventoryNamedOperations(
+        transport, selected.Serial, automationProfile, evidence, appraisalProfile);
+    var recovery = await new KnownGameStateNormalizer().EnsureCleanupReadyAsync(
+        operations, cancellationToken);
+    await File.WriteAllTextAsync(
+        Path.Combine(output, "start-state-recovery.json"),
+        JsonSerializer.Serialize(recovery, new JsonSerializerOptions { WriteIndented = true }),
+        cancellationToken);
+    await File.WriteAllTextAsync(
+        Path.Combine(output, "start-state-recovery.md"),
+        $"# Start-state recovery\n\n- Initial state: `{recovery.InitialState}`\n- Recovery path: `{string.Join(" -> ", recovery.RecoveryPath)}`\n- Actions: `{string.Join(", ", recovery.RecoveryActions)}`\n- Input count: `{recovery.RecoveryInputCount}`\n- Ready state: `{recovery.ReadyState}`\n- Result: `{recovery.Result}`\n- Blocker: `{recovery.Blocker ?? "NONE"}`\n",
+        cancellationToken);
+    if (!recovery.IsReady)
     {
-        var screenshot = await transport.CaptureScreenshotPngAsync(selected.Serial, cancellationToken);
-        var detection = detector.Detect(screenshot, appraisalProfile);
-        await File.WriteAllBytesAsync(Path.Combine(evidence, $"preflight-map-{index}.png"), screenshot, cancellationToken);
-        await File.WriteAllTextAsync(
-            Path.Combine(evidence, $"preflight-map-{index}.json"),
-            JsonSerializer.Serialize(detection, new JsonSerializerOptions { WriteIndented = true }),
-            cancellationToken);
-        preflightPassed &= detection.State == PokemonGoGameState.GameplayMap;
-        if (index < 3)
-            await Task.Delay(automationProfile.PostActionSettleMilliseconds, cancellationToken);
-    }
-    if (!preflightPassed)
-    {
-        Console.Error.WriteLine("MANUAL_SAFE_START_REQUIRED: cleanup proof stopped before input; three stable GameplayMap frames were not verified.");
+        Console.Error.WriteLine($"CLEANUP_START_RECOVERY_BLOCKED: {recovery.Blocker ?? recovery.Result}");
         return 1;
     }
 
-    var operations = new AndroidVerifiedInventoryNamedOperations(
-        transport, selected.Serial, automationProfile, evidence, appraisalProfile);
     var request = new CleanupProofRequest
     {
         SpeciesQuery = species,

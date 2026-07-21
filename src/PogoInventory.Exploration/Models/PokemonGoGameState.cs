@@ -6,7 +6,10 @@ public enum PokemonGoGameState
     GameplayMap,
     MainMenu,
     Inventory,
+    InventorySearchOpen,
+    InventoryFiltered,
     PokemonDetails,
     PokemonMenu,
-    Appraisal
+    Appraisal,
+    KnownInformationalPopup
 }
