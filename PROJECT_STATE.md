@@ -1,5 +1,24 @@
 # Project state
 
+## Evidence-machine gates result (2026-07-21 aften)
+
+Gates 0-3 were executed against real evidence and the real phone.
+The OCR crop transform was repaired (BitmapTransform scale-before-crop),
+ROI defaults are spike-tuned, and Tesseract (tessdata-best) replaced
+WinRT as the cleanup-flow engine after WinRT produced a false CP
+consensus (29 vs real 129). Offline reprocess of the 20-item database:
+species 19/20, CP 16/20, zero false values, original untouched, statuses
+recomputed. The 50-item real-phone regression captured 50/50 with
+36 distinct species, species 48/50, CP 41/50, IV 47/50, zero
+query-as-species, zero destructive actions and SQLite integrity ok —
+formally red on the >=48/50 coverage gate because large Pokémon models
+physically occlude the CP header (structural UI limit, not OCR). The
+controller stopped the iteration after gate 3; gate 4
+(re-identification, ID-006) has not run and still blocks cleanup work.
+Self-tests 208/208. Open defects: live runner does not recompute
+ObservationStatus; final-map verification runs before the exit chain
+completes. See NEXT_PROMPT.md.
+
 ## Semantic foundation checkpoint (2026-07-21)
 
 The semantic core now exists offline: `PokemonHeaderAnalyzer` extracts
