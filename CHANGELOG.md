@@ -1,5 +1,14 @@
 # Changelog
 
+## Long database acceptance — 2026-07-21
+
+- Ran the permanent read-only cleanup proof with `age0-1825` and limit 20.
+- Four Complete rows were persisted before appraisal and retained through a
+  bounded `CursorProgression:Unknown` SafeStopped result.
+- SQLite was reopened and reports were generated from the reloaded rows;
+  integrity was `ok`, with four Observations, four PokemonRecords and twelve
+  InventoryEvents. This is below the ten-item long-run acceptance threshold.
+
 ## Unreleased
 
 - Repaired real Android canonical-close scale/position evidence and integrated

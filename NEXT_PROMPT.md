@@ -1,5 +1,15 @@
 # Continuation prompt
 
+## Long database acceptance checkpoint
+
+The fresh `age0-1825` / 20-item real run safely stopped after four Complete
+rows at `CursorProgression:Unknown`. SQLite integrity is `ok`; all four rows
+and reports were retained after database reopen. Do not patch and rerun in
+this iteration. The precise remaining runtime defect is cursor progression
+after ordinal 4, with the final phone screenshot visually PokemonDetails but
+the detector returning Unknown. Evidence is under
+`local-data/validation/cleanup-value-proof/long-age0-1825`.
+
 ## Current checkpoint: canonical close accepted; value proof blocked by query
 
 Canonical close is pushed through `5a5ffc1`; the real phone diagnostic and

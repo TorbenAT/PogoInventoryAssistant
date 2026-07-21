@@ -102,6 +102,20 @@ remains the authoritative compiler and test runner.
 
 # Validation report
 
+## Long self-recovering database acceptance — 2026-07-21
+
+- Baseline: HEAD/origin/main `3c78c225718b269647e437b39d512d69f0b5c592`.
+- Build PASS; self-tests PASS 162/162; diff-check PASS.
+- Query `age0-1825`, requested 20, captured 4 Complete items, then safely
+  stopped at `CursorProgression:Unknown`. No blind retry or source repair was
+  performed.
+- SQLite integrity: `ok`; ScanRuns 1, Observations 4, PokemonRecords 4,
+  InventoryEvents 12. Database was reopened before analysis and reports were
+  generated from reloaded rows.
+- Final screenshot was visually PokemonDetails/Fletchling while the detector
+  returned Unknown. No further phone input was sent. This is not a long-run
+  acceptance because it is below the required 10 captured items.
+
 ## Canonical close and cleanup value-proof checkpoint — 2026-07-21
 
 - Code commits: `2c34f70` and `5a5ffc1`, both pushed to `main`.

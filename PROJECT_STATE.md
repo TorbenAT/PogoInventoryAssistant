@@ -1,5 +1,17 @@
 # Project state
 
+## Long self-recovering database acceptance result
+
+The permanent real-phone cleanup proof ran with `age0-1825` and limit 20.
+It safely stopped at four Complete observations on
+`CursorProgression:Unknown`; all four rows were retained, SQLite integrity
+was `ok`, and the reopened database produced four Observations, four
+PokemonRecords and twelve InventoryEvents. Reports were generated from the
+reloaded database. The run did not meet the ten-item long-run threshold and
+must not be described as long-sequence acceptance. The final screenshot was
+visually PokemonDetails/Fletchling while the detector returned Unknown, so no
+further phone input was sent.
+
 ## Canonical close phone acceptance and bounded value-proof result
 
 The canonical-close locator was repaired for the real OnePlus A6013 scale and
