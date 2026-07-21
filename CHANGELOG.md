@@ -13,6 +13,9 @@
   checkpoints are distinct and idempotent. Offline self-tests pass 157/157.
 - Resume evidence numbering now appends within an existing output directory and
   cannot overwrite the earlier replay evidence.
+- Lowered the Intro locator gate to 0.58 after a visually clear real-device
+  Intro scored 0.594 with the avatar overlapping the dialog edge; the
+  three-frame ROI consensus and one-tap bound remain unchanged.
 
 ## Android real-phone attempt blocked - 2026-07-21
 

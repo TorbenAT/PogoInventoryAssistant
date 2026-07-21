@@ -115,7 +115,7 @@ internal static class GuardedInventoryRecoveryTests
         Assert(GuardedInventoryRecovery.DecideAppraisalContinuation(intro, 0, false) ==
             AppraisalContinuationOutcome.TAP_INTRO_ONCE,
             "stable intro authorizes exactly one locator-grounded tap");
-        var weak = intro.Select(frame => frame with { LocatorConfidence = 0.59 }).ToArray();
+        var weak = intro.Select(frame => frame with { LocatorConfidence = 0.57 }).ToArray();
         Assert(!GuardedInventoryRecovery.IsStable(weak),
             "intro locator confidence below the real-device threshold is rejected");
         Assert(GuardedInventoryRecovery.DecideAppraisalContinuation(intro, 1, true) ==

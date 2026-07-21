@@ -90,7 +90,10 @@ public sealed class GuardedInventoryRecovery
     public const int MaxAppraisalTotalActions = 3;
     // The real OnePlus AppraisalIntro anchor is consistently 0.611. Keep a
     // small evidence margin while rejecting weaker partial overlays.
-    public const double MinimumIntroLocatorConfidence = 0.60;
+    // The item-4 real-device intro is visually unambiguous but scored 0.594
+    // because the avatar overlapped the lower dialog edge. Keep a bounded
+    // margin below that observation while retaining ROI consensus.
+    public const double MinimumIntroLocatorConfidence = 0.58;
 
     // Locked from the 1080x2340 OnePlus captures under local-data/validation:
     // animation changes the whole screen substantially, while these sampled

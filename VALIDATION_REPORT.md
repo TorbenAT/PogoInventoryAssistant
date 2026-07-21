@@ -338,8 +338,13 @@ Limitations observed during validation:
   separate instances when transition evidence exists.
 - ControlledStopped checkpoints resume through overlap and Completed
   checkpoints are idempotent. Offline self-tests: 157/157.
-- Real-phone acceptance has not started in this repair checkpoint.
+- Real-phone acceptance is active in the current checkpoint; Tasks 7/8 passed
+  and Task 9 reached three items before the item-4 Intro threshold repair.
 - During the controlled resume acceptance, evidence numbering was observed to
   restart in an existing output. The host now scans existing evidence ordinals
-  and appends safely; this is the only additional runtime repair required by
+  and appends safely; this was the first additional runtime repair required by
   the acceptance run.
+- The ten-item run reached three complete items, then item 4 presented a clear
+  AppraisalIntro at confidence 0.594 and stopped below the former 0.60 gate.
+  One focused repair lowers the bounded gate to 0.58; the captured failure
+  screen and state JSON are under `failures/ten-item-item4`.
