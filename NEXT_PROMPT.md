@@ -9,6 +9,11 @@ not match. Tag mutation remains disabled and false by default for the first
 real acceptance. Offline self-tests are 156/156. Real-phone acceptance is not
 claimed until the bounded 3-item and resume runs are actually executed.
 
+Latest real-phone attempt is blocked: `tools/platform-tools/adb.exe` discovered
+no authorized device and the bounded reconnect to `192.168.1.185:5555` failed
+with Windows socket error 10013. Do not claim phone acceptance until ADB is
+available again.
+
 Task 5 now has an offline `VerifiedInventoryTaskSequence` contract with
 checkpoint/resume, Partial preservation plus bounded continuation after a
 verified Inventory restore, and fail-closed tests at 156/156. Bind it to the

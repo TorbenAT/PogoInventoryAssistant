@@ -1,5 +1,12 @@
 # Changelog
 
+## Android real-phone attempt blocked - 2026-07-21
+
+- The bounded Task E attempt found no authorized ADB device; reconnect to the
+  expected Wi-Fi serial failed with Windows socket error 10013.
+- No production host input was sent. Tasks E/F remain blocked and Task G was
+  skipped; no real-phone acceptance is claimed.
+
 ## Android verified sequence host and cursor - 2026-07-21
 
 - Added `AndroidVerifiedInventoryNamedOperations` and the

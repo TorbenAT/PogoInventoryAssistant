@@ -324,3 +324,7 @@ Limitations observed during validation:
 - The real Android ADB path was found at
   `tools/platform-tools/adb.exe`; phone execution remains a separate evidence
   checkpoint and no approval is claimed here.
+- A bounded real-phone attempt on 2026-07-21 found no authorized device. The
+  expected Wi-Fi serial reconnect returned Windows socket error 10013, so the
+  production host sent no phone input. Tasks E/F are blocked and Task G is
+  ineligible; this is not real-phone acceptance.

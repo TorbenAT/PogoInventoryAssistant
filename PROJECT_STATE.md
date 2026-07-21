@@ -18,6 +18,10 @@ real-phone acceptance claim.
 
 Offline self-tests: 156/156.
 
+The bounded real-phone attempt found no authorized ADB device. Reconnect to the
+expected Wi-Fi serial failed with Windows socket error 10013; no production
+host input was sent and Tasks E/F/G remain unaccepted.
+
 ## Current version
 
 0.14.3
