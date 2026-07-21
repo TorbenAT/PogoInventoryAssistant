@@ -313,6 +313,173 @@ public sealed class InventoryPersistenceService
         await command.ExecuteNonQueryAsync(cancellationToken);
     }
 
+    public async Task EnrichCleanupAppraisalAsync(
+        string runId,
+        string localPokemonId,
+        PokemonObservation observation,
+        CleanupProofAppraisalCapture appraisal,
+        IReadOnlyDictionary<string, string> fieldEvidenceSources,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(runId);
+        ArgumentException.ThrowIfNullOrWhiteSpace(localPokemonId);
+        ArgumentNullException.ThrowIfNull(observation);
+        ArgumentNullException.ThrowIfNull(appraisal);
+        await InitializeAsync(cancellationToken);
+        await using var connection = Open();
+        await connection.OpenAsync(cancellationToken);
+        await using var transaction = (SqliteTransaction)await connection.BeginTransactionAsync(cancellationToken);
+        var options = JsonOptions();
+        var observationJson = JsonSerializer.Serialize(observation, options);
+        var fieldsJson = JsonSerializer.Serialize(fieldEvidenceSources, options);
+        var appraisalJson = JsonSerializer.Serialize(
+            appraisal.EvidencePaths.Count == 0
+                ? new[] { "AppraisalStatus:" + appraisal.Status }
+                : appraisal.EvidencePaths,
+            options);
+        var appraisalDetailJson = JsonSerializer.Serialize(appraisal, options);
+        await using (var command = connection.CreateCommand())
+        {
+            command.Transaction = transaction;
+            command.CommandText = """
+                UPDATE Observations
+                SET Cp = @cp, AttackIv = @attack, DefenseIv = @defense, HpIv = @hp,
+                    ObservationJson = @observation, FieldEvidenceJson = @fields,
+                    AppraisalEvidenceJson = @appraisal
+                WHERE LocalPokemonId = @id AND RunId = @run;
+                """;
+            AddEnrichmentParameters(command, runId, localPokemonId, observation,
+                observationJson, fieldsJson, appraisalJson);
+            await command.ExecuteNonQueryAsync(cancellationToken);
+        }
+        await using (var command = connection.CreateCommand())
+        {
+            command.Transaction = transaction;
+            command.CommandText = """
+                UPDATE PokemonRecords
+                SET Cp = @cp, AttackIv = @attack, DefenseIv = @defense, HpIv = @hp,
+                    FieldEvidenceJson = @fields, AppraisalEvidenceJson = @appraisal
+                WHERE LocalPokemonId = @id AND LastSeenRunId = @run;
+                """;
+            AddEnrichmentParameters(command, runId, localPokemonId, observation,
+                observationJson, fieldsJson, appraisalJson);
+            await command.ExecuteNonQueryAsync(cancellationToken);
+        }
+        await InsertCleanupEventAsync(connection, transaction, localPokemonId, runId,
+            "AppraisalEnriched", appraisalDetailJson, cancellationToken);
+        await transaction.CommitAsync(cancellationToken);
+    }
+
+    public async Task EnrichCleanupSemanticReviewAsync(
+        string runId,
+        string localPokemonId,
+        PokemonObservation observation,
+        IReadOnlyDictionary<string, string> fieldEvidenceSources,
+        string reviewJson,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(runId);
+        ArgumentException.ThrowIfNullOrWhiteSpace(localPokemonId);
+        ArgumentNullException.ThrowIfNull(observation);
+        ArgumentException.ThrowIfNullOrWhiteSpace(reviewJson);
+        await InitializeAsync(cancellationToken);
+        await using var connection = Open();
+        await connection.OpenAsync(cancellationToken);
+        await using var transaction = (SqliteTransaction)await connection.BeginTransactionAsync(cancellationToken);
+        var options = JsonOptions();
+        var observationJson = JsonSerializer.Serialize(observation, options);
+        var fieldsJson = JsonSerializer.Serialize(fieldEvidenceSources, options);
+        await using (var command = connection.CreateCommand())
+        {
+            command.Transaction = transaction;
+            command.CommandText = """
+                UPDATE Observations
+                SET Cp = @cp, AttackIv = @attack, DefenseIv = @defense, HpIv = @hp,
+                    CatchLocation = @location, ObservationJson = @observation,
+                    FieldEvidenceJson = @fields
+                WHERE LocalPokemonId = @id AND RunId = @run;
+                """;
+            AddSemanticParameters(command, runId, localPokemonId, observation,
+                observationJson, fieldsJson);
+            await command.ExecuteNonQueryAsync(cancellationToken);
+        }
+        await using (var command = connection.CreateCommand())
+        {
+            command.Transaction = transaction;
+            command.CommandText = """
+                UPDATE PokemonRecords
+                SET Cp = @cp, AttackIv = @attack, DefenseIv = @defense, HpIv = @hp,
+                    CatchLocation = @location, FieldEvidenceJson = @fields
+                WHERE LocalPokemonId = @id AND LastSeenRunId = @run;
+                """;
+            AddSemanticParameters(command, runId, localPokemonId, observation,
+                observationJson, fieldsJson);
+            await command.ExecuteNonQueryAsync(cancellationToken);
+        }
+        await InsertCleanupEventAsync(connection, transaction, localPokemonId, runId,
+            "SemanticReviewEnriched", reviewJson, cancellationToken);
+        await transaction.CommitAsync(cancellationToken);
+    }
+
+    private static void AddEnrichmentParameters(
+        SqliteCommand command,
+        string runId,
+        string localPokemonId,
+        PokemonObservation observation,
+        string observationJson,
+        string fieldsJson,
+        string appraisalJson)
+    {
+        command.Parameters.AddWithValue("@run", runId);
+        command.Parameters.AddWithValue("@id", localPokemonId);
+        command.Parameters.AddWithValue("@cp", (object?)observation.Cp ?? DBNull.Value);
+        command.Parameters.AddWithValue("@attack", (object?)observation.AttackIv ?? DBNull.Value);
+        command.Parameters.AddWithValue("@defense", (object?)observation.DefenseIv ?? DBNull.Value);
+        command.Parameters.AddWithValue("@hp", (object?)observation.HpIv ?? DBNull.Value);
+        command.Parameters.AddWithValue("@observation", observationJson);
+        command.Parameters.AddWithValue("@fields", fieldsJson);
+        command.Parameters.AddWithValue("@appraisal", appraisalJson);
+    }
+
+    private static void AddSemanticParameters(
+        SqliteCommand command,
+        string runId,
+        string localPokemonId,
+        PokemonObservation observation,
+        string observationJson,
+        string fieldsJson)
+    {
+        command.Parameters.AddWithValue("@run", runId);
+        command.Parameters.AddWithValue("@id", localPokemonId);
+        command.Parameters.AddWithValue("@cp", (object?)observation.Cp ?? DBNull.Value);
+        command.Parameters.AddWithValue("@attack", (object?)observation.AttackIv ?? DBNull.Value);
+        command.Parameters.AddWithValue("@defense", (object?)observation.DefenseIv ?? DBNull.Value);
+        command.Parameters.AddWithValue("@hp", (object?)observation.HpIv ?? DBNull.Value);
+        command.Parameters.AddWithValue("@location", (object?)observation.CatchLocation ?? DBNull.Value);
+        command.Parameters.AddWithValue("@observation", observationJson);
+        command.Parameters.AddWithValue("@fields", fieldsJson);
+    }
+
+    private static async Task InsertCleanupEventAsync(
+        SqliteConnection connection,
+        SqliteTransaction transaction,
+        string localPokemonId,
+        string runId,
+        string eventType,
+        string detailJson,
+        CancellationToken cancellationToken)
+    {
+        await using var command = connection.CreateCommand();
+        command.Transaction = transaction;
+        command.CommandText = "INSERT INTO InventoryEvents (LocalPokemonId, RunId, EventType, OccurredAtUtc, DetailJson) VALUES (@id, @run, @event, @at, @detail);";
+        command.Parameters.AddWithValue("@id", localPokemonId);
+        command.Parameters.AddWithValue("@run", runId);
+        command.Parameters.AddWithValue("@event", eventType);
+        command.Parameters.AddWithValue("@at", DateTimeOffset.UtcNow.ToString("O"));
+        command.Parameters.AddWithValue("@detail", detailJson);
+        await command.ExecuteNonQueryAsync(cancellationToken);
+    }
+
     public async Task<IReadOnlyList<CleanupProofDatabaseRow>> LoadCleanupProofRowsAsync(
         string runId,
         CancellationToken cancellationToken = default)

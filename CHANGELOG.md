@@ -1,5 +1,18 @@
 # Changelog
 
+## Cleanup value-proof persistence and advisory comparison - 2026-07-21
+
+- Cleanup proof now requires three stable GameplayMap frames as a manual safe
+  start and reports `MANUAL_SAFE_START_REQUIRED` without phone input otherwise.
+- Identity and read-only tags are persisted transactionally before appraisal;
+  appraisal is best-effort and enriches an already durable row.
+- Appraisal exit has one bounded, topology-scoped Details postcondition
+  fallback after the single authorized exit tap.
+- Added semantic-review templates, strict recommendation exports and separate
+  human-review-only comparative cleanup suggestions. No real-phone result is
+  claimed in this checkpoint.
+- Offline self-tests pass 161/161.
+
 ## Cleanup proof pipeline implementation - 2026-07-21
 
 - Added self-contained wrong-screen modal fixtures using `PixelImage` and

@@ -126,13 +126,6 @@ public sealed class CleanupProofRunner
                     }
                 }
 
-                var appraisal = await operations.CaptureCleanupAppraisalAsync(cancellationToken);
-                var afterAppraisal = await operations.ExitAppraisalAsync(cancellationToken);
-                if (afterAppraisal != VerifiedSequenceState.PokemonDetails)
-                {
-                    stopReason = "AppraisalDetailsRecoveryFailed";
-                    return await FinishAsync("SafeStopped", stopReason, captures, runId, persistence, request, cancellationToken);
-                }
                 var tags = await operations.ReadTagObservationAsync(cancellationToken);
                 var observation = BuildObservation(runId, ordinal, request.SpeciesQuery, identity, tags);
                 var record = new CleanupProofObservationRecord
@@ -148,13 +141,53 @@ public sealed class CleanupProofRunner
                     StableFingerprint = identity.Consensus.StableFingerprintSha256,
                     ScreenshotPaths = identity.ScreenshotPaths,
                     ScreenshotHashes = identity.ScreenshotHashes,
-                    AppraisalEvidence = appraisal.EvidencePaths.Count == 0
-                        ? new[] { "AppraisalStatus:" + appraisal.Status }
-                        : appraisal.EvidencePaths,
-                    FieldEvidenceSources = FieldEvidence(observation, tags, appraisal.Status)
+                    AppraisalEvidence = new[] { "AppraisalStatus:Pending" },
+                    FieldEvidenceSources = FieldEvidence(observation, tags, "Pending")
                 };
                 captures.Add(record);
                 await persistence.RecordCleanupObservationAsync(record, cancellationToken);
+
+                // Identity and tags are durable before appraisal begins. A
+                // later best-effort appraisal or navigation failure therefore
+                // cannot erase the real phone item from SQLite.
+                CleanupProofAppraisalCapture appraisal;
+                try
+                {
+                    appraisal = await operations.CaptureCleanupAppraisalAsync(cancellationToken);
+                }
+                catch (Exception exception) when (exception is not OperationCanceledException)
+                {
+                    appraisal = new CleanupProofAppraisalCapture
+                    {
+                        Status = "Unavailable",
+                        FailureReasons = new[] { exception.GetType().Name + ":" + exception.Message }
+                    };
+                }
+
+                var enrichedObservation = ApplyAppraisal(observation, appraisal);
+                var enrichedRecord = record with
+                {
+                    Observation = enrichedObservation,
+                    AppraisalEvidence = appraisal.EvidencePaths.Count == 0
+                        ? new[] { "AppraisalStatus:" + appraisal.Status }
+                        : appraisal.EvidencePaths,
+                    FieldEvidenceSources = FieldEvidence(enrichedObservation, tags, appraisal.Status)
+                };
+                await persistence.EnrichCleanupAppraisalAsync(
+                    runId,
+                    record.LocalPokemonId,
+                    enrichedObservation,
+                    appraisal,
+                    enrichedRecord.FieldEvidenceSources,
+                    cancellationToken);
+                captures[^1] = enrichedRecord;
+
+                var afterAppraisal = await operations.ExitAppraisalAsync(cancellationToken);
+                if (afterAppraisal != VerifiedSequenceState.PokemonDetails)
+                {
+                    stopReason = "AppraisalDetailsRecoveryFailed";
+                    return await FinishAsync("SafeStopped", stopReason, captures, runId, persistence, request, cancellationToken);
+                }
 
                 if (ordinal >= request.ItemLimit)
                 {
@@ -220,6 +253,15 @@ public sealed class CleanupProofRunner
             _ => IdentityConfidence.Unknown
         }
     };
+
+    private static PokemonObservation ApplyAppraisal(
+        PokemonObservation observation,
+        CleanupProofAppraisalCapture appraisal) => observation with
+        {
+            AttackIv = appraisal.AttackIv,
+            DefenseIv = appraisal.DefenseIv,
+            HpIv = appraisal.HpIv
+        };
 
     private static IReadOnlyDictionary<string, string> FieldEvidence(
         PokemonObservation observation,
@@ -288,8 +330,9 @@ public sealed class CleanupProofRunner
             .LoadCleanupProofRowsAsync(runId, cancellationToken);
         var sqlSummary = await new InventoryPersistenceService(Path.GetFullPath(request.DatabasePath))
             .ReadCleanupProofSqlSummaryAsync(cancellationToken);
+        var comparative = BuildComparativeSuggestions(rows);
         ValidateReports(rows, sqlSummary, request.OutputDirectory);
-        await WriteReportsAsync(request, runId, status, stopReason, captures, rows, sqlSummary, cancellationToken);
+        await WriteReportsAsync(request, runId, status, stopReason, captures, rows, sqlSummary, comparative, cancellationToken);
         var counts = rows.GroupBy(row => row.CurrentRecommendation, StringComparer.Ordinal)
             .ToDictionary(group => group.Key, group => group.Count(), StringComparer.Ordinal);
         return new CleanupProofRunResult
@@ -334,22 +377,17 @@ public sealed class CleanupProofRunner
         IReadOnlyList<CleanupProofObservationRecord> captures,
         IReadOnlyList<CleanupProofDatabaseRow> rows,
         CleanupProofSqlSummary sql,
+        IReadOnlyList<CleanupProofComparativeSuggestion> comparative,
         CancellationToken cancellationToken)
     {
         var output = Path.GetFullPath(request.OutputDirectory);
         await File.WriteAllTextAsync(Path.Combine(output, "captured-observations.json"),
             JsonSerializer.Serialize(captures, JsonOptions), cancellationToken);
+        var review = rows.Select(row => SemanticReview(row, request.SpeciesQuery)).ToArray();
+        await File.WriteAllTextAsync(Path.Combine(output, "semantic-review.template.json"),
+            JsonSerializer.Serialize(review, JsonOptions), cancellationToken);
         await File.WriteAllTextAsync(Path.Combine(output, "semantic-review.json"),
-            JsonSerializer.Serialize(rows.Select(row => new
-            {
-                row.LocalPokemonId,
-                row.Ordinal,
-                row.Observation,
-                row.ObservationStatus,
-                row.FieldEvidenceSources,
-                row.ScreenshotPaths,
-                row.AppraisalEvidence
-            }), JsonOptions), cancellationToken);
+            JsonSerializer.Serialize(review, JsonOptions), cancellationToken);
         await File.WriteAllTextAsync(Path.Combine(output, "db-roundtrip.json"),
             JsonSerializer.Serialize(new
             {
@@ -376,6 +414,22 @@ public sealed class CleanupProofRunner
             }));
         }
         await File.WriteAllTextAsync(Path.Combine(output, "recommendations.csv"), csv.ToString(), cancellationToken);
+        await File.WriteAllTextAsync(Path.Combine(output, "strict-recommendations.csv"), csv.ToString(), cancellationToken);
+
+        var comparativeCsv = new StringBuilder();
+        comparativeCsv.AppendLine("LocalPokemonId,Species,Classification,Label,CP,TotalIv,Ordinal,ComparatorLocalPokemonId,MissingProtectionChecks");
+        foreach (var item in comparative)
+        {
+            comparativeCsv.AppendLine(string.Join(',', new[]
+            {
+                Csv(item.LocalPokemonId), Csv(item.Species), Csv(item.Classification), Csv(item.Label),
+                Csv(item.Cp?.ToString(CultureInfo.InvariantCulture) ?? "Unknown"),
+                Csv(item.TotalIv?.ToString(CultureInfo.InvariantCulture) ?? "Unknown"),
+                item.Ordinal.ToString(CultureInfo.InvariantCulture), Csv(item.ComparatorLocalPokemonId ?? string.Empty),
+                Csv(string.Join(";", item.MissingProtectionChecks))
+            }));
+        }
+        await File.WriteAllTextAsync(Path.Combine(output, "comparative-cleanup-suggestions.csv"), comparativeCsv.ToString(), cancellationToken);
 
         var markdown = new StringBuilder("# Recommendations\n\n| LocalPokemonId | Ordinal | Species | CP | IV | Status | Recommendation | Reason | Comparator | Evidence |\n|---|---:|---|---:|---:|---|---|---|---|---|\n");
         foreach (var row in rows)
@@ -407,6 +461,7 @@ public sealed class CleanupProofRunner
         proof.AppendLine($"- Complete / Partial / Unresolved: {rows.Count(row => row.ObservationStatus == "Complete")} / {rows.Count(row => row.ObservationStatus == "Partial")} / {rows.Count(row => row.ObservationStatus == "Unresolved")}");
         proof.AppendLine($"- SQLite ScanRuns / Observations / PokemonRecords / InventoryEvents: {sql.ScanRunCount} / {sql.ObservationCount} / {sql.PokemonRecordCount} / {sql.InventoryEventCount}");
         proof.AppendLine($"- KEEP / REVIEW / DELETE-CANDIDATE: {Count(counts, "KEEP")} / {Count(counts, "REVIEW")} / {Count(counts, "DELETE-CANDIDATE")}");
+        proof.AppendLine($"- Comparative RETAINED / LIKELY_DELETE / INSUFFICIENT: {comparative.Count(item => item.Classification == "RETAINED_COMPARATOR")} / {comparative.Count(item => item.Classification == "LIKELY_DELETE_SUGGESTION")} / {comparative.Count(item => item.Classification == "INSUFFICIENT_COMPARISON_DATA")}");
         proof.AppendLine($"- Stop reason: `{stopReason}`");
         proof.AppendLine();
         proof.AppendLine("## Recommendations generated from reloaded SQLite rows");
@@ -420,6 +475,11 @@ public sealed class CleanupProofRunner
         proof.AppendLine();
         foreach (var row in rows.Take(3))
             proof.AppendLine($"- `{row.LocalPokemonId}` ordinal {row.Ordinal}, species `{row.Observation.Species}`, status `{row.ObservationStatus}`, recommendation `{row.CurrentRecommendation}`, evidence `{row.ScreenshotPaths.FirstOrDefault() ?? "none"}`.");
+        proof.AppendLine();
+        proof.AppendLine("## Comparative cleanup suggestions");
+        proof.AppendLine();
+        foreach (var item in comparative)
+            proof.AppendLine($"- `{item.LocalPokemonId}` `{item.Label}` comparator `{item.ComparatorLocalPokemonId ?? "none"}`; missing protection checks: `{string.Join(", ", item.MissingProtectionChecks.DefaultIfEmpty("none"))}`.");
         proof.AppendLine();
         proof.AppendLine("## SQL integrity checks");
         proof.AppendLine();
@@ -440,6 +500,103 @@ public sealed class CleanupProofRunner
         proof.AppendLine("- No tag, transfer, delete, power-up, evolve, purify, purchase or location-changing action is exposed by this command.");
         await File.WriteAllTextAsync(Path.Combine(output, "proof-summary.md"), proof.ToString(), cancellationToken);
     }
+
+    private static object SemanticReview(CleanupProofDatabaseRow row, string query)
+    {
+        var evidence = row.ScreenshotPaths.FirstOrDefault() ?? string.Empty;
+        static object Field(string? value, string source, string path, string note) => new
+        {
+            value,
+            source,
+            evidencePath = path,
+            reviewNote = note
+        };
+        var fields = new Dictionary<string, object>(StringComparer.Ordinal)
+        {
+            ["Species"] = Field(row.Observation.Species, "QueryDerived", evidence, "Exact species query; not OCR."),
+            ["Cp"] = Field(null, "Unknown", string.Empty, "Requires bounded human evidence review."),
+            ["AttackIv"] = Field(row.Observation.AttackIv?.ToString(CultureInfo.InvariantCulture), row.Observation.AttackIv is null ? "Unknown" : "Automated", row.AppraisalEvidence.FirstOrDefault() ?? string.Empty, "Verified appraisal only when profile accepted Complete."),
+            ["DefenseIv"] = Field(row.Observation.DefenseIv?.ToString(CultureInfo.InvariantCulture), row.Observation.DefenseIv is null ? "Unknown" : "Automated", row.AppraisalEvidence.FirstOrDefault() ?? string.Empty, "Verified appraisal only when profile accepted Complete."),
+            ["HpIv"] = Field(row.Observation.HpIv?.ToString(CultureInfo.InvariantCulture), row.Observation.HpIv is null ? "Unknown" : "Automated", row.AppraisalEvidence.FirstOrDefault() ?? string.Empty, "Verified appraisal only when profile accepted Complete."),
+            ["Form"] = Field(null, "Unknown", string.Empty, "Requires bounded human evidence review."),
+            ["Costume"] = Field(null, "Unknown", string.Empty, "Requires bounded human evidence review."),
+            ["Background"] = Field(null, "Unknown", string.Empty, "Requires bounded human evidence review."),
+            ["Shiny"] = Field(null, "Unknown", string.Empty, "Unknown is not false."),
+            ["Shadow"] = Field(null, "Unknown", string.Empty, "Unknown is not false."),
+            ["Purified"] = Field(null, "Unknown", string.Empty, "Unknown is not false."),
+            ["Lucky"] = Field(null, "Unknown", string.Empty, "Unknown is not false."),
+            ["Dynamax"] = Field(null, "Unknown", string.Empty, "Unknown is not false."),
+            ["Gigantamax"] = Field(null, "Unknown", string.Empty, "Unknown is not false."),
+            ["Favorite"] = Field(null, "Unknown", string.Empty, "Unknown is not false."),
+            ["SpecialMove"] = Field(null, "Unknown", string.Empty, "Unknown is not false."),
+            ["Xxl"] = Field(null, "Unknown", string.Empty, "Unknown is not false."),
+            ["Xxs"] = Field(null, "Unknown", string.Empty, "Unknown is not false."),
+            ["Nickname"] = Field(null, "Unknown", string.Empty, "Requires bounded human evidence review."),
+            ["CatchDateOrAge"] = Field(null, "Unknown", string.Empty, "Requires bounded human evidence review."),
+            ["ExistingTags"] = Field(row.Observation.Tags.Count == 0 ? null : string.Join(",", row.Observation.Tags), row.Observation.Tags.Count == 0 ? "Unknown" : "Automated", evidence, "Tag mutation is disabled; names are read-only evidence.")
+        };
+        return new { row.LocalPokemonId, row.Ordinal, Fields = fields, Query = query };
+    }
+
+    private static IReadOnlyList<CleanupProofComparativeSuggestion> BuildComparativeSuggestions(
+        IReadOnlyList<CleanupProofDatabaseRow> rows)
+    {
+        var result = new List<CleanupProofComparativeSuggestion>();
+        foreach (var group in rows.GroupBy(row => row.Observation.GroupKey, StringComparer.Ordinal))
+        {
+            var ranked = group.OrderByDescending(row => row.Observation.TotalIv ?? -1)
+                .ThenByDescending(row => row.Observation.Cp ?? -1)
+                .ThenBy(row => row.Ordinal)
+                .ToArray();
+            foreach (var row in ranked)
+            {
+                var comparator = ranked.FirstOrDefault(candidate => candidate.LocalPokemonId != row.LocalPokemonId);
+                var missing = ProtectionFields(row.Observation);
+                var exactReviewed = row.Observation.HasKnownCriticalValues &&
+                    row.Observation.IdentityConfidence == IdentityConfidence.Exact &&
+                    row.Observation.VariantIdentity?.VariantKey is not null;
+                var protectedKnown = row.Observation.IsFavorite is true || row.Observation.IsShiny is true ||
+                    row.Observation.IsBackground is true || row.Observation.IsShadow is true ||
+                    row.Observation.IsPurified is true || row.Observation.IsLucky is true ||
+                    row.Observation.IsCostume is true || row.Observation.IsDynamax is true ||
+                    row.Observation.IsGigantamax is true;
+                var better = comparator is not null &&
+                    comparator.Observation.TotalIv is not null && row.Observation.TotalIv is not null &&
+                    (comparator.Observation.TotalIv > row.Observation.TotalIv ||
+                     comparator.Observation.TotalIv == row.Observation.TotalIv && comparator.Observation.Cp > row.Observation.Cp);
+                var isRetained = row.LocalPokemonId == ranked[0].LocalPokemonId;
+                var classification = isRetained && exactReviewed
+                    ? "RETAINED_COMPARATOR"
+                    : comparator is null || !exactReviewed || protectedKnown || !better
+                        ? "INSUFFICIENT_COMPARISON_DATA"
+                        : "LIKELY_DELETE_SUGGESTION";
+                result.Add(new CleanupProofComparativeSuggestion
+                {
+                    LocalPokemonId = row.LocalPokemonId,
+                    Species = row.Observation.Species,
+                    Classification = classification,
+                    ComparatorLocalPokemonId = better ? comparator!.LocalPokemonId : null,
+                    Cp = row.Observation.Cp,
+                    TotalIv = row.Observation.TotalIv,
+                    Ordinal = row.Ordinal,
+                    MissingProtectionChecks = missing
+                });
+            }
+        }
+        return result.OrderBy(item => item.Ordinal).ToArray();
+    }
+
+    private static IReadOnlyList<string> ProtectionFields(PokemonObservation observation) =>
+        new (string Name, bool? Value)[]
+        {
+            ("Favorite", observation.IsFavorite), ("Shiny", observation.IsShiny),
+            ("Background", observation.IsBackground), ("Shadow", observation.IsShadow),
+            ("Purified", observation.IsPurified), ("Lucky", observation.IsLucky),
+            ("Costume", observation.IsCostume), ("Dynamax", observation.IsDynamax),
+            ("Gigantamax", observation.IsGigantamax), ("SpecialMove", observation.HasSpecialMove),
+            ("Xxl", observation.IsXxl), ("Xxs", observation.IsXxs), ("Nickname", string.IsNullOrWhiteSpace(observation.Nickname) ? null : true),
+            ("CatchDate", observation.CatchDate is null ? null : true)
+        }.Where(item => item.Value is null).Select(item => item.Name).ToArray();
 
     private static int Count(IReadOnlyDictionary<string, int> counts, string key) =>
         counts.TryGetValue(key, out var value) ? value : 0;

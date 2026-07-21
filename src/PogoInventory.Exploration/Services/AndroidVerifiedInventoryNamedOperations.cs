@@ -1,5 +1,6 @@
 using System.Security.Cryptography;
 using System.Text.Json;
+using PogoInventory.Appraisal.Services;
 using PogoInventory.Appraisal.Models;
 using PogoInventory.Automation.Models;
 using PogoInventory.Automation.Services;
@@ -43,6 +44,7 @@ public sealed class AndroidVerifiedInventoryNamedOperations : ICleanupProofNamed
     private byte[]? _lastScreenshot;
     private int _evidenceOrdinal;
     private readonly List<string> _lastCleanupAppraisalEvidence = new();
+    private byte[]? _lastCleanupAppraisalScreenshot;
 
     public AndroidVerifiedInventoryNamedOperations(
         IAndroidAutomationTransport transport,
@@ -301,6 +303,7 @@ public sealed class AndroidVerifiedInventoryNamedOperations : ICleanupProofNamed
     public async Task<string> CaptureAppraisalAsync(CancellationToken cancellationToken)
     {
         _lastCleanupAppraisalEvidence.Clear();
+        _lastCleanupAppraisalScreenshot = null;
         var details = await WaitForStateAsync(new[] { PokemonGoGameState.PokemonDetails }, cancellationToken);
         var menu = _locator.LocateDetailsMenu(details.Screenshot);
         if (menu is null) return "Partial";
@@ -320,6 +323,7 @@ public sealed class AndroidVerifiedInventoryNamedOperations : ICleanupProofNamed
                 AppraisalContinuationOutcome.SUCCESS_TAPPED)
             {
                 var stable = frames.Last(frame => frame.Kind == RecoveryFrameKind.AppraisalBars);
+                _lastCleanupAppraisalScreenshot = stable.Screenshot;
                 _lastCleanupAppraisalEvidence.Add(
                     await SaveEvidenceAsync("appraisal-bars", stable.Screenshot, cancellationToken));
                 return "AppraisalBarsObserved";
@@ -344,10 +348,44 @@ public sealed class AndroidVerifiedInventoryNamedOperations : ICleanupProofNamed
         CancellationToken cancellationToken)
     {
         var status = await CaptureAppraisalAsync(cancellationToken);
+        if (status != "AppraisalBarsObserved")
+        {
+            return new CleanupProofAppraisalCapture
+            {
+                Status = "Unavailable",
+                FailureReasons = new[] { status },
+                EvidencePaths = _lastCleanupAppraisalEvidence.ToArray()
+            };
+        }
+
+        if (_lastCleanupAppraisalScreenshot is null || _appraisalProfile is null)
+        {
+            return new CleanupProofAppraisalCapture
+            {
+                Status = "Partial",
+                FailureReasons = new[] { "VerifiedAppraisalProfileUnavailable" },
+                EvidencePaths = _lastCleanupAppraisalEvidence.ToArray()
+            };
+        }
+
+        var analysis = new AppraisalAnalyzer().Analyze(
+            PngDecoder.Decode(_lastCleanupAppraisalScreenshot),
+            _appraisalProfile,
+            allowComplete: true);
         return new CleanupProofAppraisalCapture
         {
-            Status = status,
-            EvidencePaths = _lastCleanupAppraisalEvidence.ToArray()
+            Status = analysis.Status == AppraisalAnalysisStatus.Complete &&
+                analysis.AttackIv is not null && analysis.DefenseIv is not null && analysis.HpIv is not null
+                ? "Complete"
+                : "Partial",
+            AttackIv = analysis.AttackIv,
+            DefenseIv = analysis.DefenseIv,
+            HpIv = analysis.HpIv,
+            Confidence = analysis.Confidence,
+            EvidencePaths = _lastCleanupAppraisalEvidence.ToArray(),
+            FailureReasons = analysis.Status == AppraisalAnalysisStatus.Complete
+                ? Array.Empty<string>()
+                : new[] { analysis.Detail }
         };
     }
 
@@ -367,7 +405,18 @@ public sealed class AndroidVerifiedInventoryNamedOperations : ICleanupProofNamed
             var outcome = _recovery.ObservePostAction(frames);
             if (outcome is RecoveryOutcome.UNKNOWN_STOP or RecoveryOutcome.UNEXPECTED_STOP or
                 RecoveryOutcome.ACTION_NOT_OBSERVED or RecoveryOutcome.STABILITY_TIMEOUT)
+            {
+                // This fallback is intentionally scoped to the one authorized
+                // appraisal-exit tap. It accepts only three compatible visual
+                // Details frames with positive topology and no appraisal,
+                // menu, main-menu or unsafe-surface evidence. No second input
+                // is sent here.
+                var recovered = await CapturePostExitDetailsFramesAsync(
+                    "post-exit-details-fallback", cancellationToken);
+                if (recovered.Count == 3)
+                    return VerifiedSequenceState.PokemonDetails;
                 return VerifiedSequenceState.Unknown;
+            }
             if (_recovery.Current?.Detection.State == PokemonGoGameState.PokemonDetails)
             {
                 var details = await WaitForStateAsync(new[] { PokemonGoGameState.PokemonDetails }, cancellationToken);
@@ -573,6 +622,36 @@ public sealed class AndroidVerifiedInventoryNamedOperations : ICleanupProofNamed
                 await Task.Delay(_automationProfile.PostActionSettleMilliseconds, cancellationToken);
         }
         return frames;
+    }
+
+    private async Task<IReadOnlyList<PokemonIdentityFrame>> CapturePostExitDetailsFramesAsync(
+        string label,
+        CancellationToken cancellationToken)
+    {
+        var frames = new List<PokemonIdentityFrame>(3);
+        for (var index = 0; index < 3; index++)
+        {
+            var screenshot = await CaptureAsync($"{label}-{index + 1}", cancellationToken);
+            var detection = _detector.Detect(screenshot, _appraisalProfile);
+            var topology = _locator.LocateDetailsPageTopology(screenshot);
+            var unsafeSurface = _unsafeSurfaceDetector.Detect(screenshot, label);
+            var recoveryFrame = _recovery.Observe(screenshot, _appraisalProfile);
+            var hasConflict = detection.State is PokemonGoGameState.MainMenu or
+                PokemonGoGameState.PokemonMenu or PokemonGoGameState.Appraisal ||
+                recoveryFrame.Kind is RecoveryFrameKind.AppraisalIntro or
+                RecoveryFrameKind.AppraisalBars or RecoveryFrameKind.Conflicting;
+            if (topology is null || unsafeSurface.IsUnsafe || hasConflict)
+                return Array.Empty<PokemonIdentityFrame>();
+            frames.Add(new PokemonIdentityFrame { ScreenshotPng = screenshot });
+            await SaveEvidenceAsync($"{label}-{index + 1}", screenshot, cancellationToken);
+            if (index < 2)
+                await Task.Delay(_automationProfile.PostActionSettleMilliseconds, cancellationToken);
+        }
+
+        return _identityAnalyzer.Consensus(frames).Status ==
+            PokemonIdentityObservationStatus.Complete
+            ? frames
+            : Array.Empty<PokemonIdentityFrame>();
     }
 
     private async Task ExecuteRecoveryActionAsync(

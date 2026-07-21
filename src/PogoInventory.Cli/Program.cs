@@ -1826,7 +1826,7 @@ static async Task<int> RunCleanupProofAsync(
     }
     if (!preflightPassed)
     {
-        Console.Error.WriteLine("Cleanup proof stopped before input: three stable GameplayMap frames were not verified.");
+        Console.Error.WriteLine("MANUAL_SAFE_START_REQUIRED: cleanup proof stopped before input; three stable GameplayMap frames were not verified.");
         return 1;
     }
 

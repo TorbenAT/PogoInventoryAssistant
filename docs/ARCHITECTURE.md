@@ -1,5 +1,21 @@
 # Architecture
 
+## Cleanup value-proof transition
+
+The permanent value proof has a strict manual start contract: the CLI captures
+three stable GameplayMap frames, rejects unsafe/conflicting state and sends no
+input when the phone is elsewhere. Once a Details identity and read-only tags
+are captured, the runner writes `ScanRuns`, `Observations`, `PokemonRecords`
+and an `Observed` event before it attempts appraisal. Appraisal is an
+enrichment, not a persistence gate. A single authorized appraisal-exit tap may
+use a bounded three-frame Details topology fallback; that fallback is not used
+for preflight, inventory opening, ReturnToInventory or cursor authorization.
+
+Strict `InventoryAnalyzer` recommendations are exported separately from
+human-review-only comparative duplicate suggestions. Unknown protection fields
+are listed and comparative suggestions can never trigger tags or destructive
+actions.
+
 ## Real cleanup proof value chain
 
 `device-run-cleanup-proof` is the permanent bounded read-only value-chain

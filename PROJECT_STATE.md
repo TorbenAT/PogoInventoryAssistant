@@ -1,5 +1,17 @@
 # Project state
 
+## Cleanup value-proof implementation checkpoint
+
+The failed arbitrary-state recovery experiment was saved to
+`local-data/validation/cleanup-value-proof/abandoned-recovery.diff` and its two
+tracked files were restored to the prior checkpoint before the value-proof
+changes. `device-run-cleanup-proof` now requires three stable GameplayMap
+frames and performs zero input when that manual precondition is absent. Each
+identity/tag baseline is persisted before best-effort appraisal; appraisal
+enrichment, semantic-review enrichment and recommendations are transactional.
+Strict policy output remains separate from advisory comparative suggestions.
+Offline self-tests pass 161/161. No real-phone value proof is claimed yet.
+
 ## Cleanup proof pipeline implementation checkpoint
 
 The CI packaging defect in `WrongScreenAuthorizationTests` is fixed with

@@ -205,6 +205,7 @@ var tests = new (string Name, Func<Task> Run)[]
     ,("Wrong-screen navigation and destructive confirmation authorization", WrongScreenAuthorizationTests.RunAsync)
     ,("Deterministic navigation safety trace is phase-aligned", NavigationSafetyTraceTests.RunAsync)
     ,("Cleanup proof persists partial observations and reopens SQLite", CleanupProofTests.RunAsync)
+    ,("Cleanup value proof persists before appraisal and keeps review advisory", CleanupProofTests.RunValueProofAsync)
 };
 
 var failed = 0;

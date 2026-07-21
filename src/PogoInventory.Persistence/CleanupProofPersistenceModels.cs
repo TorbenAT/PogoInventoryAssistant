@@ -29,6 +29,14 @@ public sealed record CleanupProofObservationRecord
     public required IReadOnlyDictionary<string, string> FieldEvidenceSources { get; init; }
 }
 
+public sealed record CleanupProofSemanticReviewField
+{
+    public required string? Value { get; init; }
+    public required string Source { get; init; }
+    public required string EvidencePath { get; init; }
+    public required string ReviewNote { get; init; }
+}
+
 public sealed record CleanupProofDatabaseRow
 {
     public required string RunId { get; init; }

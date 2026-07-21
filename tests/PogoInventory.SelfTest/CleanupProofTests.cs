@@ -25,6 +25,66 @@ internal static class CleanupProofTests
         NoDestructiveExecutorIsReachable();
     }
 
+    public static async Task RunValueProofAsync()
+    {
+        var root = CreateTemporaryDirectory();
+        try
+        {
+            var evidence = Path.Combine(root, "evidence.png");
+            await File.WriteAllBytesAsync(evidence, FixtureBytes());
+            var baselineSeen = false;
+            var fake = new FakeCleanupOperations(
+                evidence,
+                partial: true,
+                beforeAppraisal: async () =>
+                {
+                    await using var connection = new SqliteConnection($"Data Source={Path.Combine(root, "cleanup-proof.sqlite")}");
+                    await connection.OpenAsync();
+                    await using var command = connection.CreateCommand();
+                    command.CommandText = "SELECT COUNT(*) FROM Observations;";
+                    baselineSeen |= Convert.ToInt64(await command.ExecuteScalarAsync()) == 1;
+                });
+            var result = await RunProofAsync(root, fake);
+            AssertTrue(baselineSeen, "baseline row exists before appraisal");
+
+            var service = new InventoryPersistenceService(Path.Combine(root, "cleanup-proof.sqlite"));
+            var row = (await service.LoadCleanupProofRowsAsync(result.RunId)).First();
+            var reviewed = row.Observation with { Cp = 88, AttackIv = 1, DefenseIv = 2, HpIv = 3 };
+            await service.EnrichCleanupSemanticReviewAsync(
+                result.RunId,
+                row.LocalPokemonId,
+                reviewed,
+                new Dictionary<string, string> { ["Cp"] = "EvidenceReviewed" },
+                "{\"Cp\":{\"source\":\"EvidenceReviewed\"}}");
+            var reloaded = (await new InventoryPersistenceService(Path.Combine(root, "cleanup-proof.sqlite"))
+                .LoadCleanupProofRowsAsync(result.RunId)).First();
+            AssertEqual(88, reloaded.Observation.Cp, "semantic review CP transaction");
+
+            var failedAppraisal = await RunProofAsync(
+                Path.Combine(root, "failed-appraisal"),
+                new FakeCleanupOperations(
+                    await CreateEvidenceAsync(Path.Combine(root, "failed-appraisal")),
+                    partial: true,
+                    throwAppraisal: true));
+            AssertTrue(failedAppraisal.CapturedItems > 0, "appraisal failure retains identity rows");
+
+            var runnerSource = File.ReadAllText(RepositoryPath("src", "PogoInventory.Application", "CleanupProofRunner.cs"));
+            AssertTrue(runnerSource.IndexOf("RecordCleanupObservationAsync", StringComparison.Ordinal) <
+                runnerSource.IndexOf("CaptureCleanupAppraisalAsync", StringComparison.Ordinal),
+                "baseline persistence precedes appraisal");
+            var cliSource = File.ReadAllText(RepositoryPath("src", "PogoInventory.Cli", "Program.cs"));
+            AssertTrue(cliSource.Contains("MANUAL_SAFE_START_REQUIRED", StringComparison.Ordinal), "manual safe start required");
+            var androidSource = File.ReadAllText(RepositoryPath("src", "PogoInventory.Exploration", "Services", "AndroidVerifiedInventoryNamedOperations.cs"));
+            AssertTrue(androidSource.Contains("CapturePostExitDetailsFramesAsync", StringComparison.Ordinal), "post-exit fallback exists");
+            AssertTrue(File.ReadAllText(RepositoryPath("src", "PogoInventory.Application", "CleanupProofComparativeModels.cs"))
+                .Contains("REQUIRES HUMAN PROTECTION REVIEW", StringComparison.Ordinal), "comparative suggestion is advisory");
+        }
+        finally
+        {
+            DeleteDirectory(root);
+        }
+    }
+
     private static async Task PartialObservationDoesNotTerminateBatchAsync()
     {
         var root = CreateTemporaryDirectory();
@@ -77,7 +137,7 @@ internal static class CleanupProofTests
             var rows = await service.LoadCleanupProofRowsAsync(result.RunId);
             AssertEqual(6, rows.Count, "reloaded SQLite rows");
             AssertTrue(rows.All(row => row.CurrentRecommendation == "REVIEW"), "reloaded recommendations");
-            AssertEqual(12L, result.SqlSummary.InventoryEventCount, "Observed plus RecommendationGenerated events");
+            AssertEqual(18L, result.SqlSummary.InventoryEventCount, "Observed plus AppraisalEnriched plus RecommendationGenerated events");
             var roundTrip = await File.ReadAllTextAsync(Path.Combine(root, "db-roundtrip.json"));
             AssertTrue(roundTrip.Contains("databaseReopenedBeforeAnalysis", StringComparison.Ordinal), "roundtrip marker");
         }
@@ -140,13 +200,22 @@ internal static class CleanupProofTests
         private readonly string _evidence;
         private readonly bool _partial;
         private readonly bool _unresolved;
+        private readonly Func<Task>? _beforeAppraisal;
+        private readonly bool _throwAppraisal;
         public int AdvanceCount { get; private set; }
 
-        public FakeCleanupOperations(string evidence, bool partial, bool unresolved = false)
+        public FakeCleanupOperations(
+            string evidence,
+            bool partial,
+            bool unresolved = false,
+            Func<Task>? beforeAppraisal = null,
+            bool throwAppraisal = false)
         {
             _evidence = evidence;
             _partial = partial;
             _unresolved = unresolved;
+            _beforeAppraisal = beforeAppraisal;
+            _throwAppraisal = throwAppraisal;
         }
 
         public Task<VerifiedSequenceState> EnsureFilteredInventoryAsync(string query, CancellationToken cancellationToken) =>
@@ -176,8 +245,14 @@ internal static class CleanupProofTests
                     ScreenshotHashes = new[] { Hash(_evidence), Hash(_evidence) }
                 });
 
-        public Task<CleanupProofAppraisalCapture> CaptureCleanupAppraisalAsync(CancellationToken cancellationToken) =>
-            Task.FromResult(new CleanupProofAppraisalCapture { Status = "Partial", EvidencePaths = new[] { _evidence } });
+        public async Task<CleanupProofAppraisalCapture> CaptureCleanupAppraisalAsync(CancellationToken cancellationToken)
+        {
+            if (_beforeAppraisal is not null)
+                await _beforeAppraisal();
+            if (_throwAppraisal)
+                throw new InvalidOperationException("synthetic appraisal failure");
+            return new CleanupProofAppraisalCapture { Status = "Partial", EvidencePaths = new[] { _evidence } };
+        }
 
         public Task<string> CloseInventoryAsync(CancellationToken cancellationToken) => Task.FromResult("GameplayMap");
 
@@ -263,6 +338,14 @@ internal static class CleanupProofTests
     };
 
     private static byte[] FixtureBytes() => File.ReadAllBytes(RepositoryPath("data", "screen-fixtures", "PokemonDetails.png"));
+
+    private static async Task<string> CreateEvidenceAsync(string root)
+    {
+        Directory.CreateDirectory(root);
+        var path = Path.Combine(root, "evidence.png");
+        await File.WriteAllBytesAsync(path, FixtureBytes());
+        return path;
+    }
 
     private static string Hash(string path) => Convert.ToHexString(SHA256.HashData(File.ReadAllBytes(path))).ToLowerInvariant();
 
