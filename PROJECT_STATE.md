@@ -23,7 +23,7 @@ bounds, mutable tag observation, lower-content anchor evidence and three-frame
 consensus. `PokemonIdentityInstance` assigns `ScanRunId:ordinal` independently
 of both hashes, so identical fingerprints remain separate instances.
 
-Offline self-tests are 155/155. Three real five-frame Details groups complete
+Offline self-tests are 156/156. Three real five-frame Details groups complete
 with the tuned profile; a fourth captured group is Inventory rather than
 Details and is correctly Unavailable. The zero/one/two-tag Task 3 captures are
 counted as 0/1/2, and the zero-tag versus tagged stable fingerprint similarity
@@ -31,6 +31,12 @@ is 0.9815 against the 0.965 threshold. Real-phone acceptance remains PARTIAL
 because the complete three-state acceptance set is not a 20-Pokémon provider
 gate and one local group is not a Details screen. No real-phone Task 4 approval
 claim is made.
+
+The identity consensus contract now requires at least three compatible usable
+frames for Complete. One or two usable frames are Partial, unavailable frames
+do not count, and the consensus fingerprint is a deterministic bytewise median
+over all compatible frame fingerprints. CLI exit codes are 0 Complete, 2
+Partial and 3 Unavailable.
 
 ## Verified tag selection by name accepted on 2026-07-20
 

@@ -1,5 +1,16 @@
 # Changelog
 
+## Task A stable identity consensus hardening - 2026-07-21
+
+- `PokemonDetailsIdentityAnalyzer.Consensus` now requires at least three
+  compatible usable frames before returning Complete; one or two frames remain
+  Partial.
+- Consensus fingerprints are deterministic bytewise-median fingerprints across
+  all compatible frames, with deterministic candidate tie-breaking. Individual
+  frame fingerprints and evidence hashes remain in the report.
+- `identity-fingerprint` now returns exit codes 0 Complete, 2 Partial and 3
+  Unavailable. Identity contract regressions pass 156/156.
+
 ## Task 5 Partial continuation hardening - 2026-07-21
 
 - A Partial identity observation is now checkpointed and passed through the

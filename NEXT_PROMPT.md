@@ -2,7 +2,7 @@
 
 Task 5 now has an offline `VerifiedInventoryTaskSequence` contract with
 checkpoint/resume, Partial preservation plus bounded continuation after a
-verified Inventory restore, and fail-closed tests at 155/155. Bind it to the
+verified Inventory restore, and fail-closed tests at 156/156. Bind it to the
 existing validated named Android operations before any real-phone run; keep
 apply-tags false by default and never auto-apply AI-Delete.
 
@@ -43,7 +43,9 @@ Task 3 checkpoint.
 Task 4 implementation now exists locally: `PokemonDetailsIdentityAnalyzer` and
 `identity-fingerprint` provide separate evidence hashes, stable fingerprints,
 dynamic tag metadata, three-frame consensus and ordinal instance IDs. The
-tuned profile passes 155/155 tests. Three real five-frame Details groups are
+tuned profile passes 156/156 tests. Consensus requires at least three compatible
+usable frames for Complete; one/two frames are Partial, and CLI exit codes are
+0/2/3 for Complete/Partial/Unavailable. Three real five-frame Details groups are
 Complete; one local group is Inventory and is Unavailable. The captured
 zero/one/two-tag states count 0/1/2 and the zero-tag versus tagged similarity
 is 0.9815 at a 0.965 threshold. Keep Task 4 real-phone acceptance PARTIAL

@@ -18,10 +18,12 @@ restored Inventory.
 `PokemonDetailsIdentityAnalyzer` is the Details identity boundary. It hashes
 the complete PNG only as evidence integrity, then builds a separate stable
 fingerprint from multiple model-independent ROIs. It dynamically records tag
-section bounds and aligns lower content to a detected visual anchor. Three
-short-interval frames form a consensus; mutable tag state is not included in
-identity. `PokemonIdentityInstance` uses `ScanRunId` plus ordinal and never
-uses a screenshot hash as the instance key.
+section bounds and aligns lower content to a detected visual anchor. At least
+three compatible usable frames are required for Complete; the canonical
+consensus fingerprint is a deterministic bytewise median over compatible frame
+fingerprints. Mutable tag state is not included in identity.
+`PokemonIdentityInstance` uses `ScanRunId` plus ordinal and never uses a
+screenshot hash as the instance key.
 
 ## Target flow
 

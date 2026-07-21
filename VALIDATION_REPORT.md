@@ -56,13 +56,23 @@ remains the authoritative compiler and test runner.
 ## Task 5 sequence orchestration checkpoint on 2026-07-20
 
 - build: PASS for Automation and SelfTest
-- self-tests: PASS, 155/155
+- self-tests: PASS, 156/156
 - bounded item limit, per-item atomic checkpoint and resume: PASS
 - Partial preservation, bounded continuation after verified Inventory restore,
   and Unknown stop without further input: PASS
 - tags disabled by default and AI-Delete auto-apply rejected: PASS
 - real-phone sequence acceptance: NOT RUN; no named-operation host was bound
 - production raw ADB actions: 0
+
+## Task A identity consensus contract on 2026-07-21
+
+- minimum Complete consensus: PASS; one/two frames are Partial and three
+  compatible frames are Complete
+- two usable plus one Unavailable: PASS; result remains Partial
+- order-independent bytewise-median canonical fingerprint: PASS
+- separate frame evidence hashes and mutable tag observations: PASS
+- CLI exit codes: Complete 0, Partial 2, Unavailable 3
+- package-free self-tests: PASS, 156/156
 
 ## Task 4 dynamic identity tuning checkpoint on 2026-07-21
 

@@ -72,7 +72,75 @@ internal static class PokemonIdentityTests
         return Task.CompletedTask;
     }
 
+    public static Task RunConsensusContractAsync()
+    {
+        var analyzer = new PokemonDetailsIdentityAnalyzer();
+        var baseImage = Frame("Eevee", 0, 0, false);
+        var basePng = PngEncoder.Encode(baseImage);
+        var one = analyzer.Consensus(new[] { FrameOf(basePng) });
+        var two = analyzer.Consensus(new[] { FrameOf(basePng), FrameOf(basePng) });
+        Assert(one.Status == PokemonIdentityObservationStatus.Partial, "one frame is partial");
+        Assert(two.Status == PokemonIdentityObservationStatus.Partial, "two frames are partial");
+
+        var three = ConsensusOf(analyzer, baseImage, baseImage, baseImage);
+        Assert(three.Status == PokemonIdentityObservationStatus.Complete, "three frames are complete");
+
+        var unavailable = analyzer.Consensus(new[]
+        {
+            FrameOf(basePng),
+            FrameOf(basePng),
+            new PokemonIdentityFrame { ScreenshotPng = new byte[] { 1, 2, 3 } }
+        });
+        Assert(unavailable.Status == PokemonIdentityObservationStatus.Partial,
+            "two usable plus unavailable is partial");
+        Assert(unavailable.IgnoredFrameCount == 1, "unavailable frame is ignored");
+
+        var animated = WithFill(baseImage, 72, 130, 84, 134, (45, 85, 175));
+        var orderedA = ConsensusOf(analyzer, baseImage, animated, baseImage);
+        var orderedB = ConsensusOf(analyzer, animated, baseImage, baseImage);
+        Assert(orderedA.Status == PokemonIdentityObservationStatus.Complete,
+            "small animation remains complete");
+        Assert(orderedA.StableFingerprintSha256 == orderedB.StableFingerprintSha256,
+            "frame order does not change canonical fingerprint");
+        Assert(orderedA.StableFingerprintSha256 == three.StableFingerprintSha256,
+            "small animation is removed by canonical fingerprint");
+        Assert(orderedA.EvidenceHashes.Distinct().Count() == 2,
+            "evidence hashes remain separate");
+
+        var changedCp = ConsensusOf(analyzer, Frame("Eevee", 1, 0, false),
+            Frame("Eevee", 1, 0, false), Frame("Eevee", 1, 0, false));
+        var changedSpecies = ConsensusOf(analyzer, Frame("Pikachu", 0, 0, false),
+            Frame("Pikachu", 0, 0, false), Frame("Pikachu", 0, 0, false));
+        Assert(changedCp.StableFingerprintSha256 != three.StableFingerprintSha256,
+            "changed CP changes consensus fingerprint");
+        Assert(changedSpecies.StableFingerprintSha256 != three.StableFingerprintSha256,
+            "changed species changes consensus fingerprint");
+
+        var tagged = ConsensusOf(analyzer, Frame("Eevee", 0, 0, false),
+            Frame("Eevee", 0, 1, false), Frame("Eevee", 0, 2, false));
+        Assert(tagged.Status == PokemonIdentityObservationStatus.Complete,
+            "tagged frames are complete");
+        Assert(tagged.StableFingerprintSha256 == three.StableFingerprintSha256,
+            "mutable tags are excluded from consensus fingerprint");
+        return Task.CompletedTask;
+    }
+
     private static PokemonIdentityFrame FrameOf(byte[] png) => new() { ScreenshotPng = png };
+
+    private static PokemonIdentityConsensus ConsensusOf(
+        PokemonDetailsIdentityAnalyzer analyzer,
+        params PixelImage[] images) => analyzer.Consensus(images.Select(image => new PokemonIdentityFrame
+        {
+            ScreenshotPng = PngEncoder.Encode(image)
+        }).ToArray());
+
+    private static PixelImage WithFill(PixelImage source, int left, int top, int right, int bottom,
+        (int R, int G, int B) color)
+    {
+        var rgba = source.RgbaBytes.ToArray();
+        Fill(rgba, source.Width, left, top, right, bottom, color);
+        return new PixelImage(source.Width, source.Height, rgba);
+    }
 
     private static PixelImage Frame(string species, int cpVariant, int tagCount, bool special)
     {

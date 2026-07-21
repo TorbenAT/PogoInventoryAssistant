@@ -1989,7 +1989,13 @@ static async Task<int> ExtractPokemonIdentityFingerprintAsync(
     Console.WriteLine($"Identity fingerprint written to: {outputPath}");
     Console.WriteLine($"Status: {consensus.Status}; confidence: {consensus.Confidence:F4}; " +
         $"stable fingerprint: {consensus.StableFingerprintSha256}");
-    return consensus.Status == PokemonIdentityObservationStatus.Unavailable ? 1 : 0;
+    return consensus.Status switch
+    {
+        PokemonIdentityObservationStatus.Complete => 0,
+        PokemonIdentityObservationStatus.Partial => 2,
+        PokemonIdentityObservationStatus.Unavailable => 3,
+        _ => 1
+    };
 }
 
 static async Task<int> DetectGameStateImageAsync(string[] args, CancellationToken cancellationToken)

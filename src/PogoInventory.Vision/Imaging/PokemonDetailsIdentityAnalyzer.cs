@@ -66,25 +66,49 @@ public sealed class PokemonDetailsIdentityAnalyzer
             })
             .OrderByDescending(value => value.Matches)
             .ThenByDescending(value => value.Candidate.Confidence)
+            .ThenBy(value => value.Candidate.StableFingerprintSha256, StringComparer.Ordinal)
+            .ThenBy(value => value.Candidate.StableFingerprintBase64, StringComparer.Ordinal)
             .First();
         var consensusFrames = usable.Where(item => Similarity(best.Candidate, item) >=
             _profile.SameIdentitySimilarityThreshold).ToArray();
+        var canonical = CanonicalFingerprint(consensusFrames);
         var confidence = consensusFrames.Length == 0 ? 0 :
             consensusFrames.Average(item => Similarity(best.Candidate, item)) *
             consensusFrames.Length / (double)Math.Max(3, frames.Count);
         return new PokemonIdentityConsensus
         {
-            Status = consensusFrames.Length >= Math.Min(3, frames.Count)
+            Status = consensusFrames.Length >= 3
                 ? PokemonIdentityObservationStatus.Complete
                 : PokemonIdentityObservationStatus.Partial,
-            StableFingerprintSha256 = best.Candidate.StableFingerprintSha256,
-            StableFingerprintBase64 = best.Candidate.StableFingerprintBase64,
+            StableFingerprintSha256 = Hex(SHA256.HashData(canonical)),
+            StableFingerprintBase64 = Convert.ToBase64String(canonical),
             Confidence = Math.Clamp(confidence, 0, 1),
             Frames = observations,
             EvidenceHashes = observations.Select(item => item.EvidenceSha256).ToArray(),
             Tags = consensusFrames.OrderByDescending(item => item.Confidence).First().Tags,
             IgnoredFrameCount = observations.Length - consensusFrames.Length
         };
+    }
+
+    private static byte[] CanonicalFingerprint(IReadOnlyList<PokemonIdentityFingerprintObservation> frames)
+    {
+        if (frames.Count == 0)
+            return Array.Empty<byte>();
+
+        var samples = frames
+            .Select(frame => Convert.FromBase64String(frame.StableFingerprintBase64))
+            .ToArray();
+        var length = samples[0].Length;
+        if (samples.Any(sample => sample.Length != length))
+            throw new InvalidOperationException("Consensus fingerprint lengths do not match.");
+
+        var canonical = new byte[length];
+        for (var index = 0; index < length; index++)
+        {
+            var values = samples.Select(sample => sample[index]).OrderBy(value => value).ToArray();
+            canonical[index] = values[(values.Length - 1) / 2];
+        }
+        return canonical;
     }
 
     private PokemonIdentityFingerprintObservation Analyze(PixelImage image, string evidenceHash)
