@@ -1,5 +1,14 @@
 # Project state
 
+## Canonical close Android scale repair checkpoint
+
+The first direct canonical-close diagnostic captured the actual Details
+screen's lower-centre X but stopped with zero input because the locator used a
+single button radius. The locator now evaluates bounded scale-normalized radii
+around the expected Android control dimension and retains shell, X-stroke,
+position, dimensions and contrast evidence. Build and self-tests pass 162/162.
+The diagnostic must be rerun once; no phone acceptance is claimed yet.
+
 ## Canonical close unwind checkpoint
 
 Cleanup startup now uses `CanonicalCloseUnwindService` rather than a large

@@ -198,11 +198,20 @@ public sealed class VisualControlLocator
         ArgumentNullException.ThrowIfNull(screenshotPng);
         var image = PngDecoder.Decode(screenshotPng);
         var candidates = new List<CanonicalCandidate>();
-        var radius = Math.Max(10, image.Width / 18);
+        var expectedRadius = Math.Max(10, image.Width / 18);
+        var radii = new[]
+        {
+            Math.Max(10, image.Width / 22),
+            Math.Max(10, image.Width / 20),
+            expectedRadius,
+            Math.Max(10, image.Width / 16),
+            Math.Max(10, image.Width / 14)
+        }.Distinct().ToArray();
         for (var y = (int)(image.Height * 0.74); y <= (int)(image.Height * 0.925); y += 2)
         for (var x = (int)(image.Width * 0.32); x <= (int)(image.Width * 0.68); x += 4)
+        foreach (var radius in radii)
         {
-            var candidate = ScoreCanonicalClose(image, x, y, radius);
+            var candidate = ScoreCanonicalClose(image, x, y, radius, expectedRadius);
             if (candidate.Score >= 0.62)
                 candidates.Add(candidate);
         }
@@ -213,17 +222,17 @@ public sealed class VisualControlLocator
 
         var conflicting = candidates.Any(candidate =>
             candidate != best &&
-            Distance(candidate.X, candidate.Y, best.X, best.Y) > radius * 2.4 &&
+            Distance(candidate.X, candidate.Y, best.X, best.Y) > best.Radius * 2.4 &&
             candidate.Score >= best.Score - 0.05);
         if (conflicting)
             return null;
 
         var bounds = new NormalizedRegion
         {
-            X = (double)(best.X - radius) / image.Width,
-            Y = (double)(best.Y - radius) / image.Height,
-            Width = (double)(radius * 2) / image.Width,
-            Height = (double)(radius * 2) / image.Height
+            X = (double)(best.X - best.Radius) / image.Width,
+            Y = (double)(best.Y - best.Radius) / image.Height,
+            Width = (double)(best.Radius * 2) / image.Width,
+            Height = (double)(best.Radius * 2) / image.Height
         };
         return new LocatedCanonicalCloseControl
         {
@@ -387,7 +396,7 @@ public sealed class VisualControlLocator
     }
 
     private static CanonicalCandidate ScoreCanonicalClose(
-        PixelImage image, int x, int y, int radius)
+        PixelImage image, int x, int y, int radius, int expectedRadius)
     {
         var shellMatches = 0;
         var shellTotal = 0;
@@ -429,9 +438,11 @@ public sealed class VisualControlLocator
         var contrast = backgroundMatches / (double)backgroundTotal;
         var position = x >= image.Width * 0.39 && x <= image.Width * 0.61 &&
             y >= image.Height * 0.76 && y <= image.Height * 0.91 ? 1d : 0d;
+        var dimensions = Math.Max(0, 1 -
+            Math.Abs(radius - expectedRadius) / (double)Math.Max(1, expectedRadius * 0.35));
         var score = circular * 0.38 + strokes * 0.37 +
-            position * 0.15 + contrast * 0.10;
-        return new CanonicalCandidate(x, y, score, circular, strokes, position);
+            position * 0.10 + contrast * 0.08 + dimensions * 0.07;
+        return new CanonicalCandidate(x, y, radius, score, circular, strokes, position);
     }
 
     private static Rgba32 Sample(PixelImage image, int x, int y) =>
@@ -525,6 +536,7 @@ public sealed class VisualControlLocator
     private sealed record CanonicalCandidate(
         int X,
         int Y,
+        int Radius,
         double Score,
         double CircularConfidence,
         double XStrokeConfidence,

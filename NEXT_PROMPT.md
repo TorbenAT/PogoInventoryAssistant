@@ -1,5 +1,14 @@
 # Continuation prompt
 
+## Next action: rerun canonical-close diagnostic once
+
+The first diagnostic stopped with zero input after visually showing the real
+Details canonical X; the locator's single-radius model missed the Android
+button scale. The focused repair now checks bounded scale-normalized radii and
+still requires the full visual evidence set. Build/tests are 162/162. Commit
+and push this repair, then rerun the direct diagnostic once before the three
+program-created state cycles and SQLite value proof.
+
 ## Next action: canonical-close phone acceptance
 
 The current code replaces the state-specific startup graph with

@@ -1,3 +1,14 @@
+## Canonical close Android scale repair checkpoint - 2026-07-21
+
+- The first real diagnostic visually contained the canonical Details X but
+  stopped before input because the single-radius locator found no compatible
+  target.
+- The locator now evaluates bounded scale-normalized radii and retains shell,
+  crossing-stroke, position, dimensions and contrast checks.
+- Build: PASS.
+- Self-tests: PASS, 162/162.
+- Direct diagnostic rerun and real acceptance: pending; no acceptance claim.
+
 ## Canonical close unwind checkpoint - 2026-07-21
 
 - Added screenshot-derived canonical lower-centre close locator and named

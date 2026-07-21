@@ -1,5 +1,14 @@
 # Changelog
 
+## Canonical close Android scale repair - 2026-07-21
+
+- The first real diagnostic found the canonical Details X visually present but
+  outside the locator's single-radius model; it stopped before input.
+- Canonical locator scoring now evaluates a bounded set of scale-normalized
+  button radii while retaining shell, crossing-stroke, position, dimensions
+  and contrast evidence. Offline self-tests remain 162/162.
+- No real-phone acceptance is claimed from the failed diagnostic.
+
 ## Canonical close unwind for autonomous startup - 2026-07-21
 
 - Replaced cleanup startup's state-specific normalizer with bounded
