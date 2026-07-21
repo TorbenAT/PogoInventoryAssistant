@@ -253,6 +253,7 @@ var tests = new (string Name, Func<Task> Run)[]
     ,("Cleanup runner and reprocessor honor a loaded rule policy", HeaderSemanticsCleanupTests.PolicyFileLoadingAffectsRecommendationsAsync)
     ,("Offline analyze-cleanup-evidence reprocesses a database without touching the original", HeaderSemanticsCleanupTests.AnalyzeCleanupEvidenceEndToEndAsync)
     ,("Reprocess recomputes ObservationStatus from species+CP+IV completeness", HeaderSemanticsCleanupTests.ReprocessRecomputesObservationStatusAsync)
+    ,("Cleanup proof item limit accepts 6-50 and rejects outside bounds", HeaderSemanticsCleanupTests.ItemLimitBoundsAsync)
 };
 
 var failed = 0;

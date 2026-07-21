@@ -31,6 +31,31 @@ internal static class HeaderSemanticsCleanupTests
         await PolicyFileLoadingAffectsRecommendationsAsync();
         await AnalyzeCleanupEvidenceEndToEndAsync();
         await ReprocessRecomputesObservationStatusAsync();
+        await ItemLimitBoundsAsync();
+    }
+
+    public static Task ItemLimitBoundsAsync()
+    {
+        static CleanupProofRequest Request(int itemLimit) => new()
+        {
+            SpeciesQuery = "age0-1825",
+            ItemLimit = itemLimit,
+            DatabasePath = "cleanup-proof.sqlite",
+            OutputDirectory = ".",
+            DeviceSerial = "synthetic",
+            ContinueOnPartial = true
+        };
+
+        Request(6).Validate();
+        Request(50).Validate();
+        foreach (var outside in new[] { 5, 51 })
+        {
+            var threw = false;
+            try { Request(outside).Validate(); }
+            catch (ArgumentOutOfRangeException) { threw = true; }
+            AssertTrue(threw, $"item limit {outside} must be rejected");
+        }
+        return Task.CompletedTask;
     }
 
     public static async Task BroadQueryNeverStoredAsSpeciesAsync()

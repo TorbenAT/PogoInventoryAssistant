@@ -1832,8 +1832,8 @@ static async Task<int> RunCleanupProofAsync(
     var options = ParseOptions(args, "continue-on-partial");
     var species = Require(options, "species");
     var itemLimit = ParsePositiveInt(options, "item-limit", 6);
-    if (itemLimit is < 6 or > 20)
-        throw new ArgumentException("--item-limit must be between 6 and 20.");
+    if (itemLimit is < 6 or > 50)
+        throw new ArgumentException("--item-limit must be between 6 and 50.");
     if (!options.ContainsKey("continue-on-partial"))
         throw new ArgumentException("--continue-on-partial is required for cleanup proof.");
     var database = Require(options, "database");
@@ -3533,7 +3533,7 @@ static void PrintHelp()
     Console.WriteLine("  device-open-pokemon-inventory [--adb <adb.exe>] [--serial <serial>]");
     Console.WriteLine("  device-search-inventory --query <query> --out <directory> [--clear-after <true|false>]");
     Console.WriteLine("  device-run-index-sequence --query <query> --item-limit <n> --out <directory>");
-    Console.WriteLine("  device-run-cleanup-proof --species <query> --item-limit <6-20> --database <sqlite> --out <directory> --continue-on-partial");
+    Console.WriteLine("  device-run-cleanup-proof --species <query> --item-limit <6-50> --database <sqlite> --out <directory> --continue-on-partial");
     Console.WriteLine("                           [--species-reference <species-reference.json>] [--policy <rule-policy.json>]");
     Console.WriteLine("                           [--tessdata <directory>] (header OCR engine: Tesseract, default tools/tessdata-best)");
     Console.WriteLine("  analyze-cleanup-evidence --database <cleanup-proof.sqlite> --evidence-root <dir> --out <dir>");

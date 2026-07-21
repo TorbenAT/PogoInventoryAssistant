@@ -48,7 +48,7 @@ public sealed record CleanupProofRequest
     public void Validate()
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(SpeciesQuery);
-        if (ItemLimit is < 6 or > 20) throw new ArgumentOutOfRangeException(nameof(ItemLimit));
+        if (ItemLimit is < 6 or > 50) throw new ArgumentOutOfRangeException(nameof(ItemLimit));
         ArgumentException.ThrowIfNullOrWhiteSpace(DatabasePath);
         ArgumentException.ThrowIfNullOrWhiteSpace(OutputDirectory);
         ArgumentException.ThrowIfNullOrWhiteSpace(DeviceSerial);
