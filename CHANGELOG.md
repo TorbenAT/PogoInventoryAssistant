@@ -1,5 +1,19 @@
 # Changelog
 
+## Android verified sequence host and cursor - 2026-07-21
+
+- Added `AndroidVerifiedInventoryNamedOperations` and the
+  `device-run-index-sequence` CLI command using only named Android transport
+  operations.
+- Normal progression opens the first card once, performs one guarded Details
+  swipe per next item, rejects no-effect identity, and writes bounded evidence.
+- Checkpoints now carry cursor ordinals/fingerprints, identity status, evidence
+  hashes and structured tag observations; resume requires overlap agreement.
+- Index and classification tag application are separate and disabled by
+  default. AI-Delete is never an executable tag operation.
+- Offline self-tests cover first-card/cursor counts, no normal inventory
+  returns, Partial continuation and fail-closed resume overlap.
+
 ## Task A stable identity consensus hardening - 2026-07-21
 
 - `PokemonDetailsIdentityAnalyzer.Consensus` now requires at least three

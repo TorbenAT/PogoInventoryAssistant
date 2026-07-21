@@ -1,5 +1,14 @@
 # Continuation prompt
 
+The Android named-operation host and cursor sequence are implemented in
+`AndroidVerifiedInventoryNamedOperations` and exposed as
+`device-run-index-sequence`. First-card opening is single-use; normal items
+advance by one guarded Details swipe, and checkpoints include cursor overlap
+data plus structured tags. Resume stops before any new swipe when overlap does
+not match. Tag mutation remains disabled and false by default for the first
+real acceptance. Offline self-tests are 156/156. Real-phone acceptance is not
+claimed until the bounded 3-item and resume runs are actually executed.
+
 Task 5 now has an offline `VerifiedInventoryTaskSequence` contract with
 checkpoint/resume, Partial preservation plus bounded continuation after a
 verified Inventory restore, and fail-closed tests at 156/156. Bind it to the

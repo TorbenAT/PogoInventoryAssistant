@@ -150,6 +150,9 @@ static async Task<int> MainAsync(string[] args)
             "device-search-inventory" => await SearchInventoryAsync(
                 args.Skip(1).ToArray(),
                 cancellationSource.Token),
+            "device-run-index-sequence" => await RunIndexSequenceAsync(
+                args.Skip(1).ToArray(),
+                cancellationSource.Token),
             "device-set-pokemon-tag" => await SetPokemonTagAsync(
                 args.Skip(1).ToArray(),
                 cancellationSource.Token),
@@ -1733,6 +1736,46 @@ static int ParsePositiveInt(
     return value;
 }
 
+static async Task<int> RunIndexSequenceAsync(
+    string[] args,
+    CancellationToken cancellationToken)
+{
+    var options = ParseOptions(args, "apply-index-tag", "apply-classification-tag", "resume", "no-resume");
+    var query = Require(options, "query");
+    var output = Require(options, "out");
+    var itemLimit = ParsePositiveInt(options, "item-limit", 3);
+    var profilePath = Optional(options, "automation-profile") ??
+        Optional(options, "profile") ?? Path.Combine("local-data", "automation-profile.local.json");
+    var automationProfile = await AutomationProfileLoader.LoadAsync(profilePath, cancellationToken);
+    var appraisalPath = Optional(options, "appraisal-profile") ??
+        Path.Combine("local-data", "phone-preparation", "appraisal-profile.device.generated.json");
+    AppraisalVisualProfile? appraisalProfile = File.Exists(appraisalPath)
+        ? await AppraisalProfileLoader.LoadAsync(appraisalPath, cancellationToken)
+        : null;
+    var transport = CreateRealAndroidTransport(options);
+    var devices = await transport.ListDevicesAsync(cancellationToken);
+    var selected = DeviceSnapshotService.SelectDevice(devices, Optional(options, "serial"));
+    var evidence = Path.Combine(output, "evidence");
+    var request = new VerifiedSequenceRequest
+    {
+        Query = query,
+        ItemLimit = itemLimit,
+        OutputDirectory = output,
+        ApplyIndexTag = options.ContainsKey("apply-index-tag"),
+        IndexTag = Optional(options, "index-tag") ?? "AI-Indexed",
+        ApplyClassificationTag = options.ContainsKey("apply-classification-tag"),
+        ClassificationTag = Optional(options, "classification-tag"),
+        ControlledStopAfter = ParseOptionalPositiveInt(options, "controlled-stop-after"),
+        Resume = !options.ContainsKey("no-resume")
+    };
+    var operations = new AndroidVerifiedInventoryNamedOperations(
+        transport, selected.Serial, automationProfile, evidence, appraisalProfile);
+    var result = await new VerifiedInventoryTaskSequence(operations).RunAsync(request, cancellationToken: cancellationToken);
+    Console.WriteLine(JsonSerializer.Serialize(result.Checkpoint,
+        new JsonSerializerOptions { WriteIndented = true, Converters = { new JsonStringEnumConverter() } }));
+    return result.Checkpoint.State is VerifiedSequenceState.Inventory or VerifiedSequenceState.Stopped ? 0 : 1;
+}
+
 static async Task<int> StopKnownAppAsync(
     string[] args,
     CancellationToken cancellationToken)
@@ -3109,6 +3152,11 @@ static void PrintHelp()
     Console.WriteLine("  device-open-main-menu [--adb <adb.exe>] [--serial <serial>]");
     Console.WriteLine("  device-open-pokemon-inventory [--adb <adb.exe>] [--serial <serial>]");
     Console.WriteLine("  device-search-inventory --query <query> --out <directory> [--clear-after <true|false>]");
+    Console.WriteLine("  device-run-index-sequence --query <query> --item-limit <n> --out <directory>");
+    Console.WriteLine("                            [--adb <adb.exe>] [--serial <serial>] [--profile <automation.json>]");
+    Console.WriteLine("                            [--appraisal-profile <appraisal.json>] [--resume] [--controlled-stop-after <n>]");
+    Console.WriteLine("                            [--apply-index-tag --index-tag AI-Indexed]");
+    Console.WriteLine("                            [--apply-classification-tag --classification-tag <AI-Keep|AI-Review>]");
     Console.WriteLine("  device-set-pokemon-tag --tag <name> --selected <true|false> --profile <tag-profile.json> --out <directory>");
     Console.WriteLine("  tag-selector-detect-image --image <screen.png> --profile <tag-profile.json> --tag <name> --out <result.json>");
     Console.WriteLine("  device-open-appraisal --profile <automation.json> --appraisal-profile <appraisal.json> --out <directory>");

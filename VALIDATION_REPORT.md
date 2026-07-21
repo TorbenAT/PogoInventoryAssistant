@@ -311,3 +311,16 @@ Limitations observed during validation:
 - Live read-only captures: one `PokemonMenu`, followed by `GameplayMap`, then
   `PokemonMenu`; acceptance `3/3` was not claimed.
 - Phone actions: zero.
+## Android verified sequence host checkpoint on 2026-07-21
+
+- `AndroidVerifiedInventoryNamedOperations` binds the sequence to the named
+  Android transport, detector, guarded search/recovery and visual locators.
+- Offline checks cover one first-card open, N-1 cursor advances, no normal
+  return to Inventory, Partial Details continuation, Unknown/no-effect stops,
+  checkpoint fields and resume overlap fail-closed behavior.
+- `device-run-index-sequence` is bounded, read-only by default; AI-Indexed and
+  classification tag mutation are separate options and are not enabled.
+- Build: PASS; self-tests: 156/156; real-phone acceptance: NOT YET RUN.
+- The real Android ADB path was found at
+  `tools/platform-tools/adb.exe`; phone execution remains a separate evidence
+  checkpoint and no approval is claimed here.

@@ -12,26 +12,39 @@ internal static class VerifiedInventorySequenceTests
         var output = Path.Combine(Path.GetTempPath(), "pogo-sequence-selftest", Guid.NewGuid().ToString("N"));
         var result = await new VerifiedInventoryTaskSequence(fake).RunAsync(new VerifiedSequenceRequest
         {
-            Query = "age0-7", ItemLimit = 2, ApplyTags = false, OutputDirectory = output
+            Query = "age0-7", ItemLimit = 2, ApplyClassificationTag = false, OutputDirectory = output
         }, "run-sequence-test");
         Assert(result.Checkpoint.Items.Count == 2, "item limit");
         Assert(result.Checkpoint.State == VerifiedSequenceState.Inventory, "inventory checkpoint");
         Assert(File.Exists(result.CheckpointPath), "checkpoint written");
         Assert(fake.Calls.All(call => !call.Contains("adb", StringComparison.OrdinalIgnoreCase)), "no raw adb");
+        Assert(fake.Calls.Count(call => call == "open-first") == 1, "first card opened once");
+        Assert(fake.Calls.Count(call => call == "advance") == 1, "one cursor advance for two items");
+        Assert(fake.Calls.Count(call => call == "return") == 1, "normal loop returns only at end");
         var resumed = await new VerifiedInventoryTaskSequence(new FakeOperations()).RunAsync(new VerifiedSequenceRequest
         {
-            Query = "age0-7", ItemLimit = 2, ApplyTags = false, OutputDirectory = output
+            Query = "age0-7", ItemLimit = 2, ApplyClassificationTag = false, OutputDirectory = output
         }, "different-run-id");
         Assert(resumed.Checkpoint.Items.Select(item => item.Ordinal).SequenceEqual(new[] { 1, 2 }), "resume keeps ordinals");
+
+        var mismatch = new FakeOperations { Fingerprint = "different" };
+        var mismatchResult = await new VerifiedInventoryTaskSequence(mismatch).RunAsync(new VerifiedSequenceRequest
+        {
+            Query = "age0-7", ItemLimit = 2, ApplyClassificationTag = false, OutputDirectory = output
+        }, "different-run-id");
+        Assert(mismatchResult.Checkpoint.State == VerifiedSequenceState.Unknown, "resume overlap mismatch stops");
+        Assert(mismatch.Calls.Count(call => call == "advance") == 1,
+            "resume mismatch performs only the verified replay swipe");
 
         var partial = new FakeOperations
         {
             IdentityStatus = PokemonIdentityObservationStatus.Partial,
-            ReturnState = VerifiedSequenceState.Partial
+            ReturnState = VerifiedSequenceState.Partial,
+            AdvanceState = VerifiedSequenceState.Partial
         };
         var partialResult = await new VerifiedInventoryTaskSequence(partial).RunAsync(new VerifiedSequenceRequest
         {
-            Query = "age0-7", ItemLimit = 3, ApplyTags = false, OutputDirectory = Path.Combine(output, "partial")
+            Query = "age0-7", ItemLimit = 3, ApplyClassificationTag = false, OutputDirectory = Path.Combine(output, "partial")
         }, "run-partial-test");
         Assert(partialResult.Checkpoint.State == VerifiedSequenceState.Partial, "partial stops safely");
 
@@ -46,7 +59,7 @@ internal static class VerifiedInventorySequenceTests
         var continued = await new VerifiedInventoryTaskSequence(partialThenComplete).RunAsync(
             new VerifiedSequenceRequest
             {
-                Query = "age0-7", ItemLimit = 2, ApplyTags = false,
+                Query = "age0-7", ItemLimit = 2, ApplyClassificationTag = false,
                 OutputDirectory = Path.Combine(output, "partial-continue")
             },
             "run-partial-continue-test");
@@ -55,22 +68,24 @@ internal static class VerifiedInventorySequenceTests
             "partial item is preserved");
         Assert(continued.Checkpoint.State == VerifiedSequenceState.Inventory,
             "partial continuation restores inventory");
-        Assert(partialThenComplete.Calls.Count(call => call == "return") == 2,
-            "partial and complete items both restore inventory");
+        Assert(partialThenComplete.Calls.Count(call => call == "advance") == 1,
+            "partial and complete items advance on the details cursor");
+        Assert(partialThenComplete.Calls.Count(call => call == "open-first") == 1,
+            "first card is opened once");
 
         var unknown = new FakeOperations { OpenState = VerifiedSequenceState.Unknown };
         var unknownResult = await new VerifiedInventoryTaskSequence(unknown).RunAsync(new VerifiedSequenceRequest
         {
-            Query = "age0-7", ItemLimit = 3, ApplyTags = false, OutputDirectory = Path.Combine(output, "unknown")
+            Query = "age0-7", ItemLimit = 3, ApplyClassificationTag = false, OutputDirectory = Path.Combine(output, "unknown")
         }, "run-unknown-test");
         Assert(unknownResult.Checkpoint.State == VerifiedSequenceState.Unknown, "unknown stop");
-        Assert(unknown.Calls.Last() == "open", "no input after unknown");
+        Assert(unknown.Calls.Last() == "open-first", "no input after unknown");
         var rejectedDelete = false;
         try
         {
             new VerifiedSequenceRequest
             {
-                Query = "age0-7", ItemLimit = 1, ApplyTags = true,
+                Query = "age0-7", ItemLimit = 1, ApplyClassificationTag = true,
                 ClassificationTag = "AI-Delete", OutputDirectory = output
             }.Validate();
         }
@@ -83,11 +98,13 @@ internal static class VerifiedInventorySequenceTests
         public PokemonIdentityObservationStatus IdentityStatus { get; init; } = PokemonIdentityObservationStatus.Complete;
         public IReadOnlyList<PokemonIdentityObservationStatus>? IdentitySequence { get; init; }
         public VerifiedSequenceState OpenState { get; init; } = VerifiedSequenceState.PokemonDetails;
+        public VerifiedSequenceState AdvanceState { get; init; } = VerifiedSequenceState.PokemonDetails;
         public VerifiedSequenceState ReturnState { get; init; } = VerifiedSequenceState.Inventory;
+        public string Fingerprint { get; init; } = "fp";
         public List<string> Calls { get; } = new();
         private int _identityIndex;
-        public Task<VerifiedSequenceState> EnsureInventoryAsync(string query, CancellationToken cancellationToken) { Calls.Add("ensure"); return Task.FromResult(VerifiedSequenceState.Inventory); }
-        public Task<VerifiedSequenceState> OpenNextPokemonAsync(CancellationToken cancellationToken) { Calls.Add("open"); return Task.FromResult(OpenState); }
+        public Task<VerifiedSequenceState> EnsureFilteredInventoryAsync(string query, CancellationToken cancellationToken) { Calls.Add("ensure"); return Task.FromResult(VerifiedSequenceState.Inventory); }
+        public Task<VerifiedSequenceState> OpenFirstPokemonAsync(CancellationToken cancellationToken) { Calls.Add("open-first"); return Task.FromResult(OpenState); }
         public Task<PokemonIdentityConsensus> CaptureIdentityAsync(CancellationToken cancellationToken)
         {
             Calls.Add("identity");
@@ -97,7 +114,7 @@ internal static class VerifiedInventorySequenceTests
             return Task.FromResult(new PokemonIdentityConsensus
             {
                 Status = status,
-                StableFingerprintSha256 = status == PokemonIdentityObservationStatus.Complete ? "fp" : "",
+                StableFingerprintSha256 = status == PokemonIdentityObservationStatus.Complete ? Fingerprint : "",
                 StableFingerprintBase64 = "AA==",
                 Confidence = 1,
                 Frames = Array.Empty<PokemonIdentityFingerprintObservation>(),
@@ -112,8 +129,18 @@ internal static class VerifiedInventorySequenceTests
         public Task<string> CaptureAppraisalAsync(CancellationToken cancellationToken) { Calls.Add("appraisal"); return Task.FromResult("Partial"); }
         public Task<VerifiedSequenceState> ExitAppraisalAsync(CancellationToken cancellationToken) { Calls.Add("exit"); return Task.FromResult(VerifiedSequenceState.PokemonDetails); }
         public Task<VerifiedSequenceState> ReturnToInventoryAsync(CancellationToken cancellationToken) { Calls.Add("return"); return Task.FromResult(ReturnState); }
-        public Task<IReadOnlyList<string>> ReadTagsAsync(CancellationToken cancellationToken) { Calls.Add("tags"); return Task.FromResult<IReadOnlyList<string>>(Array.Empty<string>()); }
-        public Task<IReadOnlyList<string>> ApplyAllowListedTagAsync(string tagName, CancellationToken cancellationToken) { Calls.Add("apply:" + tagName); return Task.FromResult<IReadOnlyList<string>>(new[] { tagName }); }
+        public Task<VerifiedTagObservation> ReadTagObservationAsync(CancellationToken cancellationToken)
+        {
+            Calls.Add("tags");
+            return Task.FromResult(new VerifiedTagObservation { TagCount = 0, NamesComplete = true, Section = null });
+        }
+        public Task<VerifiedSequenceState> AdvanceToNextPokemonAsync(PokemonIdentityConsensus previous, CancellationToken cancellationToken)
+        {
+            Calls.Add("advance");
+            return Task.FromResult(AdvanceState);
+        }
+        public Task<IReadOnlyList<string>> ApplyIndexTagAsync(string tagName, CancellationToken cancellationToken) { Calls.Add("apply-index:" + tagName); return Task.FromResult<IReadOnlyList<string>>(new[] { tagName }); }
+        public Task<IReadOnlyList<string>> ApplyClassificationTagAsync(string tagName, CancellationToken cancellationToken) { Calls.Add("apply-classification:" + tagName); return Task.FromResult<IReadOnlyList<string>>(new[] { tagName }); }
     }
 
     private static void Assert(bool value, string message) { if (!value) throw new InvalidOperationException(message); }

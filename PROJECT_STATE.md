@@ -1,5 +1,23 @@
 # Project state
 
+## Android verified sequence host checkpoint
+
+`AndroidVerifiedInventoryNamedOperations` is now the concrete Android host
+for `VerifiedInventoryTaskSequence`. It uses the existing named transport,
+game-state detector, guarded inventory search/recovery, visual locators and
+dynamic identity analyzer. The normal loop opens the first result once and
+advances through stable Details with one allow-listed swipe per next ordinal.
+No raw ADB is constructed above `PogoInventory.Device`.
+
+The checkpoint schema records current/last-completed ordinals, previous/current
+stable fingerprints, last verified state, identity status, evidence hashes and
+structured tag observations. Resume replays verified cursor steps and fails
+closed on overlap mismatch. `device-run-index-sequence` defaults to bounded,
+read-only operation with tag application disabled. This checkpoint is not a
+real-phone acceptance claim.
+
+Offline self-tests: 156/156.
+
 ## Current version
 
 0.14.3

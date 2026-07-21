@@ -4,14 +4,23 @@
 
 `VerifiedInventoryTaskSequence` is the single sequential orchestration
 boundary. Its host supplies only named operations for Inventory, Details,
-Appraisal, tag observation/application and return-to-Inventory. The sequence
+Appraisal, tag observation/application and cursor advancement. The sequence
 does not construct ADB commands, run parallel navigation, or expose delete.
-Every completed item is atomically checkpointed with query, state, ordinal
-instance ID, stable fingerprint, evidence hashes, appraisal and tags. Partial
-states are preserved, passed through the named ReturnToInventory recovery and
-allowed to continue only after Inventory is verified. Unknown states and failed
-recovery are controlled-stopped; resume requires a matching request and
-restored Inventory.
+The first card is opened once; normal progression uses one allow-listed swipe
+from stable Details to stable Details and rejects an unchanged identity.
+Every completed item is atomically checkpointed with query, ordinal instance
+ID, cursor fingerprints, evidence hashes, appraisal and structured tag
+observation. Partial states are preserved and may advance directly while
+Details remains verified. Resume replays only verified cursor steps and requires
+an identity overlap match before any new swipe. Unknown, no-effect and failed
+recovery states are controlled-stopped.
+
+`AndroidVerifiedInventoryNamedOperations` is the concrete real-device host.
+It uses `IAndroidAutomationTransport`, `PokemonGoGameStateDetector`,
+`GuardedInventorySearch`, `GuardedInventoryRecovery`, `VisualControlLocator`
+and `PokemonDetailsIdentityAnalyzer`; raw ADB construction remains inside
+`PogoInventory.Device`. `device-run-index-sequence` is bounded and read-only
+by default. Tag mutation is intentionally disabled for the first acceptance.
 
 ## Dynamic Details identity
 
