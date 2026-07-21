@@ -53,6 +53,16 @@ remains the authoritative compiler and test runner.
 
 # Validation report
 
+## Cleanup proof pipeline implementation on 2026-07-21
+
+- wrong-screen CI packaging fix: PASS; synthetic `PixelImage`/`PngEncoder`
+  fixtures, no `local-data` dependency
+- clean-checkout-equivalent self-tests with `local-data` absent: PASS, 159/159
+- cleanup-proof focused tests: PASS; full offline self-tests 160/160
+- full build: PASS
+- `device-run-cleanup-proof`: implemented, bounded and read-only
+- real-phone SQLite/report proof: pending; no acceptance claim
+
 ## Deterministic navigation safety acceptance tooling on 2026-07-21
 
 - CLI command: implemented as `device-validate-navigation-safety`, cycles

@@ -1,5 +1,17 @@
 # Changelog
 
+## Cleanup proof pipeline implementation - 2026-07-21
+
+- Added self-contained wrong-screen modal fixtures using `PixelImage` and
+  `PngEncoder`; the tests no longer read ignored `local-data` screenshots.
+- Added permanent `device-run-cleanup-proof` orchestration with bounded
+  Complete/Partial/Unresolved identity bursts, guarded appraisal recovery and
+  no blind cursor retry.
+- Added SQLite ScanRuns, Observations, PokemonRecords and InventoryEvents
+  round-trip persistence plus reports generated from a fresh database read.
+- Added cleanup-proof self-tests; offline self-tests pass 160/160. Real-phone
+  cleanup proof is pending and is not claimed here.
+
 ## Deterministic navigation safety acceptance tooling - 2026-07-21
 
 - Added the permanent `device-validate-navigation-safety` command with bounded

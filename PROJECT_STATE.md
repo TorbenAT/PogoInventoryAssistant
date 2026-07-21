@@ -1,5 +1,16 @@
 # Project state
 
+## Cleanup proof pipeline implementation checkpoint
+
+The CI packaging defect in `WrongScreenAuthorizationTests` is fixed with
+deterministic `PixelImage`/`PngEncoder` fixtures and passes from a clean clone
+with `local-data` absent. The permanent `device-run-cleanup-proof` command now
+composes the existing named Android host, bounded identity/appraisal evidence,
+`InventoryPersistenceService`, the existing recommendation engine and fresh
+SQLite-backed reports. Two usable identity frames are preserved as Partial and
+do not terminate the batch; unresolved/unsafe evidence remains fail-closed.
+Offline self-tests pass 160/160. No real-phone cleanup proof is claimed yet.
+
 ## Deterministic navigation safety acceptance tooling checkpoint
 
 The permanent `device-validate-navigation-safety` CLI command requires three

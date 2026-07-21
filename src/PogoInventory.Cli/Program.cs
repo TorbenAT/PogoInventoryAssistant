@@ -4,6 +4,7 @@ using System.Text.Json.Serialization;
 using System.Xml.Linq;
 using PogoInventory.Appraisal.Models;
 using PogoInventory.Appraisal.Services;
+using PogoInventory.Application;
 using PogoInventory.Persistence;
 using PogoInventory.Automation.Errors;
 using PogoInventory.Automation.Models;
@@ -151,6 +152,9 @@ static async Task<int> MainAsync(string[] args)
                 args.Skip(1).ToArray(),
                 cancellationSource.Token),
             "device-run-index-sequence" => await RunIndexSequenceAsync(
+                args.Skip(1).ToArray(),
+                cancellationSource.Token),
+            "device-run-cleanup-proof" => await RunCleanupProofAsync(
                 args.Skip(1).ToArray(),
                 cancellationSource.Token),
             "device-validate-navigation-safety" => await ValidateNavigationSafetyAsync(
@@ -1779,6 +1783,77 @@ static async Task<int> RunIndexSequenceAsync(
     return result.Checkpoint.State is VerifiedSequenceState.Completed or VerifiedSequenceState.ControlledStopped ? 0 : 1;
 }
 
+static async Task<int> RunCleanupProofAsync(
+    string[] args,
+    CancellationToken cancellationToken)
+{
+    var options = ParseOptions(args, "continue-on-partial");
+    var species = Require(options, "species");
+    var itemLimit = ParsePositiveInt(options, "item-limit", 6);
+    if (itemLimit is < 6 or > 20)
+        throw new ArgumentException("--item-limit must be between 6 and 20.");
+    if (!options.ContainsKey("continue-on-partial"))
+        throw new ArgumentException("--continue-on-partial is required for cleanup proof.");
+    var database = Require(options, "database");
+    var output = Path.GetFullPath(Require(options, "out"));
+    var profilePath = Optional(options, "automation-profile") ??
+        Optional(options, "profile") ?? Path.Combine("local-data", "automation-profile.local.json");
+    var automationProfile = await AutomationProfileLoader.LoadAsync(profilePath, cancellationToken);
+    var appraisalPath = Optional(options, "appraisal-profile") ??
+        Path.Combine("local-data", "phone-preparation", "appraisal-profile.device.generated.json");
+    AppraisalVisualProfile? appraisalProfile = File.Exists(appraisalPath)
+        ? await AppraisalProfileLoader.LoadAsync(appraisalPath, cancellationToken)
+        : null;
+    var transport = CreateRealAndroidTransport(options);
+    var selected = DeviceSnapshotService.SelectDevice(
+        await transport.ListDevicesAsync(cancellationToken), Optional(options, "serial"));
+    var evidence = Path.Combine(output, "evidence");
+    Directory.CreateDirectory(evidence);
+    var detector = new PokemonGoGameStateDetector();
+    var preflightPassed = true;
+    for (var index = 1; index <= 3; index++)
+    {
+        var screenshot = await transport.CaptureScreenshotPngAsync(selected.Serial, cancellationToken);
+        var detection = detector.Detect(screenshot, appraisalProfile);
+        await File.WriteAllBytesAsync(Path.Combine(evidence, $"preflight-map-{index}.png"), screenshot, cancellationToken);
+        await File.WriteAllTextAsync(
+            Path.Combine(evidence, $"preflight-map-{index}.json"),
+            JsonSerializer.Serialize(detection, new JsonSerializerOptions { WriteIndented = true }),
+            cancellationToken);
+        preflightPassed &= detection.State == PokemonGoGameState.GameplayMap;
+        if (index < 3)
+            await Task.Delay(automationProfile.PostActionSettleMilliseconds, cancellationToken);
+    }
+    if (!preflightPassed)
+    {
+        Console.Error.WriteLine("Cleanup proof stopped before input: three stable GameplayMap frames were not verified.");
+        return 1;
+    }
+
+    var operations = new AndroidVerifiedInventoryNamedOperations(
+        transport, selected.Serial, automationProfile, evidence, appraisalProfile);
+    var request = new CleanupProofRequest
+    {
+        SpeciesQuery = species,
+        ItemLimit = itemLimit,
+        DatabasePath = database,
+        OutputDirectory = output,
+        DeviceSerial = selected.Serial,
+        ContinueOnPartial = true,
+        MaximumCaptureFrames = ParsePositiveInt(options, "maximum-capture-frames", 8),
+        MinimumCompleteFrames = ParsePositiveInt(options, "minimum-complete-frames", 3),
+        MinimumPartialFrames = ParsePositiveInt(options, "minimum-partial-frames", 2)
+    };
+    var result = await new CleanupProofRunner().RunAsync(operations, request, cancellationToken);
+    Console.WriteLine(JsonSerializer.Serialize(result, new JsonSerializerOptions
+    {
+        WriteIndented = true,
+        Converters = { new JsonStringEnumConverter() }
+    }));
+    return result.CapturedItems >= 6 &&
+        result.Status is "Completed" or "CompletedPartial" ? 0 : 1;
+}
+
 static async Task<int> ValidateNavigationSafetyAsync(
     string[] args,
     CancellationToken cancellationToken)
@@ -1836,7 +1911,7 @@ static async Task<int> ValidateNavigationSafetyAsync(
         VerifiedSequenceState opened = VerifiedSequenceState.Unknown;
         VerifiedSequenceState details = VerifiedSequenceState.Unknown;
         VerifiedSequenceState returned = VerifiedSequenceState.Unknown;
-        PokemonGoGameState closed = PokemonGoGameState.Unknown;
+        var closed = PokemonGoGameState.Unknown.ToString();
         try
         {
             opened = await operations.OpenInventoryAsync(cancellationToken);
@@ -1857,7 +1932,7 @@ static async Task<int> ValidateNavigationSafetyAsync(
             var expectedPass = opened == VerifiedSequenceState.Inventory &&
                 details == VerifiedSequenceState.PokemonDetails &&
                 returned == VerifiedSequenceState.Inventory &&
-                closed == PokemonGoGameState.GameplayMap &&
+                closed == PokemonGoGameState.GameplayMap.ToString() &&
                 inputs == 5 && backs == 2 && postFrames == inputs * NavigationSafetyTraceRecorder.RequiredPostInputFrames;
             if (!expectedPass)
                 result = "FAIL_SEQUENCE_OR_TRACE_INVARIANT";
@@ -3339,6 +3414,7 @@ static void PrintHelp()
     Console.WriteLine("  device-open-pokemon-inventory [--adb <adb.exe>] [--serial <serial>]");
     Console.WriteLine("  device-search-inventory --query <query> --out <directory> [--clear-after <true|false>]");
     Console.WriteLine("  device-run-index-sequence --query <query> --item-limit <n> --out <directory>");
+    Console.WriteLine("  device-run-cleanup-proof --species <query> --item-limit <6-20> --database <sqlite> --out <directory> --continue-on-partial");
     Console.WriteLine("                            [--adb <adb.exe>] [--serial <serial>] [--profile <automation.json>]");
     Console.WriteLine("                            [--appraisal-profile <appraisal.json>] [--resume] [--controlled-stop-after <n>]");
     Console.WriteLine("                            [--apply-index-tag --index-tag AI-Indexed]");

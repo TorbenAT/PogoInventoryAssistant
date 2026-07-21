@@ -1,5 +1,17 @@
 # Continuation prompt
 
+## Cleanup proof implementation checkpoint
+
+Commit 1 fixes the wrong-screen test packaging defect with package-free
+synthetic fixtures and is pushed as `e3f8f25`. Commit 2 is the pending green
+cleanup-proof pipeline increment: `device-run-cleanup-proof` accepts an exact
+species query, item limit 6-20, SQLite path, output directory and
+`--continue-on-partial`; it captures bounded Complete/Partial/Unresolved
+identity evidence, persists observations transactionally, closes and reopens
+SQLite before policy analysis, and writes database-derived recommendation
+reports. Offline self-tests are 160/160. No real phone input has been sent for
+this cleanup proof yet; begin only from three stable GameplayMap frames.
+
 The current offline checkpoint repairs wrong-screen action authorization.
 Before any phone input, Torben must manually press CANCEL on the currently
 recorded Power Up confirmation and leave the phone in GameplayMap or

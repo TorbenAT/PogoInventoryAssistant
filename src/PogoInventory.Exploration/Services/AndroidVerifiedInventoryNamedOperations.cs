@@ -24,7 +24,7 @@ public enum CursorProgressionOutcome
 /// named operation and every input has a bounded, visual postcondition check.
 /// The adapter never builds or executes an ADB command.
 /// </summary>
-public sealed class AndroidVerifiedInventoryNamedOperations : IVerifiedInventoryNamedOperations
+public sealed class AndroidVerifiedInventoryNamedOperations : ICleanupProofNamedOperations
 {
     private readonly IAndroidAutomationTransport _transport;
     private readonly string _serial;
@@ -42,6 +42,7 @@ public sealed class AndroidVerifiedInventoryNamedOperations : IVerifiedInventory
     private PokemonIdentityConsensus? _lastIdentity;
     private byte[]? _lastScreenshot;
     private int _evidenceOrdinal;
+    private readonly List<string> _lastCleanupAppraisalEvidence = new();
 
     public AndroidVerifiedInventoryNamedOperations(
         IAndroidAutomationTransport transport,
@@ -201,8 +202,105 @@ public sealed class AndroidVerifiedInventoryNamedOperations : IVerifiedInventory
         return _lastIdentity;
     }
 
+    public async Task<CleanupProofIdentityCapture> CaptureCleanupIdentityAsync(
+        int maximumFrames,
+        int minimumCompleteFrames,
+        int minimumPartialFrames,
+        CancellationToken cancellationToken)
+    {
+        if (maximumFrames < 1 || maximumFrames > 8)
+            throw new ArgumentOutOfRangeException(nameof(maximumFrames));
+        if (minimumCompleteFrames < 3 || minimumCompleteFrames > maximumFrames)
+            throw new ArgumentOutOfRangeException(nameof(minimumCompleteFrames));
+        if (minimumPartialFrames < 2 || minimumPartialFrames > minimumCompleteFrames)
+            throw new ArgumentOutOfRangeException(nameof(minimumPartialFrames));
+
+        var frames = new List<PokemonIdentityFrame>(maximumFrames);
+        var paths = new List<string>(maximumFrames);
+        var failureReasons = new List<string>();
+        for (var index = 0; index < maximumFrames; index++)
+        {
+            var screenshot = await CaptureAsync("cleanup-identity", cancellationToken);
+            var detection = _detector.Detect(screenshot, _appraisalProfile);
+            var topology = _locator.LocateDetailsPageTopology(screenshot);
+            var details = detection.State == PokemonGoGameState.PokemonDetails || topology is not null;
+            var unsafeSurface = _unsafeSurfaceDetector.Detect(screenshot, "cleanup-proof-observation");
+            if (unsafeSurface.IsUnsafe)
+            {
+                failureReasons.Add($"UnsafeConfirmation:{unsafeSurface.Kind}");
+                break;
+            }
+            if (!details)
+            {
+                failureReasons.Add($"ExpectedPokemonDetails:{detection.State}");
+            }
+            else
+            {
+                var path = await SaveEvidenceAsync("cleanup-identity", screenshot, cancellationToken);
+                paths.Add(path);
+                frames.Add(new PokemonIdentityFrame { ScreenshotPng = screenshot });
+            }
+
+            if (frames.Count >= minimumCompleteFrames)
+            {
+                var complete = _identityAnalyzer.Consensus(frames);
+                if (complete.Status == PokemonIdentityObservationStatus.Complete)
+                    break;
+            }
+            if (index < maximumFrames - 1)
+                await Task.Delay(_automationProfile.PostActionSettleMilliseconds, cancellationToken);
+        }
+
+        if (frames.Count == 0)
+        {
+            return new CleanupProofIdentityCapture
+            {
+                Consensus = new PokemonIdentityConsensus
+                {
+                    Status = PokemonIdentityObservationStatus.Unavailable,
+                    StableFingerprintSha256 = string.Empty,
+                    StableFingerprintBase64 = string.Empty,
+                    Confidence = 0,
+                    Frames = Array.Empty<PokemonIdentityFingerprintObservation>(),
+                    EvidenceHashes = Array.Empty<string>(),
+                    Tags = new PokemonIdentityTagObservation
+                    {
+                        TagCount = 0,
+                        Section = null,
+                        IsSeparateFromIdentity = true
+                    },
+                    IgnoredFrameCount = 0
+                },
+                Status = CleanupProofObservationStatus.Unresolved,
+                ScreenshotPaths = paths,
+                ScreenshotHashes = Array.Empty<string>(),
+                FailureReasons = failureReasons
+            };
+        }
+
+        var consensus = _identityAnalyzer.Consensus(frames);
+        var status = consensus.Status == PokemonIdentityObservationStatus.Complete
+            ? CleanupProofObservationStatus.Complete
+            : consensus.Status == PokemonIdentityObservationStatus.Partial &&
+              consensus.EvidenceHashes.Count >= minimumPartialFrames
+                ? CleanupProofObservationStatus.Partial
+                : CleanupProofObservationStatus.Unresolved;
+        if (status == CleanupProofObservationStatus.Unresolved)
+            failureReasons.Add("FewerThanTwoCompatibleDetailsFrames");
+        _lastIdentity = consensus;
+        return new CleanupProofIdentityCapture
+        {
+            Consensus = consensus,
+            Status = status,
+            ScreenshotPaths = paths,
+            ScreenshotHashes = consensus.EvidenceHashes,
+            FailureReasons = failureReasons
+        };
+    }
+
     public async Task<string> CaptureAppraisalAsync(CancellationToken cancellationToken)
     {
+        _lastCleanupAppraisalEvidence.Clear();
         var details = await WaitForStateAsync(new[] { PokemonGoGameState.PokemonDetails }, cancellationToken);
         var menu = _locator.LocateDetailsMenu(details.Screenshot);
         if (menu is null) return "Partial";
@@ -222,7 +320,8 @@ public sealed class AndroidVerifiedInventoryNamedOperations : IVerifiedInventory
                 AppraisalContinuationOutcome.SUCCESS_TAPPED)
             {
                 var stable = frames.Last(frame => frame.Kind == RecoveryFrameKind.AppraisalBars);
-                await SaveEvidenceAsync("appraisal-bars", stable.Screenshot, cancellationToken);
+                _lastCleanupAppraisalEvidence.Add(
+                    await SaveEvidenceAsync("appraisal-bars", stable.Screenshot, cancellationToken));
                 return "AppraisalBarsObserved";
             }
             if (decision != AppraisalContinuationOutcome.TAP_INTRO_ONCE)
@@ -239,6 +338,17 @@ public sealed class AndroidVerifiedInventoryNamedOperations : IVerifiedInventory
             await WriteRecoveryAuditAsync(authorization, "Appraisal", cancellationToken);
         }
         return "Partial";
+    }
+
+    public async Task<CleanupProofAppraisalCapture> CaptureCleanupAppraisalAsync(
+        CancellationToken cancellationToken)
+    {
+        var status = await CaptureAppraisalAsync(cancellationToken);
+        return new CleanupProofAppraisalCapture
+        {
+            Status = status,
+            EvidencePaths = _lastCleanupAppraisalEvidence.ToArray()
+        };
     }
 
     public async Task<VerifiedSequenceState> ExitAppraisalAsync(CancellationToken cancellationToken)
@@ -396,13 +506,13 @@ public sealed class AndroidVerifiedInventoryNamedOperations : IVerifiedInventory
         return VerifiedSequenceState.Unknown;
     }
 
-    public async Task<PokemonGoGameState> CloseInventoryAsync(CancellationToken cancellationToken)
+    public async Task<string> CloseInventoryAsync(CancellationToken cancellationToken)
     {
         var before = await WaitForStateAsync(
             new[] { PokemonGoGameState.Inventory }, cancellationToken);
         var detection = _detector.Detect(before.Screenshot, _appraisalProfile);
         if (!GuardedInventoryClose.CanAct(detection))
-            return PokemonGoGameState.Unknown;
+            return PokemonGoGameState.Unknown.ToString();
 
         await AuthorizeNonTapInputAsync(
             "close-inventory", cancellationToken, PokemonGoGameState.GameplayMap.ToString());
@@ -415,7 +525,7 @@ public sealed class AndroidVerifiedInventoryNamedOperations : IVerifiedInventory
             PokemonGoGameState.GameplayMap.ToString(),
             after.State == PokemonGoGameState.GameplayMap ? "PASS" : "FAIL",
             cancellationToken);
-        return after.State;
+        return after.State.ToString();
     }
 
     public Task<IReadOnlyList<string>> ApplyIndexTagAsync(string tagName, CancellationToken cancellationToken) =>
@@ -930,12 +1040,13 @@ public sealed class AndroidVerifiedInventoryNamedOperations : IVerifiedInventory
         return (width, height);
     }
 
-    private async Task SaveEvidenceAsync(string label, byte[] screenshot, CancellationToken cancellationToken)
+    private async Task<string> SaveEvidenceAsync(string label, byte[] screenshot, CancellationToken cancellationToken)
     {
         Directory.CreateDirectory(_evidenceDirectory);
         var safe = string.Concat(label.Select(ch => char.IsLetterOrDigit(ch) || ch is '-' or '_' ? ch : '_'));
         var path = Path.Combine(_evidenceDirectory, $"{++_evidenceOrdinal:D4}-{safe}.png");
         await File.WriteAllBytesAsync(path, screenshot, cancellationToken);
+        return path;
     }
 
     private static int NextEvidenceOrdinal(string directory)

@@ -1,5 +1,23 @@
 # Architecture
 
+## Real cleanup proof value chain
+
+`device-run-cleanup-proof` is the permanent bounded read-only value-chain
+command. It uses `AndroidVerifiedInventoryNamedOperations` for filtered
+Inventory navigation, one first-card open, guarded appraisal and one verified
+cursor swipe per next ordinal. `CaptureCleanupIdentityAsync` accepts up to
+eight bounded Details frames: three compatible frames are Complete, two are
+Partial, and unresolved or unsafe surfaces stop input without a blind retry.
+
+`CleanupProofRunner` writes each structured observation through
+`InventoryPersistenceService` in a transaction that inserts `Observations`,
+`PokemonRecords` and an `Observed` `InventoryEvents` row. The write service is
+disposed before a new service instance reloads the batch. The existing
+`InventoryAnalyzer` then evaluates only reloaded `PokemonObservation` rows;
+recommendations and `RecommendationGenerated` events are written back before
+CSV, Markdown and JSON reports are generated. No tag or destructive executor
+is reachable from this command.
+
 ## Action authorization and unsafe confirmation interlock
 
 `MainMenuPreconditionValidator` is the typed boundary for the MainMenu to
