@@ -1,4 +1,5 @@
 using PogoInventory.HeaderText;
+using PogoInventory.Vision.Imaging;
 using PogoInventory.Vision.Models;
 
 namespace PogoInventory.SelfTest;
@@ -214,6 +215,59 @@ internal static class HeaderOcrTests
     {
         var result = SearchQueryClassifier.Classify(query, SpeciesReference);
         Assert(result.Kind == SearchQueryKind.BroadFilter, $"'{query}' should classify as BroadFilter");
+    }
+
+    public static Task RunTesseractConfigSelectionAsync()
+    {
+        var cpConfig = TesseractOcrConfigSelector.ConfigFor(HeaderRegionKind.Cp);
+        Assert(cpConfig.CharWhitelist == "CPcp0123456789", "CP region must whitelist only CP glyphs and digits");
+        Assert(cpConfig.SingleLine, "CP region should force single-line segmentation");
+
+        var nameConfig = TesseractOcrConfigSelector.ConfigFor(HeaderRegionKind.Name);
+        Assert(nameConfig.CharWhitelist.Length == 0, "name/species region must not restrict the character set");
+        Assert(nameConfig.SingleLine, "name/species region should force single-line segmentation");
+
+        return Task.CompletedTask;
+    }
+
+    public static Task RunCropScalerAsync()
+    {
+        // 4x4 source, distinct pixel per cell so cropping/upscaling can be verified exactly.
+        var rgba = new byte[4 * 4 * 4];
+        for (var y = 0; y < 4; y++)
+        {
+            for (var x = 0; x < 4; x++)
+            {
+                var offset = (y * 4 + x) * 4;
+                var value = (byte)(y * 4 + x);
+                rgba[offset] = value;
+                rgba[offset + 1] = value;
+                rgba[offset + 2] = value;
+                rgba[offset + 3] = 255;
+            }
+        }
+        var source = new PixelImage(4, 4, rgba);
+
+        // Crop the middle 2x2 block (x=1,y=1) and upscale 2x: each source
+        // pixel should become a solid 2x2 block, not a blend.
+        var roi = new PixelRectangle(1, 1, 2, 2);
+        var result = HeaderOcrCropScaler.CropAndUpscale(source, roi, upscale: 2);
+
+        Assert(result.Width == 4 && result.Height == 4, "cropped+upscaled output size should be roi size * upscale");
+        var topLeftSourceValue = source.GetPixel(1, 1).R;
+        Assert(result.GetPixel(0, 0).R == topLeftSourceValue, "top-left 2x2 block should replicate the source pixel");
+        Assert(result.GetPixel(1, 0).R == topLeftSourceValue, "nearest-neighbor upscale must not blend adjacent pixels");
+        Assert(result.GetPixel(0, 1).R == topLeftSourceValue, "nearest-neighbor upscale must not blend adjacent pixels");
+
+        var bottomRightSourceValue = source.GetPixel(2, 2).R;
+        Assert(result.GetPixel(3, 3).R == bottomRightSourceValue, "bottom-right block should replicate its source pixel");
+
+        // upscale=1 must be a pure crop (no resampling at all).
+        var identity = HeaderOcrCropScaler.CropAndUpscale(source, roi, upscale: 1);
+        Assert(identity.Width == 2 && identity.Height == 2, "upscale=1 should not change dimensions beyond the crop");
+        Assert(identity.GetPixel(0, 0).R == source.GetPixel(1, 1).R, "upscale=1 crop should preserve pixel values");
+
+        return Task.CompletedTask;
     }
 
     private static async Task<PokemonHeaderResult> Analyze(string nameText, string cpText)

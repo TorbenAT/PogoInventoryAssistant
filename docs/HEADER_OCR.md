@@ -28,8 +28,12 @@ PogoInventory.HeaderOcr    (net8.0-windows10.0.19041.0)
     (Windows.Media.Ocr via CsWinRT projections pulled in automatically by the
     net8.0-windows TFM; no extra NuGet package required)
 
-PogoInventory.Cli          (net8.0-windows10.0.19041.0, references both)
-  - `ocr-header-spike` command
+PogoInventory.TesseractOcr (net8.0, plain)
+  - TesseractTextRecognizer : ITextRecognizer
+    (TesseractOCR NuGet package; native tesseract/leptonica DLLs, no WinRT)
+
+PogoInventory.Cli          (net8.0-windows10.0.19041.0, references all three)
+  - `ocr-header-spike --engine <winrt|tesseract>` command
 ```
 
 `PogoInventory.HeaderText` intentionally has no dependency on Windows-only
@@ -127,6 +131,7 @@ cross-checked against OCR'd species) versus an arbitrary filter.
 ```
 ocr-header-spike --input <directory of PNGs> --screen <details|appraisal> --out <directory>
                  [--profile <header-analysis-profile.json>] [--language <tag>]
+                 [--engine <winrt|tesseract>] [--tessdata <directory>] [--binarize-cp]
 ```
 
 - `--input`: a directory of PNG frames (one screen each).
@@ -138,12 +143,19 @@ ocr-header-spike --input <directory of PNGs> --screen <details|appraisal> --out 
 - `--profile`: optional JSON override of `HeaderAnalysisProfile` (same shape
   as the record — `DetailsCpRegion`, `DetailsNameRegion`,
   `AppraisalCpRegion`, `AppraisalNameRegion`, each `{X,Y,Width,Height}`).
-- `--language`: optional BCP-47 language tag passed to
-  `OcrEngine.TryCreateFromLanguage`; falls back to `en`, then to the user's
-  profile languages. If none are available the command exits with an error
-  telling the operator to install a Windows OCR language pack.
+- `--language`: optional BCP-47 language tag. For `--engine winrt`, passed to
+  `OcrEngine.TryCreateFromLanguage` (falls back to `en`, then the user's
+  profile languages). For `--engine tesseract`, only `eng`/`en` is mapped
+  today (`TesseractOCR.Enums.Language.English`).
+- `--engine`: `winrt` (default) or `tesseract` — see "Tesseract alternative
+  engine" below.
+- `--tessdata`: tessdata directory for `--engine tesseract` (default
+  `tools/tessdata`).
+- `--binarize-cp`: `--engine tesseract` only. Applies the shared Otsu
+  binarization to the CP crop before recognition. Off by default —
+  measured worse, see below.
 
-This command is Windows-only (it links `Windows.Media.Ocr`) and is meant to
+`--engine winrt` is Windows-only (it links `Windows.Media.Ocr`) and is meant to
 be run on the machine that has the real evidence, e.g.:
 
 ```
@@ -179,6 +191,89 @@ correct** (single-frame, not consensus — the real scan pipeline can apply
 4. Only after the spike consistently meets the target should a follow-up
    change wire this into the live scan pipeline (not part of this change).
 
+## Tesseract alternative engine
+
+`PogoInventory.TesseractOcr.TesseractTextRecognizer` is a second
+`ITextRecognizer` implementation, added specifically to test whether a
+different OCR engine avoids the WinRT engine's deterministic thin-"1"-stroke
+digit drop in CP text (see "CP digit-drop experiments" above). Selected via
+`ocr-header-spike --engine tesseract`.
+
+### Package choice
+
+[`TesseractOCR`](https://www.nuget.org/packages/TesseractOCR) 5.5.2 (Kees van
+Spelde's actively-maintained fork of the older `charlesw/tesseract` binding),
+not the original `Tesseract` package (charlesw, last released 2022, bundles
+the older tesseract50 engine). Both wrap the native tesseract/leptonica DLLs
+via plain P/Invoke (x86/x64 DLLs copied to the output folder by a `.targets`
+file) -- no WinRT involved -- so `PogoInventory.TesseractOcr` stays on the
+ordinary `net8.0` TFM, not `net8.0-windows10.0.19041.0`. `TesseractOCR` ships
+the newer tesseract55 engine and exposes `Pix.Image.LoadFromMemory(byte[])`
+plus a `Page.Layout` object tree (`Blocks` -> `Paragraphs` -> `TextLines` ->
+`Words`) with per-line `BoundingBox`/`Confidence`, which is exactly the shape
+`ITextRecognizer` needs to map back to `NormalizedBounds` the same way
+`WindowsMediaTextRecognizer` does for WinRT's `OcrResult.Lines`.
+
+`TesseractTextRecognizer` decodes the frame PNG with the repo's own
+`PngDecoder` (`PogoInventory.Vision`), crops and nearest-neighbor-upscales
+with the new pure `HeaderOcrCropScaler` (shares crop geometry with
+`HeaderOcrGeometry.ComputeUpscale`, so both engines get comparable input
+sizes), then re-encodes the crop with `PngEncoder` for Tesseract's `Pix`
+loader -- no `System.Drawing` anywhere. Per-region character whitelist and
+segmentation mode come from the pure `TesseractOcrConfigSelector`
+(`PogoInventory.HeaderText`): CP is whitelisted to `"CPcp0123456789"`,
+species/nickname text is unrestricted; both force single-line segmentation.
+
+### tessdata choice
+
+`tessdata_fast` (`tools/tessdata/eng.traineddata`, ~4MB) is committed --
+small enough that committing is simpler than a download step, and it is the
+default `--tessdata` path. `tessdata_best` (~15.4MB) measurably improved
+both species and CP reads (see iteration table below) but is over the
+"commit if small" line, so it is **not** committed; `tools/tessdata-best/`
+is gitignored. To use it:
+
+```
+curl -sL -o tools/tessdata-best/eng.traineddata https://github.com/tesseract-ocr/tessdata_best/raw/main/eng.traineddata
+ocr-header-spike ... --engine tesseract --tessdata tools/tessdata-best
+```
+
+### Measured iterations (real 60-frame set: 57 appraisal + 3 details)
+
+Scored at the item level (>= 2 of 3 frames must agree on the same value; 20
+items total -- item 1 from `frames-details`, items 2-20 from
+`frames-appraisal` in consecutive same-Pokemon triplets), against the ground
+truth in this change's task description (not committed -- it names the real
+capture set).
+
+| # | Change | Species | CP | Notes |
+|---|---|---|---|---|
+| 1 | `tessdata_fast`, whitelist, single-line PSM, nearest-neighbor upscale, default ROI | 18/20 | 14/20 | 1 **false positive**: item 15 (Volbeat, actual 961) agreed 761 |
+| 2 | Switch to `tessdata_best`, otherwise identical | 19/20 | 16/20 | Same false positive persists (agreed 261 instead of 761) |
+| 3 | + CP-only Otsu binarization (`--binarize-cp`, reusing `HeaderOcrBinarization`) | 19/20 | 15/20 | Regressed, like the WinRT experiment; false positive got *worse* (agreed 61, all 3 frames) and broke 2 previously-correct items |
+| 4 | Revert binarization; tighten the CP ROI height (`Y=0.08,Height=0.05` vs default `Y=0.07,Height=0.07`) to cut the animated background bokeh out of the crop | 19/20 | 17/20 | **False positive fixed** (item 15 now reads 961 on all 3 frames); zero wrong agreed values across all 20 items; item 13 (Illumise, CP164) regressed from correct to unread |
+
+Iteration 4 is the best-measured configuration: `--engine tesseract
+--tessdata tools/tessdata-best --profile <tightened-CP-ROI-profile>` (no
+`--binarize-cp`). It was not made the shipped `HeaderAnalysisProfile` default
+(that default is shared with the WinRT engine, already tuned to its own
+60/60 species baseline) -- the tightened ROI here is scoped to this
+Tesseract measurement only, via `--profile`.
+
+### Verdict vs the acceptance target
+
+Species meets the >= 19/20 target on every iteration from #2 onward. CP does
+**not** reach >= 19/20 in any iteration (best: 17/20) -- the remaining misses
+are unread digits (2-of-3 frames don't agree), not wrong values. The
+single hardest safety requirement -- **never emit a confidently wrong CP** --
+is met at iteration 4: item 4 (Pikachu, CP 129) reads 129 or is otherwise
+never misread as `29` in any iteration, and item 20 (Hoopa, CP occluded by
+the model) never produces a false consensus. Reported honestly: Tesseract
+(this configuration) is a safer engine than WinRT on this set (no false
+positives) but has not been tuned to beat WinRT's CP hit rate outright; it
+remains available as a second, independently-measured `ITextRecognizer` for
+future tuning rather than a wholesale WinRT replacement.
+
 ## Tests
 
 `tests/PogoInventory.SelfTest/HeaderOcrTests.cs` (registered in
@@ -199,8 +294,19 @@ correct** (single-frame, not consensus — the real scan pipeline can apply
 - `HeaderOcrBinarization`: luminance conversion, Otsu threshold selection
   (including the empty-input fallback and a two-cluster split), pixel
   binarization and alpha handling
+- `TesseractOcrConfigSelector`: CP region gets the digit whitelist, name
+  region gets none; both force single-line segmentation
+- `HeaderOcrCropScaler`: crop+upscale is a pure nearest-neighbor block
+  replication (no blending) and `upscale=1` is a plain crop
 
-None of these tests touch `PogoInventory.HeaderOcr` or a real OCR engine.
+None of these tests touch `PogoInventory.HeaderOcr`, `PogoInventory.TesseractOcr`
+or a real OCR engine. `PogoInventory.SelfTest` is deliberately package-free
+(no third-party NuGet dependencies) so it stays fast and dependency-light;
+`TesseractTextRecognizer` itself (the part that actually calls the
+`TesseractOCR` package) is therefore exercised only by the manual
+`ocr-header-spike --engine tesseract` runs above, not by the self-test
+harness -- the same split `WindowsMediaTextRecognizer` already has with
+`Windows.Media.Ocr`.
 
 ### CP digit-drop experiments (spike, not wired into production)
 

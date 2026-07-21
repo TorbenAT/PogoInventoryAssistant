@@ -25,5 +25,6 @@
     <ProjectReference Include="..\PogoInventory.Exploration\PogoInventory.Exploration.csproj" />
     <ProjectReference Include="..\PogoInventory.HeaderText\PogoInventory.HeaderText.csproj" />
     <ProjectReference Include="..\PogoInventory.HeaderOcr\PogoInventory.HeaderOcr.csproj" />
+    <ProjectReference Include="..\PogoInventory.TesseractOcr\PogoInventory.TesseractOcr.csproj" />
   </ItemGroup>
 </Project>

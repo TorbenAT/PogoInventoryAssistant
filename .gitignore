@@ -12,6 +12,10 @@ captures/
 local-data/
 private/
 tools/platform-tools/
+# tessdata_best is ~15MB (over the "commit if small" line); tools/tessdata/
+# (tessdata_fast, ~4MB) is committed instead. See docs/HEADER_OCR.md for the
+# manual download instructions if tessdata_best is needed.
+tools/tessdata-best/
 *.db
 *.db-*
 *.sqlite

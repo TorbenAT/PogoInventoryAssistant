@@ -45,6 +45,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PogoInventory.Application",
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PogoInventory.Exploration", "src\PogoInventory.Exploration\PogoInventory.Exploration.csproj", "{8D2F9D7C-F020-4350-AF5F-312BDD21815F}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PogoInventory.TesseractOcr", "src\PogoInventory.TesseractOcr\PogoInventory.TesseractOcr.csproj", "{1181EC00-7C6E-4816-9F09-63A2FCBEE629}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -295,6 +297,18 @@ Global
 		{8D2F9D7C-F020-4350-AF5F-312BDD21815F}.Release|x64.Build.0 = Release|Any CPU
 		{8D2F9D7C-F020-4350-AF5F-312BDD21815F}.Release|x86.ActiveCfg = Release|Any CPU
 		{8D2F9D7C-F020-4350-AF5F-312BDD21815F}.Release|x86.Build.0 = Release|Any CPU
+		{1181EC00-7C6E-4816-9F09-63A2FCBEE629}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{1181EC00-7C6E-4816-9F09-63A2FCBEE629}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{1181EC00-7C6E-4816-9F09-63A2FCBEE629}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{1181EC00-7C6E-4816-9F09-63A2FCBEE629}.Debug|x64.Build.0 = Debug|Any CPU
+		{1181EC00-7C6E-4816-9F09-63A2FCBEE629}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{1181EC00-7C6E-4816-9F09-63A2FCBEE629}.Debug|x86.Build.0 = Debug|Any CPU
+		{1181EC00-7C6E-4816-9F09-63A2FCBEE629}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{1181EC00-7C6E-4816-9F09-63A2FCBEE629}.Release|Any CPU.Build.0 = Release|Any CPU
+		{1181EC00-7C6E-4816-9F09-63A2FCBEE629}.Release|x64.ActiveCfg = Release|Any CPU
+		{1181EC00-7C6E-4816-9F09-63A2FCBEE629}.Release|x64.Build.0 = Release|Any CPU
+		{1181EC00-7C6E-4816-9F09-63A2FCBEE629}.Release|x86.ActiveCfg = Release|Any CPU
+		{1181EC00-7C6E-4816-9F09-63A2FCBEE629}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -303,5 +317,6 @@ Global
 		{456F6B3E-3CD0-496B-A390-903C8DBA7918} = {827E0CD3-B72D-47B6-A68D-7590B98EB39B}
 		{95B8168D-CDA2-48F6-B303-B428AD6F6EAC} = {827E0CD3-B72D-47B6-A68D-7590B98EB39B}
 		{8D2F9D7C-F020-4350-AF5F-312BDD21815F} = {827E0CD3-B72D-47B6-A68D-7590B98EB39B}
+		{1181EC00-7C6E-4816-9F09-63A2FCBEE629} = {827E0CD3-B72D-47B6-A68D-7590B98EB39B}
 	EndGlobalSection
 EndGlobal

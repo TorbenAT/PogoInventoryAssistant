@@ -1,0 +1,18 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <!-- TesseractOCR wraps the native tesseract/leptonica libraries via plain
+         P/Invoke (x86/x64 DLLs copied next to the output), not WinRT, so this
+         project stays on the ordinary net8.0 TFM instead of the
+         net8.0-windows10.0.19041.0 TFM that PogoInventory.HeaderOcr needs for
+         Windows.Media.Ocr. -->
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="TesseractOCR" Version="5.5.2" />
+    <ProjectReference Include="..\PogoInventory.HeaderText\PogoInventory.HeaderText.csproj" />
+    <ProjectReference Include="..\PogoInventory.Vision\PogoInventory.Vision.csproj" />
+  </ItemGroup>
+</Project>

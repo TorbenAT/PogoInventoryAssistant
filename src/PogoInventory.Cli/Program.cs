@@ -36,6 +36,7 @@ using PogoInventory.Device.Models;
 using PogoInventory.Device.Transport;
 using PogoInventory.HeaderOcr;
 using PogoInventory.HeaderText;
+using PogoInventory.TesseractOcr;
 using PogoInventory.ImagePretest.Models;
 using PogoInventory.ImagePretest.Services;
 using PogoInventory.Exploration.Services;
@@ -3621,8 +3622,11 @@ static void PrintHelp()
     Console.WriteLine();
     Console.WriteLine("  ocr-header-spike --input <directory of PNGs> --screen <details|appraisal> --out <directory>");
     Console.WriteLine("                   [--profile <header-analysis-profile.json>] [--language <tag>]");
+    Console.WriteLine("                   [--engine <winrt|tesseract>] [--tessdata <directory>] [--binarize-cp]");
     Console.WriteLine("                   Offline OCR spike: reads species/CP/nickname per PNG and writes");
-    Console.WriteLine("                   ocr-spike-report.json/.md. Windows-only (Windows.Media.Ocr).");
+    Console.WriteLine("                   ocr-spike-report.json/.md. --engine winrt (default) is Windows-only");
+    Console.WriteLine("                   (Windows.Media.Ocr); --engine tesseract uses Tesseract 5 and needs");
+    Console.WriteLine("                   --tessdata (default tools\\tessdata) to contain eng.traineddata.");
     Console.WriteLine();
     Console.WriteLine("Inventory scan uses only the allow-listed taps and swipe from the automation profile. It never transfers, powers up, evolves, purifies, catches or changes location.");
 }
@@ -3705,7 +3709,7 @@ static async Task<int> RunAnalyzeCleanupEvidenceAsync(string[] args, Cancellatio
 
 static async Task<int> RunOcrHeaderSpikeAsync(string[] args, CancellationToken cancellationToken)
 {
-    var options = ParseOptions(args);
+    var options = ParseOptions(args, "binarize-cp");
     var inputDirectory = Require(options, "input");
     var outputDirectory = Require(options, "out");
     var screenArgument = Require(options, "screen");
@@ -3718,6 +3722,7 @@ static async Task<int> RunOcrHeaderSpikeAsync(string[] args, CancellationToken c
     };
     var languageTag = Optional(options, "language");
     var profilePath = Optional(options, "profile");
+    var engineArgument = (Optional(options, "engine") ?? "winrt").ToLowerInvariant();
 
     var jsonOptions = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
     var profile = profilePath is null
@@ -3743,14 +3748,39 @@ static async Task<int> RunOcrHeaderSpikeAsync(string[] args, CancellationToken c
         warnings.Add("SPECIES_REFERENCE_MISSING");
     }
 
-    if (!WindowsMediaTextRecognizer.IsSupported(languageTag))
+    ITextRecognizer recognizer;
+    IDisposable? recognizerLifetime = null;
+    switch (engineArgument)
     {
-        Console.Error.WriteLine(
-            "[ocr-header-spike] No OCR engine is available for the requested or user profile languages.");
-        return 1;
+        case "winrt":
+            if (!WindowsMediaTextRecognizer.IsSupported(languageTag))
+            {
+                Console.Error.WriteLine(
+                    "[ocr-header-spike] No OCR engine is available for the requested or user profile languages.");
+                return 1;
+            }
+            recognizer = new WindowsMediaTextRecognizer(languageTag);
+            break;
+        case "tesseract":
+            var tessDataDirectory = Path.GetFullPath(
+                Optional(options, "tessdata") ?? Path.Combine("tools", "tessdata"));
+            if (!TesseractTextRecognizer.IsSupported(tessDataDirectory, languageTag ?? "eng"))
+            {
+                Console.Error.WriteLine(
+                    $"[ocr-header-spike] No Tesseract engine could be created from '{tessDataDirectory}'. " +
+                    "Ensure it contains eng.traineddata (see docs/HEADER_OCR.md).");
+                return 1;
+            }
+            var binarizeCp = options.ContainsKey("binarize-cp");
+            var tesseractRecognizer = new TesseractTextRecognizer(tessDataDirectory, languageTag ?? "eng", binarizeCp);
+            recognizer = tesseractRecognizer;
+            recognizerLifetime = tesseractRecognizer;
+            break;
+        default:
+            throw new ArgumentException($"--engine must be 'winrt' or 'tesseract', got '{engineArgument}'.");
     }
+    using var _ = recognizerLifetime;
 
-    ITextRecognizer recognizer = new WindowsMediaTextRecognizer(languageTag);
     var analyzer = new PokemonHeaderAnalyzer(recognizer, speciesReference, profile);
 
     Directory.CreateDirectory(outputDirectory);

@@ -242,6 +242,8 @@ var tests = new (string Name, Func<Task> Run)[]
     ,("BitmapTransform geometry scales bounds before cropping and stays in range", HeaderOcrTests.RunBitmapTransformGeometryAsync)
     ,("Header OCR upscale selection covers small/large crop thresholds", HeaderOcrTests.RunUpscaleSelectionAsync)
     ,("Header OCR CP binarization pixel math", HeaderOcrTests.RunCpBinarizationAsync)
+    ,("Tesseract per-region config selects CP whitelist vs unrestricted name", HeaderOcrTests.RunTesseractConfigSelectionAsync)
+    ,("Header OCR crop+upscale is nearest-neighbor with no blending", HeaderOcrTests.RunCropScalerAsync)
     ,("Cleanup runner never stores a broad-filter query as species", HeaderSemanticsCleanupTests.BroadQueryNeverStoredAsSpeciesAsync)
     ,("Cleanup runner treats an exact species query as QueryDerived species", HeaderSemanticsCleanupTests.ExactQueryProducesQueryDerivedSpeciesAsync)
     ,("Cleanup runner header OCR consensus produces Automated species and CP", HeaderSemanticsCleanupTests.HeaderConsensusProducesAutomatedSpeciesAndCpAsync)
