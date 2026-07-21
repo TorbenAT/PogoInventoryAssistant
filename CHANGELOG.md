@@ -1,5 +1,12 @@
 # Changelog
 
+## Unreleased
+
+- Cleanup proof now keeps Appraisal open across ordinary Pokémon transitions,
+  persists appraisal fingerprints before each next swipe, and exits Appraisal
+  once at the end. Offline self-tests pass 163/163; real-phone acceptance is
+  pending.
+
 ## Long database acceptance — 2026-07-21
 
 - Ran the permanent read-only cleanup proof with `age0-1825` and limit 20.

@@ -1,5 +1,14 @@
 # Continuation prompt
 
+## Persistent Appraisal carousel checkpoint
+
+The cleanup-proof implementation now keeps Appraisal open while advancing
+through ordinary Pokémon. Build and self-tests pass 163/163. Commit and push
+this increment, then run one bounded `age0-1825` / item-limit 20 acceptance in
+`local-data/validation/cleanup-value-proof/appraisal-carousel-20`. Stop at the
+first runtime defect, preserve SQLite rows and reports, and do not patch/rerun
+automatically.
+
 ## Long database acceptance checkpoint
 
 The fresh `age0-1825` / 20-item real run safely stopped after four Complete

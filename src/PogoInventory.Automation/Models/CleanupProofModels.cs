@@ -9,6 +9,14 @@ public enum CleanupProofObservationStatus
     Unresolved
 }
 
+public enum AppraisalCarouselAdvanceResult
+{
+    SUCCESS_CHANGED_POKEMON,
+    NO_EFFECT_OR_FILTER_END,
+    TRANSIENT_UNKNOWN_RECOVERED,
+    UNKNOWN_STOP
+}
+
 public sealed record CleanupProofIdentityCapture
 {
     public required PokemonIdentityConsensus Consensus { get; init; }

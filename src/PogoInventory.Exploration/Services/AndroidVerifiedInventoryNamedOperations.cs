@@ -672,6 +672,149 @@ public sealed class AndroidVerifiedInventoryNamedOperations : ICleanupProofNamed
         };
     }
 
+    public async Task<CleanupProofIdentityCapture> CaptureCleanupAppraisalIdentityAsync(
+        CancellationToken cancellationToken)
+    {
+        var frames = await CaptureRecoveryFramesAsync("carousel-appraisal-identity", cancellationToken);
+        if (!GuardedInventoryRecovery.TryGetStableFrame(frames, out var stable) ||
+            stable is null || stable.Kind != RecoveryFrameKind.AppraisalBars)
+        {
+            return new CleanupProofIdentityCapture
+            {
+                Consensus = UnavailableIdentity("AppraisalBarsNotStable"),
+                Status = CleanupProofObservationStatus.Unresolved,
+                ScreenshotPaths = Array.Empty<string>(),
+                ScreenshotHashes = Array.Empty<string>(),
+                FailureReasons = new[] { "AppraisalBarsNotStable" }
+            };
+        }
+
+        var paths = new List<string>();
+        foreach (var frame in frames.Where(frame => frame.Kind == RecoveryFrameKind.AppraisalBars).Take(3))
+            paths.Add(await SaveEvidenceAsync("carousel-appraisal-identity", frame.Screenshot, cancellationToken));
+        var fingerprint = Convert.ToHexString(SHA256.HashData(stable.Screenshot)).ToLowerInvariant();
+        var consensus = AppraisalIdentity(fingerprint, paths);
+        _lastIdentity = consensus;
+        return new CleanupProofIdentityCapture
+        {
+            Consensus = consensus,
+            Status = CleanupProofObservationStatus.Complete,
+            ScreenshotPaths = paths,
+            ScreenshotHashes = paths.Select(path => Convert.ToHexString(SHA256.HashData(File.ReadAllBytes(path))).ToLowerInvariant()).ToArray()
+        };
+    }
+
+    public async Task<CleanupProofAppraisalCapture> CaptureCurrentCleanupAppraisalAsync(
+        CancellationToken cancellationToken)
+    {
+        var frames = await CaptureRecoveryFramesAsync("carousel-appraisal-observation", cancellationToken);
+        if (!GuardedInventoryRecovery.TryGetStableFrame(frames, out var stable) ||
+            stable is null || stable.Kind != RecoveryFrameKind.AppraisalBars)
+        {
+            return new CleanupProofAppraisalCapture
+            {
+                Status = "Unavailable",
+                FailureReasons = new[] { "AppraisalBarsNotStable" }
+            };
+        }
+        _lastCleanupAppraisalEvidence.Clear();
+        _lastCleanupAppraisalScreenshot = stable.Screenshot;
+        foreach (var frame in frames.Where(frame => frame.Kind == RecoveryFrameKind.AppraisalBars).Take(3))
+            _lastCleanupAppraisalEvidence.Add(await SaveEvidenceAsync("carousel-appraisal-bars", frame.Screenshot, cancellationToken));
+        return AnalyzeLastCleanupAppraisal();
+    }
+
+    public async Task<AppraisalCarouselAdvanceResult> AdvanceToNextPokemonInAppraisalAsync(
+        string previousAppraisalFingerprint,
+        CancellationToken cancellationToken)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(previousAppraisalFingerprint);
+        var before = await CaptureRecoveryFramesAsync("carousel-appraisal-pre-swipe", cancellationToken);
+        if (!GuardedInventoryRecovery.TryGetStableFrame(before, out var stableBefore) ||
+            stableBefore is null || stableBefore.Kind != RecoveryFrameKind.AppraisalBars)
+            return AppraisalCarouselAdvanceResult.UNKNOWN_STOP;
+
+        var (width, height) = await ScreenSizeAsync(cancellationToken);
+        var start = _automationProfile.NextPokemonSwipe.Start.ToPixels(width, height);
+        var end = _automationProfile.NextPokemonSwipe.End.ToPixels(width, height);
+        await AuthorizeNonTapInputAsync(
+            "appraisal-next-pokemon-swipe", cancellationToken, PokemonGoGameState.Appraisal.ToString());
+        await _transport.SwipeAsync(_serial, start.X, start.Y, end.X, end.Y,
+            _automationProfile.NextPokemonSwipe.DurationMilliseconds, cancellationToken);
+        if (_navigationTrace is not null)
+            await _navigationTrace.RecordInputSentAsync(
+                "Swipe", $"({start.X},{start.Y})->({end.X},{end.Y})", cancellationToken);
+
+        var post = await CaptureRecoveryFramesAsync("carousel-appraisal-post-swipe", cancellationToken);
+        if (!GuardedInventoryRecovery.TryGetStableFrame(post, out var stablePost) ||
+            stablePost is null || stablePost.Kind != RecoveryFrameKind.AppraisalBars)
+        {
+            // One bounded observation window is allowed for a transient Unknown;
+            // it never sends another swipe.
+            post = await CaptureRecoveryFramesAsync("carousel-appraisal-recovery", cancellationToken);
+            if (!GuardedInventoryRecovery.TryGetStableFrame(post, out stablePost) ||
+                stablePost is null || stablePost.Kind != RecoveryFrameKind.AppraisalBars)
+                return AppraisalCarouselAdvanceResult.UNKNOWN_STOP;
+            return AppraisalCarouselAdvanceResult.TRANSIENT_UNKNOWN_RECOVERED;
+        }
+
+        var fingerprint = Convert.ToHexString(SHA256.HashData(stablePost.Screenshot)).ToLowerInvariant();
+        var result = string.Equals(previousAppraisalFingerprint, fingerprint, StringComparison.Ordinal)
+            ? AppraisalCarouselAdvanceResult.NO_EFFECT_OR_FILTER_END
+            : AppraisalCarouselAdvanceResult.SUCCESS_CHANGED_POKEMON;
+        await WriteAuditAsync("appraisal-carousel-advance", new
+        {
+            AuthorizedAction = "NextPokemonSwipe",
+            RequiredState = PokemonGoGameState.Appraisal,
+            InputCount = 1,
+            PreFingerprint = previousAppraisalFingerprint,
+            PostFingerprint = fingerprint,
+            PostFrameCount = post.Count,
+            Result = result.ToString()
+        }, cancellationToken);
+        return result;
+    }
+
+    private CleanupProofAppraisalCapture AnalyzeLastCleanupAppraisal()
+    {
+        if (_lastCleanupAppraisalScreenshot is null || _appraisalProfile is null)
+            return new CleanupProofAppraisalCapture { Status = "Partial", EvidencePaths = _lastCleanupAppraisalEvidence.ToArray() };
+        var analysis = new AppraisalAnalyzer().Analyze(
+            PngDecoder.Decode(_lastCleanupAppraisalScreenshot), _appraisalProfile, allowComplete: true);
+        return new CleanupProofAppraisalCapture
+        {
+            Status = analysis.Status == AppraisalAnalysisStatus.Complete &&
+                analysis.AttackIv is not null && analysis.DefenseIv is not null && analysis.HpIv is not null
+                ? "Complete" : "Partial",
+            AttackIv = analysis.AttackIv, DefenseIv = analysis.DefenseIv, HpIv = analysis.HpIv,
+            Confidence = analysis.Confidence,
+            EvidencePaths = _lastCleanupAppraisalEvidence.ToArray(),
+            FailureReasons = analysis.Status == AppraisalAnalysisStatus.Complete ? Array.Empty<string>() : new[] { analysis.Detail }
+        };
+    }
+
+    private static PokemonIdentityConsensus AppraisalIdentity(string fingerprint, IReadOnlyList<string> paths) => new()
+    {
+        Status = PokemonIdentityObservationStatus.Complete,
+        StableFingerprintSha256 = fingerprint,
+        StableFingerprintBase64 = fingerprint,
+        Confidence = 0.80,
+        Frames = Array.Empty<PokemonIdentityFingerprintObservation>(),
+        EvidenceHashes = paths.Select(path => Convert.ToHexString(SHA256.HashData(File.ReadAllBytes(path))).ToLowerInvariant()).ToArray(),
+        Tags = new PokemonIdentityTagObservation { TagCount = 0, Section = null, IsSeparateFromIdentity = true },
+        IgnoredFrameCount = 0
+    };
+
+    private static PokemonIdentityConsensus UnavailableIdentity(string reason) => new()
+    {
+        Status = PokemonIdentityObservationStatus.Unavailable,
+        StableFingerprintSha256 = string.Empty, StableFingerprintBase64 = string.Empty,
+        Confidence = 0, Frames = Array.Empty<PokemonIdentityFingerprintObservation>(),
+        EvidenceHashes = new[] { reason },
+        Tags = new PokemonIdentityTagObservation { TagCount = 0, Section = null, IsSeparateFromIdentity = true },
+        IgnoredFrameCount = 0
+    };
+
     public async Task<VerifiedSequenceState> ExitAppraisalAsync(CancellationToken cancellationToken)
     {
         LastCleanupRecoveryInputCount = 0;

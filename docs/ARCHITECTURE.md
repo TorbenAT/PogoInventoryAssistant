@@ -2,6 +2,13 @@
 
 ## Cleanup value-proof transition
 
+Cleanup proof uses a persistent Appraisal carousel for ordinary item
+progression. The first Details baseline is persisted before Appraisal opens;
+subsequent stable AppraisalBars fingerprints are persisted before the next
+single named horizontal swipe. Appraisal is exited once at the end, then the
+existing canonical unwind and SQLite report generation run. Details-only tags
+remain Unknown in this pass.
+
 The permanent value proof calls `CanonicalCloseUnwindService` before inventory
 search. `LocateCanonicalCloseControl` derives the lower-centre target from the
 current screenshot and requires three compatible targets, fresh revalidation,

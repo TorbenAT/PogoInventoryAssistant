@@ -1,5 +1,14 @@
 # Project state
 
+## Persistent Appraisal carousel checkpoint
+
+The cleanup-proof runner now opens Appraisal once, captures and persists each
+stable appraisal identity before the next allow-listed swipe, and exits once
+after the bounded sequence. Details swipes are not used between ordinary
+items. The concrete host has bounded transient-Unknown observation recovery,
+changed-fingerprint progression and unchanged-fingerprint end-of-filter
+handling. Offline self-tests pass 163/163. Real-phone acceptance is pending.
+
 ## Long self-recovering database acceptance result
 
 The permanent real-phone cleanup proof ran with `age0-1825` and limit 20.

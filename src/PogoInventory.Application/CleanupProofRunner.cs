@@ -102,21 +102,26 @@ public sealed class CleanupProofRunner
                 return await FinishAsync("SafeStopped", stopReason, captures, runId, persistence, request, cancellationToken);
             }
 
+            var appraisalOpen = false;
             for (var ordinal = 1; ordinal <= request.ItemLimit; ordinal++)
             {
                 cancellationToken.ThrowIfCancellationRequested();
-                var identity = await operations.CaptureCleanupIdentityAsync(
-                    request.MaximumCaptureFrames,
-                    request.MinimumCompleteFrames,
-                    request.MinimumPartialFrames,
-                    cancellationToken);
-                if (identity.Status == CleanupProofObservationStatus.Unresolved)
-                {
-                    var retry = await operations.CaptureCleanupIdentityAsync(
+                var identity = ordinal == 1
+                    ? await operations.CaptureCleanupIdentityAsync(
                         request.MaximumCaptureFrames,
                         request.MinimumCompleteFrames,
                         request.MinimumPartialFrames,
-                        cancellationToken);
+                        cancellationToken)
+                    : await operations.CaptureCleanupAppraisalIdentityAsync(cancellationToken);
+                if (identity.Status == CleanupProofObservationStatus.Unresolved)
+                {
+                    var retry = ordinal == 1
+                        ? await operations.CaptureCleanupIdentityAsync(
+                            request.MaximumCaptureFrames,
+                            request.MinimumCompleteFrames,
+                            request.MinimumPartialFrames,
+                            cancellationToken)
+                        : await operations.CaptureCleanupAppraisalIdentityAsync(cancellationToken);
                     if (retry.Status != CleanupProofObservationStatus.Unresolved)
                         identity = retry;
                     else
@@ -153,7 +158,14 @@ public sealed class CleanupProofRunner
                 CleanupProofAppraisalCapture appraisal;
                 try
                 {
-                    appraisal = await operations.CaptureCleanupAppraisalAsync(cancellationToken);
+                    appraisal = appraisalOpen
+                        ? await operations.CaptureCurrentCleanupAppraisalAsync(cancellationToken)
+                        : await operations.CaptureCleanupAppraisalAsync(cancellationToken);
+                    // The named operation has entered/confirmed the carousel
+                    // even when semantic bars are unavailable; retain the
+                    // single-exit lifecycle and let the bounded loop decide
+                    // whether to continue on partial evidence.
+                    appraisalOpen = true;
                 }
                 catch (Exception exception) when (exception is not OperationCanceledException)
                 {
@@ -182,27 +194,22 @@ public sealed class CleanupProofRunner
                     cancellationToken);
                 captures[^1] = enrichedRecord;
 
-                var afterAppraisal = await operations.ExitAppraisalAsync(cancellationToken);
-                if (afterAppraisal != VerifiedSequenceState.PokemonDetails)
-                {
-                    stopReason = "AppraisalDetailsRecoveryFailed";
-                    return await FinishAsync("SafeStopped", stopReason, captures, runId, persistence, request, cancellationToken);
-                }
-
                 if (ordinal >= request.ItemLimit)
                 {
                     safeState = true;
                     break;
                 }
 
-                var advanced = await operations.AdvanceToNextPokemonAsync(identity.Consensus, cancellationToken);
-                if (advanced == VerifiedSequenceState.NoEffectOrEndOfFilter)
+                var advanced = await operations.AdvanceToNextPokemonInAppraisalAsync(
+                    identity.Consensus.StableFingerprintSha256,
+                    cancellationToken);
+                if (advanced == AppraisalCarouselAdvanceResult.NO_EFFECT_OR_FILTER_END)
                 {
                     stopReason = "FilterExhaustedAfterStableNoEffect";
                     safeState = true;
                     break;
                 }
-                if (advanced != VerifiedSequenceState.PokemonDetails)
+                if (advanced is AppraisalCarouselAdvanceResult.UNKNOWN_STOP)
                 {
                     stopReason = "CursorProgression:" + advanced;
                     return await FinishAsync("SafeStopped", stopReason, captures, runId, persistence, request, cancellationToken);
@@ -213,6 +220,15 @@ public sealed class CleanupProofRunner
                 safeState = true;
             if (safeState)
             {
+                if (appraisalOpen)
+                {
+                    var exited = await operations.ExitAppraisalAsync(cancellationToken);
+                    if (exited != VerifiedSequenceState.PokemonDetails)
+                    {
+                        stopReason = "AppraisalExitFailed:" + exited;
+                        return await FinishAsync("SafeStopped", stopReason, captures, runId, persistence, request, cancellationToken);
+                    }
+                }
                 var inventoryState = await operations.ReturnToInventoryAsync(cancellationToken);
                 if (inventoryState == VerifiedSequenceState.Inventory)
                 {

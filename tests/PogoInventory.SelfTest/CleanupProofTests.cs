@@ -85,6 +85,28 @@ internal static class CleanupProofTests
         }
     }
 
+    public static async Task RunCarouselLifecycleAsync()
+    {
+        var root = CreateTemporaryDirectory();
+        try
+        {
+            var evidence = await CreateEvidenceAsync(root);
+            var fake = new FakeCleanupOperations(evidence, partial: true);
+            var result = await RunProofAsync(root, fake);
+            AssertEqual(6, result.CapturedItems, "carousel captures three-plus items");
+            AssertEqual(1, fake.AppraisalOpenCount, "appraisal opened once");
+            AssertEqual(5, fake.CurrentAppraisalCaptureCount, "current appraisal captured without reopening");
+            AssertEqual(5, fake.AppraisalCarouselSwipeCount, "one appraisal swipe per following item");
+            AssertEqual(0, fake.DetailsAdvanceCount, "no Details swipe between carousel items");
+            AssertEqual(1, fake.ExitCount, "appraisal exited once at end");
+            AssertTrue(fake.AllRowsPersistedBeforeSwipe, "each row persisted before next swipe");
+        }
+        finally
+        {
+            DeleteDirectory(root);
+        }
+    }
+
     private static async Task PartialObservationDoesNotTerminateBatchAsync()
     {
         var root = CreateTemporaryDirectory();
@@ -203,6 +225,12 @@ internal static class CleanupProofTests
         private readonly Func<Task>? _beforeAppraisal;
         private readonly bool _throwAppraisal;
         public int AdvanceCount { get; private set; }
+        public int AppraisalOpenCount { get; private set; }
+        public int CurrentAppraisalCaptureCount { get; private set; }
+        public int AppraisalCarouselSwipeCount { get; private set; }
+        public int DetailsAdvanceCount { get; private set; }
+        public int ExitCount { get; private set; }
+        public bool AllRowsPersistedBeforeSwipe { get; private set; } = true;
 
         public FakeCleanupOperations(
             string evidence,
@@ -247,6 +275,7 @@ internal static class CleanupProofTests
 
         public async Task<CleanupProofAppraisalCapture> CaptureCleanupAppraisalAsync(CancellationToken cancellationToken)
         {
+            AppraisalOpenCount++;
             if (_beforeAppraisal is not null)
                 await _beforeAppraisal();
             if (_throwAppraisal)
@@ -254,17 +283,49 @@ internal static class CleanupProofTests
             return new CleanupProofAppraisalCapture { Status = "Partial", EvidencePaths = new[] { _evidence } };
         }
 
+        public Task<CleanupProofIdentityCapture> CaptureCleanupAppraisalIdentityAsync(CancellationToken cancellationToken) =>
+            Task.FromResult(new CleanupProofIdentityCapture
+            {
+                Consensus = Consensus(_partial ? PokemonIdentityObservationStatus.Partial : PokemonIdentityObservationStatus.Complete, "appraisal-fingerprint"),
+                Status = _partial ? CleanupProofObservationStatus.Partial : CleanupProofObservationStatus.Complete,
+                ScreenshotPaths = new[] { _evidence, _evidence, _evidence },
+                ScreenshotHashes = new[] { Hash(_evidence), Hash(_evidence), Hash(_evidence) }
+            });
+
+        public Task<CleanupProofAppraisalCapture> CaptureCurrentCleanupAppraisalAsync(CancellationToken cancellationToken) =>
+            CaptureCurrentAsync();
+
+        private Task<CleanupProofAppraisalCapture> CaptureCurrentAsync()
+        {
+            CurrentAppraisalCaptureCount++;
+            return Task.FromResult(new CleanupProofAppraisalCapture { Status = "Partial", EvidencePaths = new[] { _evidence } });
+        }
+
+        public Task<AppraisalCarouselAdvanceResult> AdvanceToNextPokemonInAppraisalAsync(string previousAppraisalFingerprint, CancellationToken cancellationToken)
+        {
+            if (CurrentAppraisalCaptureCount + 1 != AppraisalCarouselSwipeCount + 1)
+                AllRowsPersistedBeforeSwipe = false;
+            AppraisalCarouselSwipeCount++;
+            AdvanceCount++;
+            return Task.FromResult(AppraisalCarouselAdvanceResult.SUCCESS_CHANGED_POKEMON);
+        }
+
         public Task<string> CloseInventoryAsync(CancellationToken cancellationToken) => Task.FromResult("GameplayMap");
 
         public Task<string> CaptureAppraisalAsync(CancellationToken cancellationToken) => Task.FromResult("Partial");
 
-        public Task<VerifiedSequenceState> ExitAppraisalAsync(CancellationToken cancellationToken) => Task.FromResult(VerifiedSequenceState.PokemonDetails);
+        public Task<VerifiedSequenceState> ExitAppraisalAsync(CancellationToken cancellationToken)
+        {
+            ExitCount++;
+            return Task.FromResult(VerifiedSequenceState.PokemonDetails);
+        }
 
         public Task<VerifiedTagObservation> ReadTagObservationAsync(CancellationToken cancellationToken) =>
             Task.FromResult(new VerifiedTagObservation { TagCount = 0, NamesComplete = true, Section = null });
 
         public Task<VerifiedSequenceState> AdvanceToNextPokemonAsync(PokemonIdentityConsensus previous, CancellationToken cancellationToken)
         {
+            DetailsAdvanceCount++;
             AdvanceCount++;
             return Task.FromResult(VerifiedSequenceState.PokemonDetails);
         }

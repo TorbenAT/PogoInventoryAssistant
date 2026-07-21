@@ -501,3 +501,8 @@ Limitations observed during validation:
   Later bounded attempts encountered unstable start/open-inventory state and a
   visible `POWER UP: FLETCHLING` confirmation screen. No further input was sent
   and Task G ten-item acceptance is blocked, not passed.
+# Validation report
+
+The persistent Appraisal carousel implementation builds successfully and the
+complete self-test suite passes 163/163. Real-phone acceptance has not yet
+been run for this checkpoint.
