@@ -217,34 +217,36 @@ public sealed class VisualControlLocator
         }
 
         var best = candidates.OrderByDescending(candidate => candidate.Score).FirstOrDefault();
-        if (best is null || best.Score < 0.70)
+        if (best is null || best.Score < 0.70 ||
+            best.CircularConfidence < 0.70 || best.XStrokeConfidence < 0.70)
             return null;
+        var selected = best;
 
         var conflicting = candidates.Any(candidate =>
-            candidate != best &&
-            Distance(candidate.X, candidate.Y, best.X, best.Y) > best.Radius * 2.4 &&
-            candidate.Score >= best.Score - 0.05);
+            candidate != selected &&
+            Distance(candidate.X, candidate.Y, selected.X, selected.Y) > selected.Radius * 2.4 &&
+            candidate.Score >= selected.Score - 0.05);
         if (conflicting)
             return null;
 
         var bounds = new NormalizedRegion
         {
-            X = (double)(best.X - best.Radius) / image.Width,
-            Y = (double)(best.Y - best.Radius) / image.Height,
-            Width = (double)(best.Radius * 2) / image.Width,
-            Height = (double)(best.Radius * 2) / image.Height
+            X = (double)(selected.X - selected.Radius) / image.Width,
+            Y = (double)(selected.Y - selected.Radius) / image.Height,
+            Width = (double)(selected.Radius * 2) / image.Width,
+            Height = (double)(selected.Radius * 2) / image.Height
         };
         return new LocatedCanonicalCloseControl
         {
             Target = new NormalizedPoint
             {
-                X = (double)best.X / (image.Width - 1),
-                Y = (double)best.Y / (image.Height - 1)
+                X = (double)selected.X / (image.Width - 1),
+                Y = (double)selected.Y / (image.Height - 1)
             },
-            Confidence = best.Score,
-            CircularControlConfidence = best.CircularConfidence,
-            XStrokeConfidence = best.XStrokeConfidence,
-            PositionConfidence = best.PositionConfidence,
+            Confidence = selected.Score,
+            CircularControlConfidence = selected.CircularConfidence,
+            XStrokeConfidence = selected.XStrokeConfidence,
+            PositionConfidence = selected.PositionConfidence,
             Bounds = bounds,
             Evidence = new[]
             {
@@ -408,9 +410,14 @@ public sealed class VisualControlLocator
         {
             var angle = index * Math.PI * 2 / 16;
             shellTotal++;
-            if (IsCanonicalShell(Sample(image,
-                    x + (int)(Math.Cos(angle) * radius),
-                    y + (int)(Math.Sin(angle) * radius))))
+            var shellHit = false;
+            for (var radiusOffset = -2; radiusOffset <= 2; radiusOffset++)
+            {
+                shellHit |= IsCanonicalShell(Sample(image,
+                    x + (int)(Math.Cos(angle) * (radius + radiusOffset)),
+                    y + (int)(Math.Sin(angle) * (radius + radiusOffset))));
+            }
+            if (shellHit)
                 shellMatches++;
 
             var outer = radius * 1.35;
@@ -436,7 +443,7 @@ public sealed class VisualControlLocator
         var circular = shellMatches / (double)shellTotal;
         var strokes = strokeMatches / (double)strokeTotal;
         var contrast = backgroundMatches / (double)backgroundTotal;
-        var position = x >= image.Width * 0.39 && x <= image.Width * 0.61 &&
+        var position = x >= image.Width * 0.45 && x <= image.Width * 0.55 &&
             y >= image.Height * 0.76 && y <= image.Height * 0.91 ? 1d : 0d;
         var dimensions = Math.Max(0, 1 -
             Math.Abs(radius - expectedRadius) / (double)Math.Max(1, expectedRadius * 0.35));
@@ -449,7 +456,7 @@ public sealed class VisualControlLocator
         image.GetPixel(Math.Clamp(x, 0, image.Width - 1), Math.Clamp(y, 0, image.Height - 1));
 
     private static bool IsCanonicalShell(Rgba32 pixel) =>
-        pixel.G >= 80 && pixel.B >= 80 && pixel.G >= pixel.R * 1.12 &&
+        pixel.R <= 150 && pixel.G >= 80 && pixel.B >= 80 && pixel.G >= pixel.R * 1.12 &&
         pixel.B >= pixel.R * 1.04;
 
     private static bool IsCanonicalStroke(Rgba32 pixel) =>
