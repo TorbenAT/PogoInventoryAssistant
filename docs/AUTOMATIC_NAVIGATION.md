@@ -1,5 +1,25 @@
 # Automatic inventory navigation
 
+## Deterministic navigation safety command
+
+Validation-only navigation can be exercised with:
+
+```powershell
+dotnet run --project .\src\PogoInventory.Cli --configuration Release -- \
+  device-validate-navigation-safety --adb <adb.exe> --out .\local-data\validation\deterministic-navigation-safety \
+  [--serial <serial>] [--cycles 1|2|3]
+```
+
+The command first requires three GameplayMap observations, then uses the
+existing named Android host for GameplayMap -> MainMenu -> Inventory -> first
+Pokémon -> Details -> guarded Inventory recovery -> guarded map close. The
+ignored output contains `action-trace.jsonl`, `cycle-summary.json`,
+`phone-summary.md` and meaningful screenshots. Each authorized transport input
+is followed by exactly five post-input frames before its postcondition. The
+command never tags, confirms destructive surfaces or sends an automatic
+Cancel. This command is not appraisal or real-phone acceptance proof by
+itself.
+
 ## Purpose
 
 The navigation engine removes all per-Pokémon user work. The user performs only the one-time phone/profile setup and starts the run.

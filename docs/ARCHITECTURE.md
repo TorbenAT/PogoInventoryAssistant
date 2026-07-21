@@ -496,3 +496,14 @@ evidence for the guarded identity path, not a production provider gate or a
 real-phone Task 4 approval. A local five-frame Inventory capture is rejected
 as Unavailable rather than interpreted as Details.
 
+## 2026-07-21 deterministic navigation safety validation
+
+`PogoInventory.Cli device-validate-navigation-safety` is a validation shell
+over `AndroidVerifiedInventoryNamedOperations`. The host remains the owner of
+locators, state detectors, authorization, recovery and transport calls. The
+optional `NavigationSafetyTraceRecorder` observes host captures and records
+phase-aligned evidence; it cannot send input. Post-input evidence is completed
+with bounded screenshot reads only, and POSTCONDITION is written after five
+frames. The command is limited to read-only navigation and does not establish
+real-phone acceptance until a manual safe-state precondition and bounded phone
+run pass.

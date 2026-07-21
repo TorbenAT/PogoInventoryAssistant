@@ -53,6 +53,23 @@ remains the authoritative compiler and test runner.
 
 # Validation report
 
+## Deterministic navigation safety acceptance tooling on 2026-07-21
+
+- CLI command: implemented as `device-validate-navigation-safety`, cycles
+  bounded to 1 through 3, with GameplayMap precondition and guarded final map.
+- Named host integration: PASS; no locator, detector, recovery or raw ADB
+  logic is duplicated in the CLI.
+- Action trace contract: PASS; input is recorded only after transport return,
+  five post-input frames are bounded and ordered before POSTCONDITION.
+- offline self-tests: PASS, 159/159
+- full build: PASS; full self-tests: PASS, 159/159
+- real-phone acceptance: PASS; three bounded cycles on the authorized OnePlus
+  A6013, each with five inputs, two Back actions, 25 postframes, zero unsafe
+  inputs and verified GameplayMap final state
+- final evidence: `local-data/validation/deterministic-navigation-safety`,
+  including `action-trace.jsonl`, `cycle-summary.json`,
+  `phone-summary.md` and the complete-repository ZIP
+
 ## Wrong-screen action authorization repair on 2026-07-21
 
 - incident evidence inspection: PASS; the recorded `(300,1837)` tap was on a

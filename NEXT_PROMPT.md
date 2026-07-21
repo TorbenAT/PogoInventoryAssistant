@@ -144,3 +144,13 @@ attempt reached a destructive Power Up confirmation screen; no further phone
 input was sent. Do not retry the phone until the screen is manually returned to
 a safe map or unfiltered Inventory state. Do not implement semantic species,
 CP or IV extraction in the next iteration.
+# Current continuation checkpoint
+
+The permanent deterministic navigation safety command is implemented as
+`device-validate-navigation-safety`. It requires three GameplayMap frames,
+uses the existing named Android host, records phase-aligned action traces and
+is green offline at 159/159 tests. Three bounded real-phone cycles passed on
+the authorized OnePlus A6013 with GameplayMap final state. Do not start a
+10-item sequence or semantic extraction in this checkpoint. Keep the phone
+in GameplayMap or unfiltered Inventory, send no Cancel automatically, and
+stop on any unsafe or unresolved postcondition.

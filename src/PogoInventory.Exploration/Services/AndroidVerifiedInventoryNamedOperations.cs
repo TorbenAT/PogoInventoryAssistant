@@ -37,6 +37,7 @@ public sealed class AndroidVerifiedInventoryNamedOperations : IVerifiedInventory
     private readonly InventorySearchVisualAnalyzer _searchAnalyzer = new();
     private readonly PokemonDetailsIdentityAnalyzer _identityAnalyzer;
     private readonly GuardedInventoryRecovery _recovery = new();
+    private readonly NavigationSafetyTraceRecorder? _navigationTrace;
     private AndroidDeviceMetadata? _metadata;
     private PokemonIdentityConsensus? _lastIdentity;
     private byte[]? _lastScreenshot;
@@ -48,7 +49,8 @@ public sealed class AndroidVerifiedInventoryNamedOperations : IVerifiedInventory
         InventoryAutomationProfile automationProfile,
         string evidenceDirectory,
         AppraisalVisualProfile? appraisalProfile = null,
-        PokemonIdentityFingerprintProfile? identityProfile = null)
+        PokemonIdentityFingerprintProfile? identityProfile = null,
+        NavigationSafetyTraceRecorder? navigationTrace = null)
     {
         _transport = transport ?? throw new ArgumentNullException(nameof(transport));
         ArgumentException.ThrowIfNullOrWhiteSpace(serial);
@@ -60,10 +62,10 @@ public sealed class AndroidVerifiedInventoryNamedOperations : IVerifiedInventory
         _evidenceOrdinal = NextEvidenceOrdinal(_evidenceDirectory);
         _appraisalProfile = appraisalProfile;
         _identityAnalyzer = new PokemonDetailsIdentityAnalyzer(identityProfile);
+        _navigationTrace = navigationTrace;
     }
 
-    public async Task<VerifiedSequenceState> EnsureFilteredInventoryAsync(
-        string query, CancellationToken cancellationToken)
+    public async Task<VerifiedSequenceState> OpenInventoryAsync(CancellationToken cancellationToken)
     {
         await EnsureMetadataAsync(cancellationToken);
         var state = await WaitForStateAsync(
@@ -102,6 +104,19 @@ public sealed class AndroidVerifiedInventoryNamedOperations : IVerifiedInventory
         }
 
         var current = await WaitForStateAsync(new[] { PokemonGoGameState.Inventory }, cancellationToken);
+        return current.State == PokemonGoGameState.Inventory
+            ? VerifiedSequenceState.Inventory
+            : VerifiedSequenceState.Unknown;
+    }
+
+    public async Task<VerifiedSequenceState> EnsureFilteredInventoryAsync(
+        string query, CancellationToken cancellationToken)
+    {
+        var opened = await OpenInventoryAsync(cancellationToken);
+        if (opened != VerifiedSequenceState.Inventory)
+            return VerifiedSequenceState.Unknown;
+
+        var current = await WaitForStateAsync(new[] { PokemonGoGameState.Inventory }, cancellationToken);
         var workflow = new GuardedInventorySearch();
         var evidence = _searchAnalyzer.Analyze(current.Screenshot);
         var begin = workflow.Begin(evidence, query);
@@ -120,16 +135,28 @@ public sealed class AndroidVerifiedInventoryNamedOperations : IVerifiedInventory
                     await TapNamedAsync(new NormalizedPoint { X = 0.9175, Y = 0.1881 }, "clear-search", cancellationToken);
                     break;
                 case InventorySearchAction.EnterQuery:
-                    await AuthorizeNonTapInputAsync("enter-inventory-search-query", cancellationToken);
+                    await AuthorizeNonTapInputAsync(
+                        "enter-inventory-search-query", cancellationToken, "InventorySearch");
                     await _transport.EnterInventorySearchQueryAsync(_serial, query, cancellationToken);
+                    if (_navigationTrace is not null)
+                        await _navigationTrace.RecordInputSentAsync(
+                            "EnterInventorySearchQuery", "query supplied", cancellationToken);
                     break;
                 case InventorySearchAction.SubmitQuery:
-                    await AuthorizeNonTapInputAsync("submit-inventory-search-query", cancellationToken);
+                    await AuthorizeNonTapInputAsync(
+                        "submit-inventory-search-query", cancellationToken, "InventorySearch");
                     await _transport.SubmitInventorySearchQueryAsync(_serial, cancellationToken);
+                    if (_navigationTrace is not null)
+                        await _navigationTrace.RecordInputSentAsync(
+                            "SubmitInventorySearchQuery", "submit", cancellationToken);
                     break;
             }
             var after = await CaptureAsync($"search-{authorization.Sequence}", cancellationToken);
             var outcome = workflow.ObservePostAction(_searchAnalyzer.Analyze(after));
+            await CompleteTraceAsync(
+                PokemonGoGameState.Inventory.ToString(),
+                outcome.ToString(),
+                cancellationToken);
             if (outcome is InventorySearchOutcome.ActionNotObserved or InventorySearchOutcome.UnexpectedState)
                 return VerifiedSequenceState.Unknown;
             if (outcome == InventorySearchOutcome.Succeeded) break;
@@ -145,8 +172,16 @@ public sealed class AndroidVerifiedInventoryNamedOperations : IVerifiedInventory
         var inventory = await WaitForStateAsync(new[] { PokemonGoGameState.Inventory }, cancellationToken);
         var located = _locator.LocateInventoryCard(inventory.Screenshot);
         if (located is null) return VerifiedSequenceState.Unknown;
-        await TapNamedAsync(located.Target, "open-first-pokemon", cancellationToken);
+        await TapNamedAsync(
+            located.Target,
+            "open-first-pokemon",
+            cancellationToken,
+            expectedPostcondition: PokemonGoGameState.PokemonDetails);
         var details = await WaitForStateAsync(new[] { PokemonGoGameState.PokemonDetails }, cancellationToken);
+        await CompleteTraceAsync(
+            PokemonGoGameState.PokemonDetails.ToString(),
+            details.State == PokemonGoGameState.PokemonDetails ? "PASS" : "FAIL",
+            cancellationToken);
         return details.State == PokemonGoGameState.PokemonDetails
             ? VerifiedSequenceState.PokemonDetails
             : VerifiedSequenceState.Unknown;
@@ -257,9 +292,13 @@ public sealed class AndroidVerifiedInventoryNamedOperations : IVerifiedInventory
         var (width, height) = await ScreenSizeAsync(cancellationToken);
         var start = _automationProfile.NextPokemonSwipe.Start.ToPixels(width, height);
         var end = _automationProfile.NextPokemonSwipe.End.ToPixels(width, height);
-        await AuthorizeNonTapInputAsync("next-pokemon-swipe", cancellationToken);
+        await AuthorizeNonTapInputAsync(
+            "next-pokemon-swipe", cancellationToken, PokemonGoGameState.PokemonDetails.ToString());
         await _transport.SwipeAsync(_serial, start.X, start.Y, end.X, end.Y,
             _automationProfile.NextPokemonSwipe.DurationMilliseconds, cancellationToken);
+        if (_navigationTrace is not null)
+            await _navigationTrace.RecordInputSentAsync(
+                "Swipe", $"({start.X},{start.Y})->({end.X},{end.Y})", cancellationToken);
         var transition = await ObserveSwipeTransitionAsync(before.Screenshot, beforeDetection, cancellationToken);
         var postFrames = await CaptureIndependentDetailsFramesAsync(
             "post-swipe-identity",
@@ -272,6 +311,10 @@ public sealed class AndroidVerifiedInventoryNamedOperations : IVerifiedInventory
             transition.Observed,
             previous.StableFingerprintSha256,
             postIdentity.StableFingerprintSha256);
+        await CompleteTraceAsync(
+            PokemonGoGameState.PokemonDetails.ToString(),
+            outcome.ToString(),
+            cancellationToken);
         if (outcome == CursorProgressionOutcome.NoEffectOrEndOfFilter)
         {
             await WriteAuditAsync("advance-no-effect", new
@@ -341,12 +384,38 @@ public sealed class AndroidVerifiedInventoryNamedOperations : IVerifiedInventory
             await WriteRecoveryAuditAsync(authorization, "Inventory", cancellationToken);
             frames = await CaptureRecoveryFramesAsync("return-to-inventory-post", cancellationToken);
             var outcome = _recovery.ObservePostAction(frames);
+            await CompleteTraceAsync(
+                _recovery.Current?.Detection.State.ToString() ?? "Unknown",
+                outcome.ToString(),
+                cancellationToken);
             if (outcome is RecoveryOutcome.UNKNOWN_STOP or RecoveryOutcome.UNEXPECTED_STOP or
                 RecoveryOutcome.ACTION_NOT_OBSERVED or RecoveryOutcome.STABILITY_TIMEOUT)
                 return VerifiedSequenceState.Unknown;
             if (outcome == RecoveryOutcome.SUCCEEDED) return VerifiedSequenceState.Inventory;
         }
         return VerifiedSequenceState.Unknown;
+    }
+
+    public async Task<PokemonGoGameState> CloseInventoryAsync(CancellationToken cancellationToken)
+    {
+        var before = await WaitForStateAsync(
+            new[] { PokemonGoGameState.Inventory }, cancellationToken);
+        var detection = _detector.Detect(before.Screenshot, _appraisalProfile);
+        if (!GuardedInventoryClose.CanAct(detection))
+            return PokemonGoGameState.Unknown;
+
+        await AuthorizeNonTapInputAsync(
+            "close-inventory", cancellationToken, PokemonGoGameState.GameplayMap.ToString());
+        await _transport.PressBackAsync(_serial, cancellationToken);
+        if (_navigationTrace is not null)
+            await _navigationTrace.RecordInputSentAsync("PressBack", "Back", cancellationToken);
+        var after = await WaitForStateAsync(
+            new[] { PokemonGoGameState.GameplayMap }, cancellationToken);
+        await CompleteTraceAsync(
+            PokemonGoGameState.GameplayMap.ToString(),
+            after.State == PokemonGoGameState.GameplayMap ? "PASS" : "FAIL",
+            cancellationToken);
+        return after.State;
     }
 
     public Task<IReadOnlyList<string>> ApplyIndexTagAsync(string tagName, CancellationToken cancellationToken) =>
@@ -411,8 +480,11 @@ public sealed class AndroidVerifiedInventoryNamedOperations : IVerifiedInventory
         if (authorization.Action != RecoveryInputAction.PressBack ||
             authorization.StateBefore is not (PokemonGoGameState.PokemonDetails or PokemonGoGameState.PokemonMenu))
             throw new InvalidOperationException("Android Back was not authorized for the observed state.");
-        await AuthorizeNonTapInputAsync("guarded-back", cancellationToken);
+        await AuthorizeNonTapInputAsync(
+            "guarded-back", cancellationToken, PokemonGoGameState.Inventory.ToString());
         await _transport.PressBackAsync(_serial, cancellationToken);
+        if (_navigationTrace is not null)
+            await _navigationTrace.RecordInputSentAsync("PressBack", "Back", cancellationToken);
     }
 
     private Task WriteRecoveryAuditAsync(
@@ -535,8 +607,12 @@ public sealed class AndroidVerifiedInventoryNamedOperations : IVerifiedInventory
         string name, CancellationToken cancellationToken,
         NamedInputAuthorization? authorization = null)
     {
-        await TapNamedAsync(point, name, cancellationToken, authorization);
+        await TapNamedAsync(point, name, cancellationToken, authorization, expected);
         var result = await WaitForStateAsync(new[] { expected }, cancellationToken);
+        await CompleteTraceAsync(
+            expected.ToString(),
+            result.State == expected ? "PASS" : "FAIL",
+            cancellationToken);
         if (result.State != expected) throw new InvalidOperationException($"{name} postcondition was not verified.");
     }
 
@@ -544,7 +620,8 @@ public sealed class AndroidVerifiedInventoryNamedOperations : IVerifiedInventory
         NormalizedPoint point,
         string name,
         CancellationToken cancellationToken,
-        NamedInputAuthorization? authorization = null)
+        NamedInputAuthorization? authorization = null,
+        PokemonGoGameState? expectedPostcondition = null)
     {
         var screenshot = authorization?.FreshScreenshot ??
             await CaptureAsync($"pre-{name}", cancellationToken);
@@ -554,8 +631,20 @@ public sealed class AndroidVerifiedInventoryNamedOperations : IVerifiedInventory
             _locator.LocateDetailsPageTopology(screenshot) is not null
             ? PokemonGoGameState.PokemonDetails
             : (PokemonGoGameState?)null;
+        var traceExpectedState = expectedPostcondition?.ToString() ?? "validated-named-operation";
         if (authorization?.RequiredState is { } required && detection.State != required)
         {
+            if (_navigationTrace is not null)
+                await _navigationTrace.AuthorizeAsync(
+                    name,
+                    traceExpectedState,
+                    required.ToString(),
+                    "DENIED_REQUIRED_STATE_CHANGED",
+                    screenshot,
+                    detection,
+                    visualFallbackState,
+                    null,
+                    cancellationToken);
             await WriteAuditAsync($"{name}-authorization", new
             {
                 Action = "named-tap",
@@ -571,9 +660,22 @@ public sealed class AndroidVerifiedInventoryNamedOperations : IVerifiedInventory
             }, cancellationToken);
             return;
         }
+        if (_navigationTrace is not null)
+            await _navigationTrace.AuthorizeAsync(
+                name,
+                traceExpectedState,
+                authorization?.RequiredState.ToString() ?? "validated-named-operation",
+                "AUTHORIZED",
+                screenshot,
+                detection,
+                visualFallbackState,
+                null,
+                cancellationToken);
         var (width, height) = await ScreenSizeAsync(cancellationToken);
         var (x, y) = point.ToPixels(width, height);
         await _transport.TapAsync(_serial, x, y, cancellationToken);
+        if (_navigationTrace is not null)
+            await _navigationTrace.RecordInputSentAsync("Tap", $"({x},{y})", cancellationToken);
         await WriteAuditAsync(name, new
         {
             Action = "named-tap",
@@ -592,20 +694,34 @@ public sealed class AndroidVerifiedInventoryNamedOperations : IVerifiedInventory
     }
 
     private async Task<byte[]> AuthorizeNonTapInputAsync(
-        string name, CancellationToken cancellationToken)
+        string name,
+        CancellationToken cancellationToken,
+        string? expectedPostcondition = null)
     {
         var screenshot = await CaptureAsync($"pre-{name}", cancellationToken);
         await EnsureNoUnsafeConfirmationAsync(name, screenshot, cancellationToken);
         var detection = _detector.Detect(screenshot, _appraisalProfile);
+        var visualFallbackState = detection.State == PokemonGoGameState.Unknown &&
+            _locator.LocateDetailsPageTopology(screenshot) is not null
+                ? PokemonGoGameState.PokemonDetails
+                : (PokemonGoGameState?)null;
+        if (_navigationTrace is not null)
+            await _navigationTrace.AuthorizeAsync(
+                name,
+                expectedPostcondition ?? "validated-named-operation",
+                detection.State.ToString(),
+                "AUTHORIZED",
+                screenshot,
+                detection,
+                visualFallbackState,
+                null,
+                cancellationToken);
         await WriteAuditAsync($"{name}-authorization", new
         {
             Action = name,
             RequiredState = "validated-named-operation",
             StrictDetectedState = detection.State,
-            VisualFallbackState = detection.State == PokemonGoGameState.Unknown &&
-                _locator.LocateDetailsPageTopology(screenshot) is not null
-                    ? PokemonGoGameState.PokemonDetails
-                    : (PokemonGoGameState?)null,
+            VisualFallbackState = visualFallbackState,
             ConflictingStates = Array.Empty<PokemonGoGameState>(),
             Target = (object?)null,
             PreconditionScreenshotHash = detection.ScreenshotSha256,
@@ -621,6 +737,23 @@ public sealed class AndroidVerifiedInventoryNamedOperations : IVerifiedInventory
     {
         var unsafeSurface = _unsafeSurfaceDetector.Detect(screenshot, action);
         if (!unsafeSurface.IsUnsafe) return;
+        if (_navigationTrace is not null)
+        {
+            var detection = _detector.Detect(screenshot, _appraisalProfile);
+            var visualFallbackState = detection.State == PokemonGoGameState.Unknown &&
+                _locator.LocateDetailsPageTopology(screenshot) is not null
+                    ? PokemonGoGameState.PokemonDetails
+                    : (PokemonGoGameState?)null;
+            await _navigationTrace.RecordDeniedAsync(
+                action,
+                "unsafe-confirmation",
+                "DENIED_UNSAFE_CONFIRMATION",
+                screenshot,
+                detection,
+                visualFallbackState,
+                unsafeSurface.Kind,
+                cancellationToken);
+        }
         await SaveEvidenceAsync($"UnsafeConfirmation-{unsafeSurface.Kind}", screenshot, cancellationToken);
         await WriteAuditAsync("UnsafeConfirmation", new
         {
@@ -756,7 +889,34 @@ public sealed class AndroidVerifiedInventoryNamedOperations : IVerifiedInventory
     {
         var screenshot = await _transport.CaptureScreenshotPngAsync(_serial, cancellationToken);
         _lastScreenshot = screenshot;
+        if (_navigationTrace is not null)
+        {
+            var detection = _detector.Detect(screenshot, _appraisalProfile);
+            var details = _locator.LocateDetailsPageTopology(screenshot);
+            var fallback = detection.State == PokemonGoGameState.Unknown && details is not null
+                ? PokemonGoGameState.PokemonDetails
+                : (PokemonGoGameState?)null;
+            var unsafeSurface = _unsafeSurfaceDetector.Detect(screenshot, label);
+            await _navigationTrace.ObserveFrameAsync(
+                screenshot,
+                detection,
+                fallback,
+                unsafeSurface.IsUnsafe ? unsafeSurface.Kind : null,
+                cancellationToken);
+        }
         return screenshot;
+    }
+
+    private async Task CompleteTraceAsync(
+        string actualState,
+        string result,
+        CancellationToken cancellationToken)
+    {
+        if (_navigationTrace is null)
+            return;
+        _navigationTrace.RecordPostcondition(actualState, result);
+        await _navigationTrace.CompletePostFramesAsync(
+            _transport, _serial, cancellationToken);
     }
 
     private async Task<AndroidDeviceMetadata> EnsureMetadataAsync(CancellationToken cancellationToken) =>

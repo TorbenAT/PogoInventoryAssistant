@@ -1,5 +1,24 @@
 # Changelog
 
+## Deterministic navigation safety acceptance tooling - 2026-07-21
+
+- Added the permanent `device-validate-navigation-safety` command with bounded
+  1-3 cycles, GameplayMap precondition evidence and guarded named-operation
+  navigation through MainMenu, Inventory, Details, recovery and map close.
+- Added phase-aligned `action-trace.jsonl` evidence with authorization,
+  transport-returned input and exactly five post-input frames per input.
+- Added an offline trace contract test; self-tests are now 159/159. This is
+  validation tooling only and is not a real-phone acceptance claim.
+
+## Deterministic navigation safety acceptance - 2026-07-21
+
+- Three bounded cycles passed on the authorized OnePlus A6013 from verified
+  GameplayMap and returned to verified GameplayMap.
+- Each cycle recorded five named inputs, two guarded Back actions, 25
+  post-input frames, zero unsafe inputs and all required postconditions.
+- Evidence and the complete-repository handoff ZIP remain under ignored
+  `local-data/validation/deterministic-navigation-safety`.
+
 ## Wrong-screen navigation authorization repair - 2026-07-21
 
 - MainMenu -> Inventory now requires three stable typed MainMenu frames with

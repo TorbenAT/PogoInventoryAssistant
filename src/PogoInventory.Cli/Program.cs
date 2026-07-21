@@ -153,6 +153,9 @@ static async Task<int> MainAsync(string[] args)
             "device-run-index-sequence" => await RunIndexSequenceAsync(
                 args.Skip(1).ToArray(),
                 cancellationSource.Token),
+            "device-validate-navigation-safety" => await ValidateNavigationSafetyAsync(
+                args.Skip(1).ToArray(),
+                cancellationSource.Token),
             "device-set-pokemon-tag" => await SetPokemonTagAsync(
                 args.Skip(1).ToArray(),
                 cancellationSource.Token),
@@ -1776,6 +1779,189 @@ static async Task<int> RunIndexSequenceAsync(
     return result.Checkpoint.State is VerifiedSequenceState.Completed or VerifiedSequenceState.ControlledStopped ? 0 : 1;
 }
 
+static async Task<int> ValidateNavigationSafetyAsync(
+    string[] args,
+    CancellationToken cancellationToken)
+{
+    var options = ParseOptions(args);
+    var output = Path.GetFullPath(Require(options, "out"));
+    var cycles = ParsePositiveInt(options, "cycles", 1);
+    if (cycles > 3)
+        throw new ArgumentException("--cycles must be between 1 and 3.");
+    Directory.CreateDirectory(output);
+
+    var profilePath = Optional(options, "profile") ??
+        Optional(options, "automation-profile") ??
+        Path.Combine("local-data", "automation-profile.local.json");
+    var automationProfile = await AutomationProfileLoader.LoadAsync(profilePath, cancellationToken);
+    var appraisalPath = Optional(options, "appraisal-profile") ??
+        Path.Combine("local-data", "phone-preparation", "appraisal-profile.device.generated.json");
+    AppraisalVisualProfile? appraisalProfile = File.Exists(appraisalPath)
+        ? await AppraisalProfileLoader.LoadAsync(appraisalPath, cancellationToken)
+        : null;
+    var transport = CreateRealAndroidTransport(options);
+    var selected = DeviceSnapshotService.SelectDevice(
+        await transport.ListDevicesAsync(cancellationToken), Optional(options, "serial"));
+    var trace = new NavigationSafetyTraceRecorder(output);
+    var operations = new AndroidVerifiedInventoryNamedOperations(
+        transport,
+        selected.Serial,
+        automationProfile,
+        Path.Combine(output, "host-audit"),
+        appraisalProfile,
+        navigationTrace: trace);
+    var summaries = new List<object>();
+    var allPassed = true;
+
+    for (var cycle = 1; cycle <= cycles; cycle++)
+    {
+        trace.BeginCycle(cycle);
+        var cycleDirectory = Path.Combine(output, "precondition", $"cycle-{cycle:00}");
+        var mapPrecondition = await CaptureStableMapPreconditionAsync(cycleDirectory);
+        if (!mapPrecondition)
+        {
+            summaries.Add(new
+            {
+                cycle,
+                result = "FAIL_PRECONDITION_GAMEPLAY_MAP",
+                inputCount = 0,
+                backCount = 0,
+                postFrameCount = 0
+            });
+            allPassed = false;
+            break;
+        }
+
+        string result = "PASS";
+        VerifiedSequenceState opened = VerifiedSequenceState.Unknown;
+        VerifiedSequenceState details = VerifiedSequenceState.Unknown;
+        VerifiedSequenceState returned = VerifiedSequenceState.Unknown;
+        PokemonGoGameState closed = PokemonGoGameState.Unknown;
+        try
+        {
+            opened = await operations.OpenInventoryAsync(cancellationToken);
+            if (opened == VerifiedSequenceState.Inventory)
+                details = await operations.OpenFirstPokemonAsync(cancellationToken);
+            if (details == VerifiedSequenceState.PokemonDetails)
+                returned = await operations.ReturnToInventoryAsync(cancellationToken);
+            if (returned == VerifiedSequenceState.Inventory)
+                closed = await operations.CloseInventoryAsync(cancellationToken);
+
+            var entries = ReadNavigationTrace(output);
+            var cycleEntries = entries.Where(entry => entry.Cycle == cycle).ToArray();
+            var inputs = cycleEntries.Count(entry => entry.Phase == "INPUT_SENT");
+            var backs = cycleEntries.Count(entry =>
+                entry.Phase == "INPUT_SENT" && entry.TransportInputType == "PressBack");
+            var postFrames = cycleEntries.Count(entry =>
+                entry.Phase.StartsWith("POST_INPUT_FRAME_", StringComparison.Ordinal));
+            var expectedPass = opened == VerifiedSequenceState.Inventory &&
+                details == VerifiedSequenceState.PokemonDetails &&
+                returned == VerifiedSequenceState.Inventory &&
+                closed == PokemonGoGameState.GameplayMap &&
+                inputs == 5 && backs == 2 && postFrames == inputs * NavigationSafetyTraceRecorder.RequiredPostInputFrames;
+            if (!expectedPass)
+                result = "FAIL_SEQUENCE_OR_TRACE_INVARIANT";
+            summaries.Add(new
+            {
+                cycle,
+                result,
+                opened = opened.ToString(),
+                details = details.ToString(),
+                returned = returned.ToString(),
+                closed = closed.ToString(),
+                inputCount = inputs,
+                backCount = backs,
+                postFrameCount = postFrames,
+                noUnsafeInput = cycleEntries.All(entry =>
+                    entry.Phase != "INPUT_SENT" || entry.AuthorizationResult == "AUTHORIZED")
+            });
+            allPassed &= expectedPass;
+        }
+        catch (Exception exception)
+        {
+            result = "FAIL_EXCEPTION";
+            summaries.Add(new
+            {
+                cycle,
+                result,
+                exception = exception.Message,
+                inputCount = ReadNavigationTrace(output).Count(entry =>
+                    entry.Cycle == cycle && entry.Phase == "INPUT_SENT")
+            });
+            allPassed = false;
+            break;
+        }
+
+        if (!allPassed)
+            break;
+    }
+
+    var summaryPath = Path.Combine(output, "cycle-summary.json");
+    await File.WriteAllTextAsync(
+        summaryPath,
+        JsonSerializer.Serialize(new
+        {
+            schemaVersion = "1.0",
+            command = "device-validate-navigation-safety",
+            serial = selected.Serial,
+            requestedCycles = cycles,
+            completedCycles = summaries.Count,
+            result = allPassed ? "PASS" : "FAIL",
+            summaries
+        }, new JsonSerializerOptions { WriteIndented = true }),
+        cancellationToken);
+    await File.WriteAllTextAsync(
+        Path.Combine(output, "phone-summary.md"),
+        $"# Deterministic navigation safety\n\n" +
+        $"- Serial: `{selected.Serial}`\n" +
+        $"- Requested cycles: {cycles}\n" +
+        $"- Completed cycles: {summaries.Count}\n" +
+        $"- Result: **{(allPassed ? "PASS" : "FAIL")}**\n" +
+        "- Scope: read-only navigation only; no tags or destructive actions.\n" +
+        "- Post-input evidence: exactly five bounded frames per authorized input.\n",
+        cancellationToken);
+    Console.WriteLine($"Navigation safety result: {(allPassed ? "PASS" : "FAIL")}; cycles: {summaries.Count}/{cycles}.");
+    return allPassed ? 0 : 1;
+
+    async Task<bool> CaptureStableMapPreconditionAsync(string directory)
+    {
+        Directory.CreateDirectory(directory);
+        var detector = new PokemonGoGameStateDetector();
+        var allMap = true;
+        for (var index = 1; index <= 3; index++)
+        {
+            var screenshot = await transport.CaptureScreenshotPngAsync(selected.Serial, cancellationToken);
+            var detection = detector.Detect(screenshot, appraisalProfile);
+            await File.WriteAllBytesAsync(
+                Path.Combine(directory, $"frame-{index}.png"), screenshot, cancellationToken);
+            await File.WriteAllTextAsync(
+                Path.Combine(directory, $"frame-{index}.json"),
+                JsonSerializer.Serialize(new
+                {
+                    state = detection.State.ToString(),
+                    confidence = detection.Confidence,
+                    evidence = detection.Evidence,
+                    screenshotSha256 = detection.ScreenshotSha256
+                }, new JsonSerializerOptions { WriteIndented = true }),
+                cancellationToken);
+            allMap &= detection.State == PokemonGoGameState.GameplayMap;
+            if (index < 3)
+                await Task.Delay(automationProfile.PostActionSettleMilliseconds, cancellationToken);
+        }
+        return allMap;
+    }
+
+    static IReadOnlyList<NavigationSafetyTraceEntry> ReadNavigationTrace(string directory)
+    {
+        var path = Path.Combine(directory, "action-trace.jsonl");
+        if (!File.Exists(path)) return Array.Empty<NavigationSafetyTraceEntry>();
+        return File.ReadLines(path)
+            .Where(line => !string.IsNullOrWhiteSpace(line))
+            .Select(line => JsonSerializer.Deserialize<NavigationSafetyTraceEntry>(line)!)
+            .ToArray();
+    }
+}
+
 static async Task<int> StopKnownAppAsync(
     string[] args,
     CancellationToken cancellationToken)
@@ -3157,6 +3343,7 @@ static void PrintHelp()
     Console.WriteLine("                            [--appraisal-profile <appraisal.json>] [--resume] [--controlled-stop-after <n>]");
     Console.WriteLine("                            [--apply-index-tag --index-tag AI-Indexed]");
     Console.WriteLine("                            [--apply-classification-tag --classification-tag <AI-Keep|AI-Review>]");
+    Console.WriteLine("  device-validate-navigation-safety --adb <adb.exe> --out <directory> [--serial <serial>] [--cycles <1|2|3>]");
     Console.WriteLine("  device-set-pokemon-tag --tag <name> --selected <true|false> --profile <tag-profile.json> --out <directory>");
     Console.WriteLine("  tag-selector-detect-image --image <screen.png> --profile <tag-profile.json> --tag <name> --out <result.json>");
     Console.WriteLine("  device-open-appraisal --profile <automation.json> --appraisal-profile <appraisal.json> --out <directory>");

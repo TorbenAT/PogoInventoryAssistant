@@ -1,5 +1,17 @@
 # Project state
 
+## Deterministic navigation safety acceptance tooling checkpoint
+
+The permanent `device-validate-navigation-safety` CLI command requires three
+GameplayMap precondition frames and calls the concrete
+`AndroidVerifiedInventoryNamedOperations` host for bounded navigation. It
+records `action-trace.jsonl` phases around the actual named transport input,
+including three precondition frames, fresh authorization, input return, five
+post-input frames and postcondition. Three real read-only cycles passed on the
+authorized OnePlus A6013 with five inputs, two Back actions, 25 postframes and
+GameplayMap final state per cycle. No Cancel, tag or destructive action was
+sent. Offline self-tests pass 159/159.
+
 ## Wrong-screen action authorization repair checkpoint
 
 The historical incident in which a Details screenshot authorized the
