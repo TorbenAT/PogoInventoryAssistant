@@ -9,6 +9,10 @@ this increment, then run one bounded `age0-1825` / item-limit 20 acceptance in
 first runtime defect, preserve SQLite rows and reports, and do not patch/rerun
 automatically.
 
+Acceptance completed: 20/20 real items, 19 appraisal swipes, zero Details
+swipes, 20 unique fingerprints, SQLite integrity `ok`, and final
+`GameplayMap`. No further carousel work is required in this iteration.
+
 ## Long database acceptance checkpoint
 
 The fresh `age0-1825` / 20-item real run safely stopped after four Complete

@@ -1,3 +1,12 @@
+## Appraisal carousel real-phone acceptance - 2026-07-21
+
+- Acceptance: PASS, 20/20 items.
+- Cursor evidence: 19 appraisal swipes, zero Details swipes, 20 unique
+  fingerprints, one appraisal open and one final exit.
+- SQLite integrity: `ok`; reports generated after database reopen.
+- Safety: zero tag mutations and zero destructive actions.
+- Final detected state: `GameplayMap`.
+
 ## Canonical close Android scale repair checkpoint - 2026-07-21
 
 - The first real diagnostic visually contained the canonical Details X but

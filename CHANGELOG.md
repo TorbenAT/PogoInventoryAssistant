@@ -5,7 +5,8 @@
 - Cleanup proof now keeps Appraisal open across ordinary Pokémon transitions,
   persists appraisal fingerprints before each next swipe, and exits Appraisal
   once at the end. Offline self-tests pass 163/163; real-phone acceptance is
-  pending.
+  complete: 20/20 items, 19 appraisal swipes, zero Details swipes, and final
+  GameplayMap with SQLite integrity `ok`.
 
 ## Long database acceptance — 2026-07-21
 

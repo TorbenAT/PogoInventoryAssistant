@@ -9,6 +9,13 @@ items. The concrete host has bounded transient-Unknown observation recovery,
 changed-fingerprint progression and unchanged-fingerprint end-of-filter
 handling. Offline self-tests pass 163/163. Real-phone acceptance is pending.
 
+The real-phone `age0-1825` / 20-item acceptance then completed all 20 items
+through the persistent carousel. Evidence shows 19 appraisal cursor swipes,
+zero Details cursor swipes, 20 unique fingerprints, one appraisal open
+operation, one end-of-carousel exit, SQLite integrity `ok`, and final
+`GameplayMap`. All 20 observations are retained as `REVIEW`; no tags or
+destructive actions were performed.
+
 ## Long self-recovering database acceptance result
 
 The permanent real-phone cleanup proof ran with `age0-1825` and limit 20.
