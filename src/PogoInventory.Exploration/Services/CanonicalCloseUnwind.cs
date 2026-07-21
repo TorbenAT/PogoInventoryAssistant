@@ -1,4 +1,5 @@
 using PogoInventory.Exploration.Models;
+using PogoInventory.Automation.Models;
 
 namespace PogoInventory.Exploration.Services;
 
@@ -35,8 +36,10 @@ public sealed record CanonicalUnwindResult
 }
 
 /// <summary>
-/// Owns the bounded generic startup unwind. Every transition is delegated to
-/// the named canonical-close operation; no Android Back fallback exists here.
+/// Owns the bounded generic startup unwind. Appraisal uses its existing named
+/// visually guarded exit operation because that screen exposes the appraisal
+/// close control rather than the lower-centre canonical X; all remaining
+/// layers use the canonical-close operation. No Android Back fallback exists.
 /// </summary>
 public sealed class CanonicalCloseUnwindService
 {
@@ -84,6 +87,27 @@ public sealed class CanonicalCloseUnwindService
             {
                 return Blocked(initial, path, actions, inputCount,
                     state.State, "canonical close input budget exhausted");
+            }
+
+            if (state.State == PokemonGoGameState.Appraisal)
+            {
+                var details = await operations.ExitAppraisalAsync(cancellationToken);
+                inputCount += operations.LastCleanupRecoveryInputCount;
+                actions.Add("exit-appraisal");
+                if (details != VerifiedSequenceState.PokemonDetails)
+                {
+                    return Blocked(initial, path, actions, inputCount,
+                        state.State, "guarded appraisal exit did not establish PokemonDetails");
+                }
+
+                if (inputCount > MaximumCloseInputs)
+                {
+                    return Blocked(initial, path, actions, inputCount,
+                        PokemonGoGameState.PokemonDetails,
+                        "canonical close input budget exhausted");
+                }
+
+                continue;
             }
 
             var close = await operations.CloseCanonicalScreenAsync(cancellationToken);
