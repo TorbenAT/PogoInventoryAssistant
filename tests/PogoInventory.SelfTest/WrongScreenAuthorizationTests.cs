@@ -1,6 +1,7 @@
 using PogoInventory.Automation.Models;
 using PogoInventory.Exploration.Models;
 using PogoInventory.Exploration.Services;
+using PogoInventory.Vision.Imaging;
 
 namespace PogoInventory.SelfTest;
 
@@ -8,18 +9,12 @@ internal static class WrongScreenAuthorizationTests
 {
     public static Task RunAsync()
     {
-        var detailsPath = RepositoryPath(
-            "local-data", "validation", "android-sequence-host", "failures",
-            "ten-item-age0-1825-final-start", "screen.png");
-        var powerUpPath = RepositoryPath(
-            "local-data", "validation", "android-sequence-host", "failures",
-            "ten-item-age0-1825-final3-current", "screen.png");
         var detector = new UnsafeConfirmationSurfaceDetector();
-        var details = detector.Detect(File.ReadAllBytes(detailsPath), "open-inventory");
+        var details = detector.Detect(PngEncoder.Encode(CreateFixture(powerUpModal: false)), "open-inventory");
         Assert(details.Kind == UnsafeConfirmationKind.None,
             "normal Details POWER UP and EVOLVE buttons must not be treated as a modal");
 
-        var powerUp = detector.Detect(File.ReadAllBytes(powerUpPath), "open-inventory");
+        var powerUp = detector.Detect(PngEncoder.Encode(CreateFixture(powerUpModal: true)), "open-inventory");
         Assert(powerUp.Kind == UnsafeConfirmationKind.PowerUp,
             $"Power Up confirmation evidence must be classified as unsafe ({string.Join(',', powerUp.Evidence)})");
 
@@ -62,6 +57,53 @@ internal static class WrongScreenAuthorizationTests
         Assert(!source.Contains("CancelAsync", StringComparison.Ordinal),
             "unsafe confirmation must not send an automatic Cancel input");
         return Task.CompletedTask;
+    }
+
+    private static PixelImage CreateFixture(bool powerUpModal)
+    {
+        const int width = 1080;
+        const int height = 1920;
+        var rgba = new byte[width * height * 4];
+        for (var index = 0; index < rgba.Length; index += 4)
+        {
+            rgba[index] = 25;
+            rgba[index + 1] = 35;
+            rgba[index + 2] = 45;
+            rgba[index + 3] = 255;
+        }
+
+        if (!powerUpModal)
+            return new PixelImage(width, height, rgba);
+
+        for (var y = (int)(height * 0.56); y < (int)(height * 0.97); y++)
+        for (var x = (int)(width * 0.03); x < (int)(width * 0.97); x++)
+        {
+            var offset = (y * width + x) * 4;
+            rgba[offset] = 225;
+            rgba[offset + 1] = 225;
+            rgba[offset + 2] = 225;
+            rgba[offset + 3] = 255;
+        }
+
+        foreach (var centerX in new[] { (int)(width * 0.23), (int)(width * 0.77) })
+        {
+            const int centerY = 1420;
+            const int radius = 55;
+            for (var y = centerY - radius; y <= centerY + radius; y++)
+            for (var x = centerX - radius; x <= centerX + radius; x++)
+            {
+                var distance = Math.Sqrt(Math.Pow(x - centerX, 2) + Math.Pow(y - centerY, 2));
+                if (distance is < 48 or > 70)
+                    continue;
+                var offset = (y * width + x) * 4;
+                rgba[offset] = 75;
+                rgba[offset + 1] = 180;
+                rgba[offset + 2] = 180;
+                rgba[offset + 3] = 255;
+            }
+        }
+
+        return new PixelImage(width, height, rgba);
     }
 
     private static MainMenuFrameObservation Frame(
