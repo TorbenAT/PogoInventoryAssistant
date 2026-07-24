@@ -14,12 +14,30 @@ ever forms (exit verify + canonical-close precondition both starve). The blue-
 header fallback measures 0.000 (assumes a blue background). The X-button locator
 is fine (0.975 on every frame). Secondary: `IsMenuBackground` 2-of-3 fallback
 false-fired MainMenu on bokeh (frame 0006).
-**Execute `.superpowers/sdd/task-H-brief.md`** (double-corroborated branch:
-modelArea>=0.08 && cpArea>=0.50 && detailsPanel>=0.50, measured margins 0.958+/0.978;
-tighten IsMenuBackground to 3-of-3). A Task H subagent may have committed before
-session end — check `git log` first; if no commit, run the brief from scratch.
-Verify with CLI `game-state-detect-image` on the 5 evidence frames (all must
-classify PokemonDetails), then rerun the gate-4 pilot 2×50 (~11 min/scan):
+**Task H OUTCOME (commit `c42f620`, pushed, 244/244): partial — and the brief's
+relaxation is DISPROVEN, do not implement it.** The safe half shipped:
+`IsMenuBackground` tightened 2-of-3 → 3-of-3 (frame 0006's MainMenu false
+positive fixed; verified against 2843 real corpus frames). The proposed
+double-corroboration branch (modelArea>=0.08 && cpArea>=0.50 &&
+detailsPanel>=0.50) was withheld after corpus verification: ~200 real
+MainMenu/Appraisal/Inventory/GameplayMap frames satisfy those same floors,
+some numerically indistinguishable from genuine Details on exactly those three
+signals — and two call sites (`CaptureCleanupIdentityAsync`,
+`CaptureIndependentDetailsFramesAsync`) treat the topology result as
+PokemonDetails with no further gating. Frames 0007/0008/0010 still classify
+Unknown; the gate-4 flicker is NOT yet fixed. Full analysis:
+`.superpowers/sdd/task-H-report.md`.
+**Recommended next approach (controller decision needed):** add a FOURTH
+orthogonal corroboration signal to the relaxed branch — the canonical-close
+X-button locator scores 0.975 on every failing Details frame and is exactly
+the strong discriminator the three area signals lack (verify it scores low on
+the ~200 colliding corpus frames first); alternatively gate the two unsafe
+call sites. Note: the task-scoped review of `c42f620` was skipped at session
+end — it is a one-line strictly-tightening change with a boundary test, but a
+fresh session may re-review cheaply.
+After the detector fix is proven on the 5 evidence frames via
+`game-state-detect-image` (all must classify PokemonDetails), rerun the
+gate-4 pilot 2×50 (~11 min/scan):
 run1/run2 fresh dirs under `local-data/validation/reid-pilot-2x50/`, program
 restart between, then `analyze-reidentification --database-a ... --database-b ...`.
 Phone was left untouched on the Fletchling Details screen (sunset background) —
