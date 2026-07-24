@@ -5,9 +5,10 @@ using PogoInventory.Device.Transport;
 namespace PogoInventory.Automation.Timing;
 
 /// <summary>
-/// Decorates an <see cref="IAndroidAutomationTransport"/> to time only the PNG
+/// Decorates an <see cref="IAndroidAutomationTransport"/> to time the PNG
 /// screenshot transfer (the single largest measured cost in a real cleanup
-/// run). Every other member passes straight through with no added behavior.
+/// run) and on-device input gestures (tap/swipe). Every other member passes
+/// straight through with no added behavior.
 /// </summary>
 public sealed class TimingAndroidAutomationTransport : IAndroidAutomationTransport
 {
@@ -68,20 +69,30 @@ public sealed class TimingAndroidAutomationTransport : IAndroidAutomationTranspo
         CancellationToken cancellationToken = default) =>
         _inner.SubmitInventorySearchQueryAsync(serial, cancellationToken);
 
-    public Task TapAsync(
+    public async Task TapAsync(
         string serial,
         int x,
         int y,
-        CancellationToken cancellationToken = default) =>
-        _inner.TapAsync(serial, x, y, cancellationToken);
+        CancellationToken cancellationToken = default)
+    {
+        var stopwatch = Stopwatch.StartNew();
+        await _inner.TapAsync(serial, x, y, cancellationToken);
+        stopwatch.Stop();
+        _timing.RecordInput("tap", stopwatch.Elapsed.TotalMilliseconds);
+    }
 
-    public Task SwipeAsync(
+    public async Task SwipeAsync(
         string serial,
         int startX,
         int startY,
         int endX,
         int endY,
         int durationMilliseconds,
-        CancellationToken cancellationToken = default) =>
-        _inner.SwipeAsync(serial, startX, startY, endX, endY, durationMilliseconds, cancellationToken);
+        CancellationToken cancellationToken = default)
+    {
+        var stopwatch = Stopwatch.StartNew();
+        await _inner.SwipeAsync(serial, startX, startY, endX, endY, durationMilliseconds, cancellationToken);
+        stopwatch.Stop();
+        _timing.RecordInput("swipe", stopwatch.Elapsed.TotalMilliseconds);
+    }
 }

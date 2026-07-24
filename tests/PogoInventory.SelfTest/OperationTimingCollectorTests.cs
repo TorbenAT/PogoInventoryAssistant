@@ -22,6 +22,152 @@ internal static class OperationTimingCollectorTests
         await RunnerWritesTimingReportAndSummarySectionAsync();
         await MarkRunStartRestartsWallClockAsync();
         await AdvanceTimeIsAttributedToTheAdvancingItemAsync();
+        await CaptureInsideNamedOperationCarriesOperationNameAsync();
+        await NestedNamedOperationsStampInnermostNameAsync();
+        await RecordInputAggregatesPerItemAndPerOperationAsync();
+        await PerOperationCaptureCountAndMillisecondsJoinCorrectlyAsync();
+        await ResidualMillisecondsArithmeticIsCorrectAsync();
+        await NullCollectorRecordInputIsInertAsync();
+        await SummarySectionContainsNewColumnsAsync();
+    }
+
+    public static Task CaptureInsideNamedOperationCarriesOperationNameAsync()
+    {
+        var collector = new OperationTimingCollector();
+        collector.RecordCapture("outside", 10, 100);
+        using (collector.Measure(TimingCategory.NamedOperation, "OpenFirstPokemonAsync"))
+        {
+            collector.RecordCapture("inside", 20, 200);
+        }
+        var report = collector.BuildReport();
+        var outside = report.CaptureTransfer;
+        _ = outside;
+        var operation = report.Operations.Single(op => op.Name == "OpenFirstPokemonAsync");
+        AssertEqual(1, operation.CaptureCount, "capture recorded inside the named operation");
+        AssertEqual(20.0, operation.CaptureMilliseconds, "capture ms recorded inside the named operation");
+        return Task.CompletedTask;
+    }
+
+    public static Task NestedNamedOperationsStampInnermostNameAsync()
+    {
+        var collector = new OperationTimingCollector();
+        using (collector.Measure(TimingCategory.NamedOperation, "Outer"))
+        {
+            using (collector.Measure(TimingCategory.NamedOperation, "Inner"))
+            {
+                collector.RecordCapture("innerCapture", 15, 150);
+            }
+            collector.RecordCapture("outerCapture", 25, 250);
+        }
+        var report = collector.BuildReport();
+        var inner = report.Operations.Single(op => op.Name == "Inner");
+        var outer = report.Operations.Single(op => op.Name == "Outer");
+        AssertEqual(1, inner.CaptureCount, "inner operation owns the capture taken while it was innermost");
+        AssertEqual(15.0, inner.CaptureMilliseconds, "inner operation capture ms");
+        AssertEqual(1, outer.CaptureCount, "outer operation owns the capture taken after inner disposed");
+        AssertEqual(25.0, outer.CaptureMilliseconds, "outer operation capture ms");
+        return Task.CompletedTask;
+    }
+
+    public static Task RecordInputAggregatesPerItemAndPerOperationAsync()
+    {
+        var collector = new OperationTimingCollector();
+        collector.BeginItem(1);
+        using (collector.Measure(TimingCategory.NamedOperation, "AdvanceToNextPokemonInAppraisalAsync"))
+        {
+            collector.RecordInput("swipe", 120);
+        }
+        collector.RecordInput("tap", 30);
+        collector.EndItem(1);
+
+        var report = collector.BuildReport();
+        var item = report.Items.Single(entry => entry.Ordinal == 1);
+        AssertEqual(150.0, item.InputMilliseconds, "item input ms sums swipe + tap");
+        var operation = report.Operations.Single(op => op.Name == "AdvanceToNextPokemonInAppraisalAsync");
+        AssertEqual(120.0, operation.InputMilliseconds, "operation input ms includes only the swipe recorded inside it");
+        return Task.CompletedTask;
+    }
+
+    public static Task PerOperationCaptureCountAndMillisecondsJoinCorrectlyAsync()
+    {
+        var collector = new OperationTimingCollector();
+        using (collector.Measure(TimingCategory.NamedOperation, "OpA"))
+        {
+            collector.RecordCapture("a1", 10, 100);
+            collector.RecordCapture("a2", 20, 200);
+        }
+        using (collector.Measure(TimingCategory.NamedOperation, "OpB"))
+        {
+            collector.RecordCapture("b1", 30, 300);
+        }
+        var report = collector.BuildReport();
+        var opA = report.Operations.Single(op => op.Name == "OpA");
+        var opB = report.Operations.Single(op => op.Name == "OpB");
+        AssertEqual(2, opA.CaptureCount, "OpA owns two captures");
+        AssertEqual(30.0, opA.CaptureMilliseconds, "OpA capture ms");
+        AssertEqual(1, opB.CaptureCount, "OpB owns one capture");
+        AssertEqual(30.0, opB.CaptureMilliseconds, "OpB capture ms");
+        return Task.CompletedTask;
+    }
+
+    public static Task ResidualMillisecondsArithmeticIsCorrectAsync()
+    {
+        var collector = new OperationTimingCollector();
+        collector.BeginItem(1);
+        collector.RecordCapture("screencap", 40, 500);
+        collector.RecordFixedDelay("PostActionSettle", 25);
+        collector.RecordInput("swipe", 10);
+        using (collector.Measure(TimingCategory.Ocr, "HeaderFrame"))
+        {
+        }
+        collector.EndItem(1);
+
+        var report = collector.BuildReport();
+        var item = report.Items.Single(entry => entry.Ordinal == 1);
+        var expectedResidual = item.TotalMilliseconds -
+            (item.CaptureMilliseconds + item.FixedDelayMilliseconds + item.OcrMilliseconds + item.InputMilliseconds);
+        AssertEqual(expectedResidual, item.ResidualMilliseconds, "residual ms arithmetic");
+        return Task.CompletedTask;
+    }
+
+    public static Task NullCollectorRecordInputIsInertAsync()
+    {
+        var collector = NullOperationTimingCollector.Instance;
+        collector.RecordInput("swipe", 100);
+        var report = collector.BuildReport();
+        AssertTrue(report.IsEmpty, "null collector report must stay empty after RecordInput");
+        return Task.CompletedTask;
+    }
+
+    public static async Task SummarySectionContainsNewColumnsAsync()
+    {
+        var root = CleanupProofTests.CreateTemporaryDirectory();
+        try
+        {
+            var evidence = Path.Combine(root, "evidence.png");
+            await File.WriteAllBytesAsync(evidence, CleanupProofTests.FixtureBytes());
+            var fake = new CleanupProofTests.FakeCleanupOperations(evidence, partial: true);
+            var timing = new OperationTimingCollector();
+            var request = new CleanupProofRequest
+            {
+                SpeciesQuery = "Pidgey",
+                ItemLimit = 6,
+                DatabasePath = Path.Combine(root, "cleanup-proof.sqlite"),
+                OutputDirectory = root,
+                DeviceSerial = "synthetic",
+                ContinueOnPartial = true
+            };
+            await new CleanupProofRunner().RunAsync(fake, request, timing: timing);
+            var summary = await File.ReadAllTextAsync(Path.Combine(root, "proof-summary.md"));
+            AssertTrue(summary.Contains("Captures", StringComparison.Ordinal), "operation table must have a Captures column");
+            AssertTrue(summary.Contains("Capture ms", StringComparison.Ordinal), "operation table must have a Capture ms column");
+            AssertTrue(summary.Contains("Input ms", StringComparison.Ordinal), "operation table must have an Input ms column");
+            AssertTrue(summary.Contains("input ", StringComparison.Ordinal), "breakdown line must include an input percentage");
+        }
+        finally
+        {
+            CleanupProofTests.DeleteDirectory(root);
+        }
     }
 
     public static async Task MarkRunStartRestartsWallClockAsync()

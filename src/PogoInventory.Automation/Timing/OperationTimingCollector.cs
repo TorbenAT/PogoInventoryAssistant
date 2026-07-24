@@ -8,7 +8,8 @@ public enum TimingCategory
     NamedOperation,
     FixedDelay,
     Ocr,
-    Item
+    Item,
+    InputGesture
 }
 
 public sealed record TimingSample
@@ -18,6 +19,16 @@ public sealed record TimingSample
     public required double ElapsedMilliseconds { get; init; }
     public long? Bytes { get; init; }
     public int? ItemOrdinal { get; init; }
+
+    /// <summary>
+    /// The innermost enclosing <see cref="TimingCategory.NamedOperation"/> name
+    /// at the moment this sample was recorded, or null if no named-operation
+    /// scope was active. Stamped from an ambient stack maintained by
+    /// <see cref="OperationTimingCollector"/> so captures/input taken inside
+    /// nested named operations attribute to the innermost one only.
+    /// </summary>
+    public string? OperationName { get; init; }
+
     public required DateTimeOffset TimestampUtc { get; init; }
 }
 
@@ -28,6 +39,12 @@ public interface IOperationTimingCollector
     void RecordCapture(string label, double elapsedMilliseconds, long bytes);
 
     void RecordFixedDelay(string reason, int milliseconds);
+
+    /// <summary>
+    /// Records an on-device input gesture (swipe/tap) driven through the
+    /// automation transport. No-op on <see cref="NullOperationTimingCollector"/>.
+    /// </summary>
+    void RecordInput(string label, double elapsedMilliseconds);
 
     /// <summary>
     /// Marks the start of processing an item.
@@ -73,6 +90,7 @@ public sealed class OperationTimingCollector : IOperationTimingCollector
 {
     private readonly object _lock = new();
     private readonly List<TimingSample> _samples = new();
+    private readonly List<string> _operationNameStack = new();
     private Stopwatch _wallClock = Stopwatch.StartNew();
     private int? _currentItemOrdinal;
     private Stopwatch? _itemStopwatch;
@@ -85,6 +103,9 @@ public sealed class OperationTimingCollector : IOperationTimingCollector
 
     public void RecordFixedDelay(string reason, int milliseconds) =>
         AddSample(TimingCategory.FixedDelay, reason, milliseconds, null);
+
+    public void RecordInput(string label, double elapsedMilliseconds) =>
+        AddSample(TimingCategory.InputGesture, label, elapsedMilliseconds, null);
 
     public void BeginItem(int ordinal)
     {
@@ -137,15 +158,32 @@ public sealed class OperationTimingCollector : IOperationTimingCollector
         var capture = Summarize(samples, TimingCategory.CaptureTransfer);
         var fixedDelay = Summarize(samples, TimingCategory.FixedDelay);
         var ocr = Summarize(samples, TimingCategory.Ocr);
+        var input = Summarize(samples, TimingCategory.InputGesture);
         var operations = samples
             .Where(sample => sample.Category == TimingCategory.NamedOperation)
             .GroupBy(sample => sample.Name, StringComparer.Ordinal)
-            .Select(group => new TimingOperationSummary
+            .Select(group =>
             {
-                Name = group.Key,
-                Count = group.Count(),
-                TotalMilliseconds = group.Sum(sample => sample.ElapsedMilliseconds),
-                MeanMilliseconds = group.Average(sample => sample.ElapsedMilliseconds)
+                // Captures/input taken while this operation was the innermost
+                // active named-operation scope are stamped with its name; a
+                // capture inside a NESTED operation counts toward that inner
+                // operation only, never toward this outer one too.
+                var ownedCaptures = samples
+                    .Where(sample => sample.Category == TimingCategory.CaptureTransfer && sample.OperationName == group.Key)
+                    .ToArray();
+                var ownedInput = samples
+                    .Where(sample => sample.Category == TimingCategory.InputGesture && sample.OperationName == group.Key)
+                    .ToArray();
+                return new TimingOperationSummary
+                {
+                    Name = group.Key,
+                    Count = group.Count(),
+                    TotalMilliseconds = group.Sum(sample => sample.ElapsedMilliseconds),
+                    MeanMilliseconds = group.Average(sample => sample.ElapsedMilliseconds),
+                    CaptureCount = ownedCaptures.Length,
+                    CaptureMilliseconds = ownedCaptures.Sum(sample => sample.ElapsedMilliseconds),
+                    InputMilliseconds = ownedInput.Sum(sample => sample.ElapsedMilliseconds)
+                };
             })
             .OrderBy(summary => summary.Name, StringComparer.Ordinal)
             .ToArray();
@@ -158,7 +196,8 @@ public sealed class OperationTimingCollector : IOperationTimingCollector
                 TotalMilliseconds = sample.ElapsedMilliseconds,
                 CaptureMilliseconds = SumForItem(samples, TimingCategory.CaptureTransfer, sample.ItemOrdinal),
                 FixedDelayMilliseconds = SumForItem(samples, TimingCategory.FixedDelay, sample.ItemOrdinal),
-                OcrMilliseconds = SumForItem(samples, TimingCategory.Ocr, sample.ItemOrdinal)
+                OcrMilliseconds = SumForItem(samples, TimingCategory.Ocr, sample.ItemOrdinal),
+                InputMilliseconds = SumForItem(samples, TimingCategory.InputGesture, sample.ItemOrdinal)
             })
             .ToArray();
         var namedOperationTotal = operations.Sum(summary => summary.TotalMilliseconds);
@@ -167,7 +206,8 @@ public sealed class OperationTimingCollector : IOperationTimingCollector
             [nameof(TimingCategory.CaptureTransfer)] = PercentOf(capture.TotalMilliseconds, wallClockMilliseconds),
             [nameof(TimingCategory.FixedDelay)] = PercentOf(fixedDelay.TotalMilliseconds, wallClockMilliseconds),
             [nameof(TimingCategory.Ocr)] = PercentOf(ocr.TotalMilliseconds, wallClockMilliseconds),
-            [nameof(TimingCategory.NamedOperation)] = PercentOf(namedOperationTotal, wallClockMilliseconds)
+            [nameof(TimingCategory.NamedOperation)] = PercentOf(namedOperationTotal, wallClockMilliseconds),
+            [nameof(TimingCategory.InputGesture)] = PercentOf(input.TotalMilliseconds, wallClockMilliseconds)
         };
 
         return new TimingReport
@@ -177,6 +217,7 @@ public sealed class OperationTimingCollector : IOperationTimingCollector
             CaptureTransfer = capture,
             FixedDelay = fixedDelay,
             Ocr = ocr,
+            Input = input,
             Operations = operations,
             Items = items,
             CategoryPercentOfWallClock = percentages
@@ -194,8 +235,26 @@ public sealed class OperationTimingCollector : IOperationTimingCollector
                 ElapsedMilliseconds = elapsedMilliseconds,
                 Bytes = bytes,
                 ItemOrdinal = _currentItemOrdinal,
+                OperationName = _operationNameStack.Count > 0 ? _operationNameStack[^1] : null,
                 TimestampUtc = DateTimeOffset.UtcNow
             });
+        }
+    }
+
+    private void PushOperationName(string name)
+    {
+        lock (_lock)
+        {
+            _operationNameStack.Add(name);
+        }
+    }
+
+    private void PopOperationName()
+    {
+        lock (_lock)
+        {
+            if (_operationNameStack.Count > 0)
+                _operationNameStack.RemoveAt(_operationNameStack.Count - 1);
         }
     }
 
@@ -236,6 +295,8 @@ public sealed class OperationTimingCollector : IOperationTimingCollector
             _owner = owner;
             _category = category;
             _name = name;
+            if (_category == TimingCategory.NamedOperation)
+                _owner.PushOperationName(_name);
         }
 
         public void Dispose()
@@ -243,7 +304,12 @@ public sealed class OperationTimingCollector : IOperationTimingCollector
             if (_disposed) return;
             _disposed = true;
             _stopwatch.Stop();
+            // Record before popping so this operation's own duration sample is
+            // stamped with itself as the innermost name (consistent with any
+            // capture/input samples recorded during its body).
             _owner.AddSample(_category, _name, _stopwatch.Elapsed.TotalMilliseconds, null);
+            if (_category == TimingCategory.NamedOperation)
+                _owner.PopOperationName();
         }
     }
 }
@@ -270,6 +336,10 @@ public sealed class NullOperationTimingCollector : IOperationTimingCollector
     }
 
     public void RecordFixedDelay(string reason, int milliseconds)
+    {
+    }
+
+    public void RecordInput(string label, double elapsedMilliseconds)
     {
     }
 

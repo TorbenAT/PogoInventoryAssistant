@@ -26,6 +26,23 @@ public sealed record TimingOperationSummary
     public required int Count { get; init; }
     public required double TotalMilliseconds { get; init; }
     public required double MeanMilliseconds { get; init; }
+
+    /// <summary>
+    /// Number of <see cref="TimingCategory.CaptureTransfer"/> samples stamped
+    /// with this operation's name as the innermost enclosing named-operation
+    /// scope. A capture taken inside a NESTED named operation counts toward
+    /// that inner operation only, never toward this one too.
+    /// </summary>
+    public required int CaptureCount { get; init; }
+
+    /// <summary>See <see cref="CaptureCount"/> for attribution rules.</summary>
+    public required double CaptureMilliseconds { get; init; }
+
+    /// <summary>
+    /// Sum of <see cref="TimingCategory.InputGesture"/> samples stamped with
+    /// this operation's name, same innermost-only attribution as <see cref="CaptureCount"/>.
+    /// </summary>
+    public required double InputMilliseconds { get; init; }
 }
 
 public sealed record ItemTimingSummary
@@ -35,6 +52,16 @@ public sealed record ItemTimingSummary
     public required double CaptureMilliseconds { get; init; }
     public required double FixedDelayMilliseconds { get; init; }
     public required double OcrMilliseconds { get; init; }
+    public required double InputMilliseconds { get; init; }
+
+    /// <summary>
+    /// Wall-clock time within this item not accounted for by capture, fixed
+    /// delay, OCR or input-gesture samples: on-device app processing, tap/swipe
+    /// dispatch overhead not covered by <see cref="InputMilliseconds"/>, and any
+    /// other unmeasured work. Present so the per-item breakdown is self-explaining.
+    /// </summary>
+    public double ResidualMilliseconds =>
+        TotalMilliseconds - (CaptureMilliseconds + FixedDelayMilliseconds + OcrMilliseconds + InputMilliseconds);
 }
 
 /// <summary>
@@ -45,6 +72,7 @@ public sealed record ItemTimingSummary
 public sealed record TimingWallClockBreakdown
 {
     public required double ScreenCapturePercent { get; init; }
+    public required double InputPercent { get; init; }
     public required double FixedWaitPercent { get; init; }
     public required double OcrPercent { get; init; }
     public required double OtherPercent { get; init; }
@@ -57,6 +85,7 @@ public sealed record TimingReport
     public required TimingCategorySummary CaptureTransfer { get; init; }
     public required TimingCategorySummary FixedDelay { get; init; }
     public required TimingCategorySummary Ocr { get; init; }
+    public required TimingCategorySummary Input { get; init; }
     public required IReadOnlyList<TimingOperationSummary> Operations { get; init; }
     public required IReadOnlyList<ItemTimingSummary> Items { get; init; }
 
@@ -78,14 +107,16 @@ public sealed record TimingReport
     public TimingWallClockBreakdown WallClockBreakdown()
     {
         var screenCapture = PercentOfWallClock(CaptureTransfer.TotalMilliseconds);
+        var input = PercentOfWallClock(Input.TotalMilliseconds);
         var fixedWait = PercentOfWallClock(FixedDelay.TotalMilliseconds);
         var ocr = PercentOfWallClock(Ocr.TotalMilliseconds);
         return new TimingWallClockBreakdown
         {
             ScreenCapturePercent = screenCapture,
+            InputPercent = input,
             FixedWaitPercent = fixedWait,
             OcrPercent = ocr,
-            OtherPercent = Math.Max(0, 100 - screenCapture - fixedWait - ocr)
+            OtherPercent = Math.Max(0, 100 - screenCapture - input - fixedWait - ocr)
         };
     }
 
@@ -99,6 +130,7 @@ public sealed record TimingReport
         CaptureTransfer = TimingCategorySummary.Empty,
         FixedDelay = TimingCategorySummary.Empty,
         Ocr = TimingCategorySummary.Empty,
+        Input = TimingCategorySummary.Empty,
         Operations = Array.Empty<TimingOperationSummary>(),
         Items = Array.Empty<ItemTimingSummary>(),
         CategoryPercentOfWallClock = new Dictionary<string, double>()

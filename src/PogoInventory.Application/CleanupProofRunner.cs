@@ -770,14 +770,15 @@ public sealed class CleanupProofRunner
         proof.AppendLine($"- Per-item mean: {report.PerItemMeanMilliseconds:F0} ms ({report.Items.Count} items)");
         proof.AppendLine(
             $"- capture-transfer {breakdown.ScreenCapturePercent:F1}% / " +
+            $"input {breakdown.InputPercent:F1}% / " +
             $"fixed-wait {breakdown.FixedWaitPercent:F1}% / " +
             $"OCR {breakdown.OcrPercent:F1}% / " +
             $"other {breakdown.OtherPercent:F1}%");
         proof.AppendLine();
-        proof.AppendLine("| Operation | Count | Total ms | Mean ms |");
-        proof.AppendLine("|---|---:|---:|---:|");
+        proof.AppendLine("| Operation | Count | Total ms | Mean ms | Captures | Capture ms | Input ms |");
+        proof.AppendLine("|---|---:|---:|---:|---:|---:|---:|");
         foreach (var operation in report.Operations)
-            proof.AppendLine($"| {operation.Name} | {operation.Count} | {operation.TotalMilliseconds:F0} | {operation.MeanMilliseconds:F0} |");
+            proof.AppendLine($"| {operation.Name} | {operation.Count} | {operation.TotalMilliseconds:F0} | {operation.MeanMilliseconds:F0} | {operation.CaptureCount} | {operation.CaptureMilliseconds:F0} | {operation.InputMilliseconds:F0} |");
         proof.AppendLine();
     }
 

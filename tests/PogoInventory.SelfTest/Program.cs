@@ -269,6 +269,13 @@ var tests = new (string Name, Func<Task> Run)[]
     ,("Cleanup runner writes timing report and summary section only when a collector is supplied", OperationTimingCollectorTests.RunnerWritesTimingReportAndSummarySectionAsync)
     ,("MarkRunStart restarts the wall clock so pre-run work is excluded", OperationTimingCollectorTests.MarkRunStartRestartsWallClockAsync)
     ,("Advance time is attributed to the item it advances from", OperationTimingCollectorTests.AdvanceTimeIsAttributedToTheAdvancingItemAsync)
+    ,("Capture inside a named operation carries that OperationName", OperationTimingCollectorTests.CaptureInsideNamedOperationCarriesOperationNameAsync)
+    ,("Nested named operations stamp the innermost name", OperationTimingCollectorTests.NestedNamedOperationsStampInnermostNameAsync)
+    ,("RecordInput aggregates per item and per operation", OperationTimingCollectorTests.RecordInputAggregatesPerItemAndPerOperationAsync)
+    ,("Per-operation capture count and milliseconds join correctly", OperationTimingCollectorTests.PerOperationCaptureCountAndMillisecondsJoinCorrectlyAsync)
+    ,("ResidualMilliseconds arithmetic is correct", OperationTimingCollectorTests.ResidualMillisecondsArithmeticIsCorrectAsync)
+    ,("Null timing collector RecordInput is a no-op", OperationTimingCollectorTests.NullCollectorRecordInputIsInertAsync)
+    ,("Timing summary section contains capture/input columns", OperationTimingCollectorTests.SummarySectionContainsNewColumnsAsync)
     ,("Adb path resolver honors explicit --adb values and bundled/PATH fallback", AdbPathResolverTests.RunAsync)
 };
 
