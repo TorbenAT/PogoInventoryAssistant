@@ -29,8 +29,22 @@ public interface IOperationTimingCollector
 
     void RecordFixedDelay(string reason, int milliseconds);
 
+    /// <summary>
+    /// Marks the start of processing an item.
+    /// </summary>
+    /// <remarks>
+    /// Sequential-only contract: per-item attribution assumes items are processed strictly sequentially.
+    /// Concurrent or overlapping Begin/End calls will misattribute timing samples.
+    /// </remarks>
     void BeginItem(int ordinal);
 
+    /// <summary>
+    /// Marks the end of processing an item.
+    /// </summary>
+    /// <remarks>
+    /// Sequential-only contract: per-item attribution assumes items are processed strictly sequentially.
+    /// Concurrent or overlapping Begin/End calls will misattribute timing samples.
+    /// </remarks>
     void EndItem(int ordinal);
 
     TimingReport BuildReport();
@@ -41,6 +55,10 @@ public interface IOperationTimingCollector
 /// public member is lock-guarded so it can be shared across the sequential
 /// named-operations and runner calls without external synchronization.
 /// </summary>
+/// <remarks>
+/// Per-item attribution assumes items are processed sequentially: BeginItem/EndItem delimit one item at a time.
+/// Concurrent item processing would misattribute samples recorded between overlapping Begin/End calls.
+/// </remarks>
 public sealed class OperationTimingCollector : IOperationTimingCollector
 {
     private readonly object _lock = new();
