@@ -759,14 +759,40 @@ public sealed class AndroidVerifiedInventoryNamedOperations : ICleanupProofNamed
             Consensus = consensus,
             Status = CleanupProofObservationStatus.Complete,
             ScreenshotPaths = paths,
-            ScreenshotHashes = paths.Select(path => Convert.ToHexString(SHA256.HashData(File.ReadAllBytes(path))).ToLowerInvariant()).ToArray()
+            ScreenshotHashes = paths.Select(path => Convert.ToHexString(SHA256.HashData(File.ReadAllBytes(path))).ToLowerInvariant()).ToArray(),
+            StableScreenshot = stable.Screenshot
         };
     }
 
     public async Task<CleanupProofAppraisalCapture> CaptureCurrentCleanupAppraisalAsync(
+        CleanupProofIdentityCapture? confirmedIdentityCapture,
         CancellationToken cancellationToken)
     {
         using var _ = _timing.Measure(TimingCategory.NamedOperation, nameof(CaptureCurrentCleanupAppraisalAsync));
+
+        // When the caller (the cleanup-proof per-item loop) just established a
+        // stable, fingerprinted AppraisalBars frame for this same Pokémon via
+        // CaptureCleanupAppraisalIdentityAsync one step earlier, that frame is
+        // still the current on-screen state: no game input has happened since.
+        // Re-capturing an identical observation window here would be a
+        // redundant capture for state we already confirmed, so reuse its
+        // stable bytes and saved evidence paths instead. Only take this path
+        // when the identity capture actually carries everything needed (fail
+        // closed to a full capture window for any other/unusable capture).
+        if (confirmedIdentityCapture is { Status: CleanupProofObservationStatus.Complete } identity &&
+            identity.StableScreenshot is { Length: > 0 } stableScreenshot &&
+            identity.ScreenshotPaths.Count > 0 &&
+            !string.IsNullOrEmpty(identity.Consensus.StableFingerprintSha256))
+        {
+            _lastCleanupAppraisalEvidence.Clear();
+            _lastCleanupAppraisalEvidence.AddRange(identity.ScreenshotPaths);
+            _lastCleanupAppraisalScreenshot = stableScreenshot;
+            return AnalyzeLastCleanupAppraisal() with
+            {
+                StableFingerprintSha256 = identity.Consensus.StableFingerprintSha256
+            };
+        }
+
         var frames = await CaptureRecoveryFramesAsync("carousel-appraisal-observation", cancellationToken);
         if (!GuardedInventoryRecovery.TryGetStableFrame(frames, out var stable) ||
             stable is null || stable.Kind != RecoveryFrameKind.AppraisalBars)

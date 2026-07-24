@@ -18,6 +18,7 @@ public interface ICleanupProofNamedOperations : IVerifiedInventoryNamedOperation
         CancellationToken cancellationToken);
 
     Task<CleanupProofAppraisalCapture> CaptureCurrentCleanupAppraisalAsync(
+        CleanupProofIdentityCapture? confirmedIdentityCapture,
         CancellationToken cancellationToken);
 
     Task<AppraisalCarouselAdvanceResult> AdvanceToNextPokemonInAppraisalAsync(

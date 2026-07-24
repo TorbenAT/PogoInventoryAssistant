@@ -298,17 +298,30 @@ internal static class CleanupProofTests
             return capture;
         }
 
-        public Task<CleanupProofIdentityCapture> CaptureCleanupAppraisalIdentityAsync(CancellationToken cancellationToken) =>
-            Task.FromResult(new CleanupProofIdentityCapture
+        public List<CleanupProofIdentityCapture> AppraisalIdentityCapturesReturned { get; } = new();
+
+        public Task<CleanupProofIdentityCapture> CaptureCleanupAppraisalIdentityAsync(CancellationToken cancellationToken)
+        {
+            var capture = new CleanupProofIdentityCapture
             {
                 Consensus = Consensus(_partial ? PokemonIdentityObservationStatus.Partial : PokemonIdentityObservationStatus.Complete, "appraisal-fingerprint"),
                 Status = _partial ? CleanupProofObservationStatus.Partial : CleanupProofObservationStatus.Complete,
                 ScreenshotPaths = new[] { _evidence, _evidence, _evidence },
-                ScreenshotHashes = new[] { Hash(_evidence), Hash(_evidence), Hash(_evidence) }
-            });
+                ScreenshotHashes = new[] { Hash(_evidence), Hash(_evidence), Hash(_evidence) },
+                StableScreenshot = File.ReadAllBytes(_evidence)
+            };
+            AppraisalIdentityCapturesReturned.Add(capture);
+            return Task.FromResult(capture);
+        }
 
-        public Task<CleanupProofAppraisalCapture> CaptureCurrentCleanupAppraisalAsync(CancellationToken cancellationToken) =>
-            CaptureCurrentAsync();
+        public List<CleanupProofIdentityCapture?> ReceivedIdentityCaptures { get; } = new();
+
+        public Task<CleanupProofAppraisalCapture> CaptureCurrentCleanupAppraisalAsync(
+            CleanupProofIdentityCapture? confirmedIdentityCapture, CancellationToken cancellationToken)
+        {
+            ReceivedIdentityCaptures.Add(confirmedIdentityCapture);
+            return CaptureCurrentAsync();
+        }
 
         private Task<CleanupProofAppraisalCapture> CaptureCurrentAsync()
         {
@@ -346,6 +359,8 @@ internal static class CleanupProofTests
             ExitCount++;
             return Task.FromResult(VerifiedSequenceState.PokemonDetails);
         }
+
+        public int TagReadCallCount => _tagReadCount;
 
         public Task<VerifiedTagObservation> ReadTagObservationAsync(CancellationToken cancellationToken)
         {

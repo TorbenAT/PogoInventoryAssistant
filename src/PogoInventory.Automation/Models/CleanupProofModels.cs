@@ -24,6 +24,19 @@ public sealed record CleanupProofIdentityCapture
     public required IReadOnlyList<string> ScreenshotPaths { get; init; }
     public required IReadOnlyList<string> ScreenshotHashes { get; init; }
     public IReadOnlyList<string> FailureReasons { get; init; } = Array.Empty<string>();
+
+    /// <summary>
+    /// Raw bytes of the stable frame this identity capture confirmed, set only
+    /// for the appraisal-carousel identity capture (<c>CaptureCleanupAppraisalIdentityAsync</c>,
+    /// ordinal&gt;1) when it actually confirmed a stable AppraisalBars frame.
+    /// Lets a caller that just established this stable frame (e.g. the
+    /// cleanup-proof per-item loop) hand it into
+    /// <c>CaptureCurrentCleanupAppraisalAsync</c> as the already-confirmed IV
+    /// source, skipping a redundant re-capture of the identical on-screen
+    /// state one step later. Null whenever no stable frame was confirmed (the
+    /// consumer must then fail closed to its own full capture window).
+    /// </summary>
+    public byte[]? StableScreenshot { get; init; }
 }
 
 public sealed record CleanupProofAppraisalCapture

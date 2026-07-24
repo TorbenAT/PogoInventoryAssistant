@@ -86,6 +86,23 @@ public sealed class CleanupProofRunner
     /// </summary>
     private const string TagReadSkippedAppraisalCarouselReason = "TagReadSkipped:AppraisalCarousel";
 
+    /// <summary>
+    /// Reproduces exactly the unavailable observation
+    /// <c>ReadTagObservationAsync</c>'s own Appraisal-carousel short circuit
+    /// returns (see <c>AndroidVerifiedInventoryNamedOperations.ReadTagObservationAsync</c>),
+    /// without spending the probe capture: for ordinal&gt;1 the identity
+    /// capture immediately above already confirmed the phone is in the
+    /// carousel, so this state is already known.
+    /// </summary>
+    private static VerifiedTagObservation TagReadSkippedAppraisalCarouselObservation() => new()
+    {
+        TagCount = 0,
+        KnownTagNames = Array.Empty<string>(),
+        NamesComplete = false,
+        Section = null,
+        Evidence = new[] { TagReadSkippedAppraisalCarouselReason }
+    };
+
     private static readonly JsonSerializerOptions JsonOptions = new()
     {
         WriteIndented = true,
@@ -167,7 +184,19 @@ public sealed class CleanupProofRunner
                     }
                 }
 
-                var tags = await operations.ReadTagObservationAsync(cancellationToken);
+                // Ordinal-1 items are still on PokemonDetails (tag pills are
+                // observable there) so the real probe+read runs. Every later
+                // item is inside the Appraisal carousel where PokemonDetails
+                // (and therefore tag pills) can never appear - and the identity
+                // capture immediately above has JUST confirmed stable
+                // AppraisalBars for this exact item, so a further probe
+                // capture to re-detect "still in the carousel" would be
+                // redundant. Synthesize the identical unavailable observation
+                // the probe's own short-circuit would have returned, so
+                // downstream evidence/summary counting is unchanged.
+                var tags = ordinal == 1
+                    ? await operations.ReadTagObservationAsync(cancellationToken)
+                    : TagReadSkippedAppraisalCarouselObservation();
                 var headerScreen = ordinal == 1 ? HeaderScreenType.PokemonDetails : HeaderScreenType.AppraisalBars;
                 var extraction = await BuildSemanticExtractionAsync(
                     runId, ordinal, request, identity, tags, headerScreen, timing, cancellationToken);
@@ -201,7 +230,7 @@ public sealed class CleanupProofRunner
                 try
                 {
                     appraisal = appraisalOpen
-                        ? await operations.CaptureCurrentCleanupAppraisalAsync(cancellationToken)
+                        ? await operations.CaptureCurrentCleanupAppraisalAsync(identity, cancellationToken)
                         : await operations.CaptureCleanupAppraisalAsync(cancellationToken);
                     // The named operation has entered/confirmed the carousel
                     // even when semantic bars are unavailable; retain the

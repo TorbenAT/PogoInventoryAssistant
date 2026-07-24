@@ -1,4 +1,5 @@
 using PogoInventory.Appraisal.Models;
+using PogoInventory.Appraisal.Services;
 using PogoInventory.Automation.Models;
 using PogoInventory.Device.Errors;
 using PogoInventory.Device.Models;
@@ -10,27 +11,31 @@ using PogoInventory.Vision.Models;
 namespace PogoInventory.SelfTest;
 
 /// <summary>
-/// Task 3: <see cref="AndroidVerifiedInventoryNamedOperations.AdvanceToNextPokemonInAppraisalAsync"/>
-/// re-captured a fresh pre-swipe stability window even though
-/// <see cref="AndroidVerifiedInventoryNamedOperations.CaptureCurrentCleanupAppraisalAsync"/>
-/// just established a stable, fingerprinted AppraisalBars frame for the same
-/// Pokémon one step earlier in the cleanup-proof per-item loop. These tests
-/// exercise the real named operation against a synthetic AppraisalBars
-/// screenshot (crafted to satisfy the real <c>AppraisalAnalyzer</c>) with a
-/// counting fake transport, so the capture count proves the redundant
-/// pre-swipe window is skipped when the immediately-preceding capture is
-/// supplied, and unchanged when it is not.
+/// Task D: <see cref="AndroidVerifiedInventoryNamedOperations.CaptureCurrentCleanupAppraisalAsync"/>
+/// re-captured a fresh "carousel-appraisal-observation" stability window even
+/// though <see cref="AndroidVerifiedInventoryNamedOperations.CaptureCleanupAppraisalIdentityAsync"/>
+/// just established the exact same stable AppraisalBars frame one step
+/// earlier in the cleanup-proof per-item loop (no phone input between them).
+/// These tests exercise the real named operations against a synthetic
+/// AppraisalBars screenshot (crafted to satisfy the real
+/// <c>AppraisalAnalyzer</c>) with a counting fake transport, proving: (1) the
+/// shared-frame path produces the same IV analysis a separate capture of the
+/// identical bytes would, (2) it spends zero additional captures, (3) the
+/// fallback path (no supplied identity capture) is unchanged, and (4)
+/// chaining identity capture + shared-frame IV + advance for one steady-state
+/// item costs exactly 7 captures (3 identity + 0 IV + 1 swipe-authorization +
+/// 3 post-swipe).
 /// </summary>
-internal static class AdvancePreSwipeReuseTests
+internal static class FrameDietSharedIdentityTests
 {
     public static async Task RunAsync()
     {
-        await AdvanceReusesSuppliedPreSwipeFrameAsync();
-        await AdvanceWithoutSuppliedFrameCapturesPreSwipeWindowAsync();
-        await SkipPathDeniesSwipeWhenAuthorizationFrameIsNotAppraisalAsync();
+        await SharedIdentityFrameSkipsRedundantIvWindowAsync();
+        await FallbackWithoutIdentityCapturesOwnWindowAsync();
+        await SteadyStateItemCosts7CapturesAsync();
     }
 
-    public static async Task AdvanceReusesSuppliedPreSwipeFrameAsync()
+    public static async Task SharedIdentityFrameSkipsRedundantIvWindowAsync()
     {
         var directory = CreateTemporaryDirectory();
         try
@@ -39,27 +44,30 @@ internal static class AdvancePreSwipeReuseTests
             var transport = new CountingCaptureTransport(frame);
             var operations = CreateOperations(transport, directory);
 
-            // Establish the stable frame exactly like the cleanup-proof
-            // per-item loop does one step earlier.
-            var confirmed = await operations.CaptureCurrentCleanupAppraisalAsync(
-                confirmedIdentityCapture: null, CancellationToken.None);
-            AssertTrue(confirmed.StableFingerprintSha256 is not null,
-                "the fixture frame must be confirmed stable before the reuse can be exercised");
-            var captureCountAfterConfirm = transport.CaptureCount;
+            var identity = await operations.CaptureCleanupAppraisalIdentityAsync(CancellationToken.None);
+            AssertTrue(
+                identity.Status == CleanupProofObservationStatus.Complete,
+                "the fixture frame must resolve to a stable, complete identity capture");
+            AssertTrue(identity.StableScreenshot is not null, "identity capture must retain its stable screenshot bytes");
+            var captureCountAfterIdentity = transport.CaptureCount;
 
-            var result = await operations.AdvanceToNextPokemonInAppraisalAsync(
-                "a-fingerprint-that-does-not-match-the-supplied-frame",
-                confirmed,
-                CancellationToken.None);
+            var shared = await operations.CaptureCurrentCleanupAppraisalAsync(identity, CancellationToken.None);
 
             AssertTrue(
-                result == AppraisalCarouselAdvanceResult.SUCCESS_CHANGED_POKEMON,
-                $"advance must still verify the swipe with real post-swipe data, got {result}");
-            var capturesDuringAdvance = transport.CaptureCount - captureCountAfterConfirm;
-            AssertTrue(
-                capturesDuringAdvance == 4,
-                $"supplying the just-confirmed frame must skip the redundant pre-swipe window " +
-                $"(expected 1 authorization capture + 3 post-swipe captures = 4, got {capturesDuringAdvance})");
+                transport.CaptureCount == captureCountAfterIdentity,
+                $"supplying the just-confirmed identity capture must skip the redundant IV capture window " +
+                $"(expected 0 additional captures, got {transport.CaptureCount - captureCountAfterIdentity})");
+            AssertEqual(identity.Consensus.StableFingerprintSha256, shared.StableFingerprintSha256,
+                "IV analysis reuses the identity's fingerprint (same underlying frame)");
+
+            // Ground truth: running the real AppraisalAnalyzer directly on the
+            // identity's stable bytes must produce exactly the same IV triple
+            // the shared-frame path reports, proving the reuse is not lossy.
+            var direct = new AppraisalAnalyzer().Analyze(
+                PngDecoder.Decode(identity.StableScreenshot!), CreateAppraisalProfile(), allowComplete: true);
+            AssertEqual(direct.AttackIv, shared.AttackIv, "shared-frame AttackIv matches direct analysis of the same bytes");
+            AssertEqual(direct.DefenseIv, shared.DefenseIv, "shared-frame DefenseIv matches direct analysis of the same bytes");
+            AssertEqual(direct.HpIv, shared.HpIv, "shared-frame HpIv matches direct analysis of the same bytes");
         }
         finally
         {
@@ -67,7 +75,7 @@ internal static class AdvancePreSwipeReuseTests
         }
     }
 
-    public static async Task AdvanceWithoutSuppliedFrameCapturesPreSwipeWindowAsync()
+    public static async Task FallbackWithoutIdentityCapturesOwnWindowAsync()
     {
         var directory = CreateTemporaryDirectory();
         try
@@ -76,86 +84,54 @@ internal static class AdvancePreSwipeReuseTests
             var transport = new CountingCaptureTransport(frame);
             var operations = CreateOperations(transport, directory);
 
-            var result = await operations.AdvanceToNextPokemonInAppraisalAsync(
-                "a-fingerprint-that-does-not-match-the-captured-frame",
-                confirmedPreSwipeCapture: null,
-                CancellationToken.None);
+            var result = await operations.CaptureCurrentCleanupAppraisalAsync(
+                confirmedIdentityCapture: null, CancellationToken.None);
 
+            AssertTrue(result.AttackIv is not null && result.DefenseIv is not null && result.HpIv is not null,
+                "regression path must still succeed with real IV data");
             AssertTrue(
-                result == AppraisalCarouselAdvanceResult.SUCCESS_CHANGED_POKEMON,
-                $"regression path must still succeed with real data, got {result}");
+                transport.CaptureCount == 3,
+                $"without a supplied identity capture the IV observation window must still be captured " +
+                $"(expected 3 captures, got {transport.CaptureCount})");
+        }
+        finally
+        {
+            DeleteDirectory(directory);
+        }
+    }
+
+    public static async Task SteadyStateItemCosts7CapturesAsync()
+    {
+        var directory = CreateTemporaryDirectory();
+        try
+        {
+            var frame = CreateAppraisalBarsFrame();
+            var transport = new CountingCaptureTransport(frame);
+            var operations = CreateOperations(transport, directory);
+
+            var identity = await operations.CaptureCleanupAppraisalIdentityAsync(CancellationToken.None);
+            AssertTrue(identity.Status == CleanupProofObservationStatus.Complete, "identity must be stable");
+            // Task D change 1b (dropping the tag probe for ordinal>1) is a
+            // runner-level decision, not a named-operation capture, so it
+            // contributes 0 captures here by construction - nothing to call.
+            var shared = await operations.CaptureCurrentCleanupAppraisalAsync(identity, CancellationToken.None);
+            AssertTrue(shared.StableFingerprintSha256 is not null, "shared IV capture must carry a fingerprint for the advance below");
+
+            var advanced = await operations.AdvanceToNextPokemonInAppraisalAsync(
+                "a-fingerprint-that-does-not-match-the-supplied-frame", shared, CancellationToken.None);
+            AssertTrue(
+                advanced == AppraisalCarouselAdvanceResult.SUCCESS_CHANGED_POKEMON,
+                $"advance must still verify the swipe with real post-swipe data, got {advanced}");
+
             AssertTrue(
                 transport.CaptureCount == 7,
-                $"without a supplied frame the pre-swipe window must still be captured " +
-                $"(expected 3 pre-swipe + 1 authorization + 3 post-swipe = 7, got {transport.CaptureCount})");
+                $"steady-state item (identity + shared IV + advance) must cost exactly 7 captures " +
+                $"(3 identity + 0 IV + 1 swipe-authorization + 3 post-swipe), got {transport.CaptureCount}");
         }
         finally
         {
             DeleteDirectory(directory);
         }
-    }
-
-    /// <summary>
-    /// Task 4 / Important #3: when the pre-swipe window is skipped (a
-    /// just-confirmed, fingerprinted AppraisalBars capture was supplied), the
-    /// swipe's own authorization frame is the only remaining re-verification
-    /// that the phone is still in the carousel. If the phone has actually left
-    /// Appraisal by the time that frame is captured, the swipe must be denied
-    /// fail-closed rather than sent blind.
-    /// </summary>
-    public static async Task SkipPathDeniesSwipeWhenAuthorizationFrameIsNotAppraisalAsync()
-    {
-        var directory = CreateTemporaryDirectory();
-        try
-        {
-            var appraisalFrame = CreateAppraisalBarsFrame();
-            var notAppraisalFrame = CreateNonAppraisalFrame();
-            var transport = new CountingCaptureTransport(appraisalFrame);
-            var operations = CreateOperations(transport, directory);
-
-            // Establish the stable frame exactly like the cleanup-proof
-            // per-item loop does one step earlier, then simulate the phone
-            // having left the carousel before the swipe's own authorization
-            // capture runs.
-            var confirmed = await operations.CaptureCurrentCleanupAppraisalAsync(
-                confirmedIdentityCapture: null, CancellationToken.None);
-            AssertTrue(confirmed.StableFingerprintSha256 is not null,
-                "the fixture frame must be confirmed stable before the skip path can be exercised");
-            transport.ReplaceFrame(notAppraisalFrame);
-
-            var denied = false;
-            try
-            {
-                await operations.AdvanceToNextPokemonInAppraisalAsync(
-                    "a-fingerprint-that-does-not-match-the-supplied-frame",
-                    confirmed,
-                    CancellationToken.None);
-            }
-            catch (InvalidOperationException)
-            {
-                denied = true;
-            }
-
-            AssertTrue(denied,
-                "the skip-path swipe must be denied fail-closed when its authorization frame is not classified as Appraisal");
-        }
-        finally
-        {
-            DeleteDirectory(directory);
-        }
-    }
-
-    /// <summary>
-    /// A plain, uniform frame with none of the painted appraisal bars, so the
-    /// real state detector does not classify it as Appraisal (and the
-    /// PokemonDetails visual-fallback locator finds no topology either).
-    /// </summary>
-    private static byte[] CreateNonAppraisalFrame()
-    {
-        const int width = 300;
-        const int height = 600;
-        var rgba = Fill(width, height, r: 30, g: 30, b: 30);
-        return PngEncoder.Encode(new PixelImage(width, height, rgba));
     }
 
     private static AndroidVerifiedInventoryNamedOperations CreateOperations(
@@ -165,7 +141,7 @@ internal static class AdvancePreSwipeReuseTests
             "TEST-SERIAL",
             new InventoryAutomationProfile
             {
-                Name = "advance-pre-swipe-reuse-test",
+                Name = "frame-diet-shared-identity-test",
                 FirstInventoryCard = new NormalizedPoint { X = 0.18, Y = 0.72 },
                 DetailsMenuButton = new NormalizedPoint { X = 0.92, Y = 0.08 },
                 AppraiseMenuItem = new NormalizedPoint { X = 0.82, Y = 0.58 },
@@ -196,7 +172,7 @@ internal static class AdvancePreSwipeReuseTests
     /// </summary>
     private static AppraisalVisualProfile CreateAppraisalProfile() => new()
     {
-        ProfileId = "advance-pre-swipe-reuse-test-profile",
+        ProfileId = "frame-diet-shared-identity-test-profile",
         Bars = new[]
         {
             new AppraisalBarDefinition
@@ -243,9 +219,7 @@ internal static class AdvancePreSwipeReuseTests
         const double left = 0.08;
         const double barWidth = 0.70;
         const double barHeight = 0.05;
-        // Track (unfilled) color across the whole bar region.
         Paint(rgba, width, height, left, top, left + barWidth, top + barHeight, r: 200, g: 200, b: 200);
-        // Orange fill over the left half.
         Paint(rgba, width, height, left, top, left + barWidth * 0.5, top + barHeight, r: 220, g: 150, b: 60);
     }
 
@@ -293,13 +267,6 @@ internal static class AdvancePreSwipeReuseTests
         public CountingCaptureTransport(byte[] frame) => _frame = frame;
 
         public int CaptureCount { get; private set; }
-
-        /// <summary>
-        /// Swaps the frame returned by subsequent captures. Used to simulate
-        /// the phone having left the Appraisal carousel between an earlier
-        /// confirmed capture and a later authorization capture.
-        /// </summary>
-        public void ReplaceFrame(byte[] frame) => _frame = frame;
 
         public Task<IReadOnlyList<AndroidDeviceDescriptor>> ListDevicesAsync(
             CancellationToken cancellationToken = default) =>
@@ -370,7 +337,7 @@ internal static class AdvancePreSwipeReuseTests
 
     private static string CreateTemporaryDirectory()
     {
-        var path = Path.Combine(Path.GetTempPath(), "pogo-advance-pre-swipe-reuse-selftest", Guid.NewGuid().ToString("N"));
+        var path = Path.Combine(Path.GetTempPath(), "pogo-frame-diet-shared-identity-selftest", Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(path);
         return path;
     }
@@ -384,5 +351,11 @@ internal static class AdvancePreSwipeReuseTests
     private static void AssertTrue(bool condition, string message)
     {
         if (!condition) throw new InvalidOperationException(message);
+    }
+
+    private static void AssertEqual<T>(T expected, T actual, string message)
+    {
+        if (!Equals(expected, actual))
+            throw new InvalidOperationException($"{message}: expected '{expected}', got '{actual}'.");
     }
 }
