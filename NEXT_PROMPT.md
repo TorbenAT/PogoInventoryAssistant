@@ -1,5 +1,54 @@
 # Continuation prompt
 
+## Speed iteration checkpoint (2026-07-24) — SHIPPED, phone-measured
+
+Focused on run speed (Torben found runs very slow). All work via Superpowers
+subagent-driven-development with Sonnet subagents; four commits pushed to `main`
+(`0c1d884`, `7c70862`, `76362c6`, `a38a25e`, `d255ad6`), self-tests 223/223.
+
+- **Root cause + fix (`76362c6`):** `ReadTagObservationAsync` waited for
+  `PokemonDetails` while the phone was in the Appraisal carousel (every item
+  after the first), burning the full 12 s `WaitForStateAsync` timeout (~34
+  captures) per item and then reading tags off the wrong frame. Now probes the
+  state first and short-circuits with `TagReadSkipped:AppraisalCarousel`
+  (speed AND correctness fix).
+- **Timing instrumentation (`0c1d884`+`7c70862`):** `OperationTimingCollector`,
+  `TimingReport`, `TimingAndroidAutomationTransport`; each run now writes
+  `timing-report.json` + a `## Timing` section (null-collector default = zero
+  behavior change).
+- **Pre-swipe reuse (`a38a25e`):** reuse the just-confirmed stable AppraisalBars
+  frame as the pre-swipe reference (−3 captures/item); post-swipe verification
+  untouched.
+- **Final-review fixes (`d255ad6`):** honest per-item timing (EndItem in a
+  try/finally that includes the advance), run-scoped wall clock (MarkRunStart),
+  and a fail-closed `requiredState: Appraisal` gate on the skipped-pre-swipe
+  swipe authorization.
+
+**Measured WiFi vs USB A/B (12 items each, OnePlus 6T, both 12/12 green,
+integrity ok, identical species multiset, all REVIEW):**
+baseline ~41 s/item → **WiFi 22 s/item, USB 18 s/item**. Capture-transfer is the
+dominant cost (58 % WiFi / 51 % USB); mean `screencap -p` 1021 ms WiFi / 733 ms
+USB. USB cuts 28 % per capture, 18 % wall clock, no accuracy regression →
+**adopt USB for long runs**, but the per-frame cost is on-device PNG encode (not
+link), so the next structural lever is capture COUNT/format, not transport.
+Evidence: `local-data/validation/ab-usb/comparison.md`.
+CLI note: must pass `--adb 'C:\Data\PokemonGo\tools\platform-tools\adb.exe'`
+(absolute path; bare `adb`/relative fails AdbNotFound). USB serial `01f5c502`.
+
+**Still open for next iteration (design done, controller decisions taken —
+see plan `til-n-ste-iteration-st-r-cryptic-chipmunk.md`):**
+1. Runner-status defect (`CleanupProofRunner.cs:218` marks Complete despite
+   Unknown CP/IV) — extract shared `CleanupObservationStatusRule` from
+   `CleanupEvidenceReprocessor.RecomputeObservationStatus`. (The A/B runs'
+   `CompleteItems 12` reflects this defect; recommendations correctly stay
+   REVIEW, so fail-safe.)
+2. Final-map verification timing — bounded input-free `VerifyGameplayMapSettledAsync`.
+3. Coverage→accuracy requirement restatement (Torben decided 2026-07-24) +
+   reclassify gate 3 GREEN.
+4. Gate 4 pilot 2×50 (`analyze-reidentification`); formal ID-006 (≥200) stays
+   blocking.
+5. Capture-count/format reduction (raw framebuffer vs PNG) if it can be made safe.
+
 ## Evidence-machine result checkpoint (2026-07-21 aften) — CONTROLLER STOPPED AFTER GATE 3
 
 Gates 0-3 of the semantic integration checkpoint were executed on the
