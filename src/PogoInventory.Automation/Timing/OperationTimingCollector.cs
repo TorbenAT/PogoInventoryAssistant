@@ -47,6 +47,16 @@ public interface IOperationTimingCollector
     /// </remarks>
     void EndItem(int ordinal);
 
+    /// <summary>
+    /// Restarts the wall-clock stopwatch so <see cref="TimingReport.WallClockMilliseconds"/>
+    /// measures the run itself rather than the time since the collector was
+    /// constructed (which, for the CLI, includes unwind/profile loading that
+    /// happens before the run starts). Call once at the start of the run.
+    /// Any samples already recorded (there should be none in practice) are
+    /// kept; only the wall-clock reference point moves.
+    /// </summary>
+    void MarkRunStart();
+
     TimingReport BuildReport();
 }
 
@@ -63,7 +73,7 @@ public sealed class OperationTimingCollector : IOperationTimingCollector
 {
     private readonly object _lock = new();
     private readonly List<TimingSample> _samples = new();
-    private readonly Stopwatch _wallClock = Stopwatch.StartNew();
+    private Stopwatch _wallClock = Stopwatch.StartNew();
     private int? _currentItemOrdinal;
     private Stopwatch? _itemStopwatch;
 
@@ -103,18 +113,27 @@ public sealed class OperationTimingCollector : IOperationTimingCollector
         }
     }
 
+    public void MarkRunStart()
+    {
+        lock (_lock)
+        {
+            _wallClock = Stopwatch.StartNew();
+        }
+    }
+
     public TimingReport BuildReport()
     {
         List<TimingSample> samples;
+        double wallClockMilliseconds;
         lock (_lock)
         {
             samples = new List<TimingSample>(_samples);
+            wallClockMilliseconds = _wallClock.Elapsed.TotalMilliseconds;
         }
 
         if (samples.Count == 0)
             return TimingReport.Empty;
 
-        var wallClockMilliseconds = _wallClock.Elapsed.TotalMilliseconds;
         var capture = Summarize(samples, TimingCategory.CaptureTransfer);
         var fixedDelay = Summarize(samples, TimingCategory.FixedDelay);
         var ocr = Summarize(samples, TimingCategory.Ocr);
@@ -259,6 +278,10 @@ public sealed class NullOperationTimingCollector : IOperationTimingCollector
     }
 
     public void EndItem(int ordinal)
+    {
+    }
+
+    public void MarkRunStart()
     {
     }
 

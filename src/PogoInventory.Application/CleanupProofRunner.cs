@@ -95,13 +95,14 @@ public sealed class CleanupProofRunner
     public async Task<CleanupProofRunResult> RunAsync(
         ICleanupProofNamedOperations operations,
         CleanupProofRequest request,
-        CancellationToken cancellationToken = default,
-        IOperationTimingCollector? timing = null)
+        IOperationTimingCollector? timing = null,
+        CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(operations);
         ArgumentNullException.ThrowIfNull(request);
         request.Validate();
         timing ??= NullOperationTimingCollector.Instance;
+        timing.MarkRunStart();
         var output = Path.GetFullPath(request.OutputDirectory);
         var database = Path.GetFullPath(request.DatabasePath);
         Directory.CreateDirectory(output);
@@ -246,28 +247,41 @@ public sealed class CleanupProofRunner
                     cancellationToken,
                     enrichedRecord.ObservationStatus);
                 captures[^1] = enrichedRecord;
-                timing.EndItem(ordinal);
 
-                if (ordinal >= request.ItemLimit)
+                // EndItem is deliberately deferred until after the carousel
+                // advance (or the decision not to advance) below: the advance's
+                // captures/swipe/settle delays belong to the item they advance
+                // FROM, so honest per-item timing must include them. The
+                // try/finally guarantees EndItem still fires exactly once for
+                // every loop exit from this point (last-item break, no-effect
+                // break, unknown-stop return, or a propagating exception).
+                try
                 {
-                    safeState = true;
-                    break;
-                }
+                    if (ordinal >= request.ItemLimit)
+                    {
+                        safeState = true;
+                        break;
+                    }
 
-                var advanced = await operations.AdvanceToNextPokemonInAppraisalAsync(
-                    identity.Consensus.StableFingerprintSha256,
-                    appraisal,
-                    cancellationToken);
-                if (advanced == AppraisalCarouselAdvanceResult.NO_EFFECT_OR_FILTER_END)
-                {
-                    stopReason = "FilterExhaustedAfterStableNoEffect";
-                    safeState = true;
-                    break;
+                    var advanced = await operations.AdvanceToNextPokemonInAppraisalAsync(
+                        identity.Consensus.StableFingerprintSha256,
+                        appraisal,
+                        cancellationToken);
+                    if (advanced == AppraisalCarouselAdvanceResult.NO_EFFECT_OR_FILTER_END)
+                    {
+                        stopReason = "FilterExhaustedAfterStableNoEffect";
+                        safeState = true;
+                        break;
+                    }
+                    if (advanced is AppraisalCarouselAdvanceResult.UNKNOWN_STOP)
+                    {
+                        stopReason = "CursorProgression:" + advanced;
+                        return await FinishAsync("SafeStopped", stopReason, captures, runId, persistence, request, timing, cancellationToken);
+                    }
                 }
-                if (advanced is AppraisalCarouselAdvanceResult.UNKNOWN_STOP)
+                finally
                 {
-                    stopReason = "CursorProgression:" + advanced;
-                    return await FinishAsync("SafeStopped", stopReason, captures, runId, persistence, request, timing, cancellationToken);
+                    timing.EndItem(ordinal);
                 }
             }
 

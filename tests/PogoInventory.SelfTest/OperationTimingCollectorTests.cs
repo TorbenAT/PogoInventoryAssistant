@@ -20,6 +20,65 @@ internal static class OperationTimingCollectorTests
         await PercentagesAreDerivedAndBoundedAsync();
         await NullCollectorIsInertAndReportEmptyAsync();
         await RunnerWritesTimingReportAndSummarySectionAsync();
+        await MarkRunStartRestartsWallClockAsync();
+        await AdvanceTimeIsAttributedToTheAdvancingItemAsync();
+    }
+
+    public static async Task MarkRunStartRestartsWallClockAsync()
+    {
+        var collector = new OperationTimingCollector();
+        // Simulate pre-run work (unwind/profile loading in the CLI) happening
+        // before the collector is told the run has actually started.
+        await Task.Delay(250);
+        collector.MarkRunStart();
+        collector.RecordCapture("screencap", 5, 100);
+        var report = collector.BuildReport();
+        AssertTrue(
+            report.WallClockMilliseconds < 200,
+            $"MarkRunStart must restart the wall clock so pre-run work is excluded, got {report.WallClockMilliseconds:F0} ms");
+    }
+
+    public static async Task AdvanceTimeIsAttributedToTheAdvancingItemAsync()
+    {
+        var root = CleanupProofTests.CreateTemporaryDirectory();
+        try
+        {
+            var evidence = await CleanupProofTests.CreateEvidenceAsync(root);
+            var fake = new CleanupProofTests.FakeCleanupOperations(
+                evidence, partial: true,
+                beforeAdvance: () => Task.Delay(80));
+            var timing = new OperationTimingCollector();
+            var request = new CleanupProofRequest
+            {
+                SpeciesQuery = "Pidgey",
+                ItemLimit = 6,
+                DatabasePath = Path.Combine(root, "cleanup-proof.sqlite"),
+                OutputDirectory = root,
+                DeviceSerial = "synthetic",
+                ContinueOnPartial = true
+            };
+            await new CleanupProofRunner().RunAsync(fake, request, timing: timing);
+            var report = timing.BuildReport();
+            AssertEqual(6, report.Items.Count, "one item summary per captured item");
+
+            // Items 1-5 each advance to the next Pokémon with an injected
+            // 80 ms delay; that delay must land in the item it advances FROM.
+            foreach (var item in report.Items.Where(entry => entry.Ordinal < 6))
+                AssertTrue(
+                    item.TotalMilliseconds >= 70,
+                    $"item {item.Ordinal} total must include the advance delay, got {item.TotalMilliseconds:F0} ms");
+
+            // Item 6 is the last item: the loop never advances past it, so it
+            // must not pick up any injected advance delay.
+            var last = report.Items.Single(entry => entry.Ordinal == 6);
+            AssertTrue(
+                last.TotalMilliseconds < 70,
+                $"the last item never advances and must not include any injected delay, got {last.TotalMilliseconds:F0} ms");
+        }
+        finally
+        {
+            CleanupProofTests.DeleteDirectory(root);
+        }
     }
 
     public static Task CaptureAggregationSumsMillisecondsAndBytesAsync()

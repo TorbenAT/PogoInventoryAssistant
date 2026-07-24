@@ -59,6 +59,17 @@ public sealed record TimingReport
     public required TimingCategorySummary Ocr { get; init; }
     public required IReadOnlyList<TimingOperationSummary> Operations { get; init; }
     public required IReadOnlyList<ItemTimingSummary> Items { get; init; }
+
+    /// <summary>
+    /// Each <see cref="TimingCategory"/>'s total milliseconds as a percentage
+    /// of <see cref="WallClockMilliseconds"/>. <see cref="TimingCategory.NamedOperation"/>
+    /// spans nest the finer-grained capture, fixed-delay and OCR samples taken
+    /// during that named operation (e.g. a capture measured inside
+    /// <c>AdvanceToNextPokemonInAppraisalAsync</c> is also included in that
+    /// operation's own duration), so the percentages here can legitimately sum
+    /// to more than 100%: they are independent per-category shares of wall
+    /// clock, not mutually exclusive partitions of it.
+    /// </summary>
     public required IReadOnlyDictionary<string, double> CategoryPercentOfWallClock { get; init; }
 
     public double PerItemMeanMilliseconds =>

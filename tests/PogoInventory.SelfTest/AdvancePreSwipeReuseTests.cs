@@ -27,6 +27,7 @@ internal static class AdvancePreSwipeReuseTests
     {
         await AdvanceReusesSuppliedPreSwipeFrameAsync();
         await AdvanceWithoutSuppliedFrameCapturesPreSwipeWindowAsync();
+        await SkipPathDeniesSwipeWhenAuthorizationFrameIsNotAppraisalAsync();
     }
 
     public static async Task AdvanceReusesSuppliedPreSwipeFrameAsync()
@@ -91,6 +92,68 @@ internal static class AdvancePreSwipeReuseTests
         {
             DeleteDirectory(directory);
         }
+    }
+
+    /// <summary>
+    /// Task 4 / Important #3: when the pre-swipe window is skipped (a
+    /// just-confirmed, fingerprinted AppraisalBars capture was supplied), the
+    /// swipe's own authorization frame is the only remaining re-verification
+    /// that the phone is still in the carousel. If the phone has actually left
+    /// Appraisal by the time that frame is captured, the swipe must be denied
+    /// fail-closed rather than sent blind.
+    /// </summary>
+    public static async Task SkipPathDeniesSwipeWhenAuthorizationFrameIsNotAppraisalAsync()
+    {
+        var directory = CreateTemporaryDirectory();
+        try
+        {
+            var appraisalFrame = CreateAppraisalBarsFrame();
+            var notAppraisalFrame = CreateNonAppraisalFrame();
+            var transport = new CountingCaptureTransport(appraisalFrame);
+            var operations = CreateOperations(transport, directory);
+
+            // Establish the stable frame exactly like the cleanup-proof
+            // per-item loop does one step earlier, then simulate the phone
+            // having left the carousel before the swipe's own authorization
+            // capture runs.
+            var confirmed = await operations.CaptureCurrentCleanupAppraisalAsync(CancellationToken.None);
+            AssertTrue(confirmed.StableFingerprintSha256 is not null,
+                "the fixture frame must be confirmed stable before the skip path can be exercised");
+            transport.ReplaceFrame(notAppraisalFrame);
+
+            var denied = false;
+            try
+            {
+                await operations.AdvanceToNextPokemonInAppraisalAsync(
+                    "a-fingerprint-that-does-not-match-the-supplied-frame",
+                    confirmed,
+                    CancellationToken.None);
+            }
+            catch (InvalidOperationException)
+            {
+                denied = true;
+            }
+
+            AssertTrue(denied,
+                "the skip-path swipe must be denied fail-closed when its authorization frame is not classified as Appraisal");
+        }
+        finally
+        {
+            DeleteDirectory(directory);
+        }
+    }
+
+    /// <summary>
+    /// A plain, uniform frame with none of the painted appraisal bars, so the
+    /// real state detector does not classify it as Appraisal (and the
+    /// PokemonDetails visual-fallback locator finds no topology either).
+    /// </summary>
+    private static byte[] CreateNonAppraisalFrame()
+    {
+        const int width = 300;
+        const int height = 600;
+        var rgba = Fill(width, height, r: 30, g: 30, b: 30);
+        return PngEncoder.Encode(new PixelImage(width, height, rgba));
     }
 
     private static AndroidVerifiedInventoryNamedOperations CreateOperations(
@@ -222,12 +285,19 @@ internal static class AdvancePreSwipeReuseTests
     /// </summary>
     private sealed class CountingCaptureTransport : IAndroidAutomationTransport
     {
-        private readonly byte[] _frame;
+        private byte[] _frame;
         private const string Serial = "TEST-SERIAL";
 
         public CountingCaptureTransport(byte[] frame) => _frame = frame;
 
         public int CaptureCount { get; private set; }
+
+        /// <summary>
+        /// Swaps the frame returned by subsequent captures. Used to simulate
+        /// the phone having left the Appraisal carousel between an earlier
+        /// confirmed capture and a later authorization capture.
+        /// </summary>
+        public void ReplaceFrame(byte[] frame) => _frame = frame;
 
         public Task<IReadOnlyList<AndroidDeviceDescriptor>> ListDevicesAsync(
             CancellationToken cancellationToken = default) =>

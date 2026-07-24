@@ -227,6 +227,7 @@ internal static class CleanupProofTests
         private readonly bool _throwAppraisal;
         private readonly Func<CleanupProofAppraisalCapture>? _appraisalOverride;
         private readonly Func<int, VerifiedTagObservation>? _tagObservationOverride;
+        private readonly Func<Task>? _beforeAdvance;
         private int _tagReadCount;
         public int AdvanceCount { get; private set; }
         public int AppraisalOpenCount { get; private set; }
@@ -243,7 +244,8 @@ internal static class CleanupProofTests
             Func<Task>? beforeAppraisal = null,
             bool throwAppraisal = false,
             Func<CleanupProofAppraisalCapture>? appraisalOverride = null,
-            Func<int, VerifiedTagObservation>? tagObservationOverride = null)
+            Func<int, VerifiedTagObservation>? tagObservationOverride = null,
+            Func<Task>? beforeAdvance = null)
         {
             _evidence = evidence;
             _partial = partial;
@@ -252,6 +254,7 @@ internal static class CleanupProofTests
             _throwAppraisal = throwAppraisal;
             _appraisalOverride = appraisalOverride;
             _tagObservationOverride = tagObservationOverride;
+            _beforeAdvance = beforeAdvance;
         }
 
         public Task<VerifiedSequenceState> EnsureFilteredInventoryAsync(string query, CancellationToken cancellationToken) =>
@@ -318,7 +321,7 @@ internal static class CleanupProofTests
         public CleanupProofAppraisalCapture? LastConfirmedPreSwipeCapture { get; private set; }
         public List<CleanupProofAppraisalCapture?> ConfirmedPreSwipeCaptures { get; } = new();
 
-        public Task<AppraisalCarouselAdvanceResult> AdvanceToNextPokemonInAppraisalAsync(
+        public async Task<AppraisalCarouselAdvanceResult> AdvanceToNextPokemonInAppraisalAsync(
             string previousAppraisalFingerprint,
             CleanupProofAppraisalCapture? confirmedPreSwipeCapture,
             CancellationToken cancellationToken)
@@ -329,7 +332,9 @@ internal static class CleanupProofTests
             ConfirmedPreSwipeCaptures.Add(confirmedPreSwipeCapture);
             AppraisalCarouselSwipeCount++;
             AdvanceCount++;
-            return Task.FromResult(AppraisalCarouselAdvanceResult.SUCCESS_CHANGED_POKEMON);
+            if (_beforeAdvance is not null)
+                await _beforeAdvance();
+            return AppraisalCarouselAdvanceResult.SUCCESS_CHANGED_POKEMON;
         }
 
         public Task<string> CloseInventoryAsync(CancellationToken cancellationToken) => Task.FromResult("GameplayMap");

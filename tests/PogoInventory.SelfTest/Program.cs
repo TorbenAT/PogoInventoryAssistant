@@ -52,6 +52,7 @@ var tests = new (string Name, Func<Task> Run)[]
     ("Cleanup runner reports skipped appraisal-carousel tag reads", TagReadAppraisalCarouselSummaryTests.RunAsync),
     ("Advance reuses the just-confirmed stable frame as the pre-swipe reference", AdvancePreSwipeReuseTests.AdvanceReusesSuppliedPreSwipeFrameAsync),
     ("Advance without a supplied frame still captures the pre-swipe window", AdvancePreSwipeReuseTests.AdvanceWithoutSuppliedFrameCapturesPreSwipeWindowAsync),
+    ("Skip-path swipe is denied when its authorization frame is not Appraisal", AdvancePreSwipeReuseTests.SkipPathDeniesSwipeWhenAuthorizationFrameIsNotAppraisalAsync),
     ("Cleanup runner passes the confirmed appraisal capture into advance", CleanupRunnerAdvanceReuseTests.RunAsync),
     ("Guarded inventory close enforces one map transition", GuardedInventoryCloseTests.RunAsync),
     ("Recovery ROI consensus ignores full-screen animation", GuardedInventoryRecoveryTests.RunRoiConsensusAsync),
@@ -266,6 +267,8 @@ var tests = new (string Name, Func<Task> Run)[]
     ,("Timing report percentages are derived and non-negative", OperationTimingCollectorTests.PercentagesAreDerivedAndBoundedAsync)
     ,("Null timing collector is inert and its report is empty", OperationTimingCollectorTests.NullCollectorIsInertAndReportEmptyAsync)
     ,("Cleanup runner writes timing report and summary section only when a collector is supplied", OperationTimingCollectorTests.RunnerWritesTimingReportAndSummarySectionAsync)
+    ,("MarkRunStart restarts the wall clock so pre-run work is excluded", OperationTimingCollectorTests.MarkRunStartRestartsWallClockAsync)
+    ,("Advance time is attributed to the item it advances from", OperationTimingCollectorTests.AdvanceTimeIsAttributedToTheAdvancingItemAsync)
 };
 
 var failed = 0;

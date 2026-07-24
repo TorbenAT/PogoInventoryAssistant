@@ -800,7 +800,14 @@ public sealed class AndroidVerifiedInventoryNamedOperations : ICleanupProofNamed
         // Re-verifying pre-swipe stability here would be a redundant capture
         // window for state we already confirmed. Only skip when a fingerprint
         // is actually present (fail-closed for any other/unavailable capture).
-        if (confirmedPreSwipeCapture?.StableFingerprintSha256 is null)
+        // Whether the pre-swipe window was skipped: when it was, the swipe's
+        // own authorization frame is the only remaining re-verification that
+        // the phone is still in the carousel, so it must fail-closed require
+        // the Appraisal state. When the pre-swipe window ran, it already acted
+        // as that state gate, so the authorization frame keeps its prior
+        // (unenforced) behavior to avoid a redundant/duplicate gate.
+        var preSwipeWindowSkipped = confirmedPreSwipeCapture?.StableFingerprintSha256 is not null;
+        if (!preSwipeWindowSkipped)
         {
             var before = await CaptureRecoveryFramesAsync("carousel-appraisal-pre-swipe", cancellationToken);
             if (!GuardedInventoryRecovery.TryGetStableFrame(before, out var stableBefore) ||
@@ -812,7 +819,8 @@ public sealed class AndroidVerifiedInventoryNamedOperations : ICleanupProofNamed
         var start = _automationProfile.NextPokemonSwipe.Start.ToPixels(width, height);
         var end = _automationProfile.NextPokemonSwipe.End.ToPixels(width, height);
         await AuthorizeNonTapInputAsync(
-            "appraisal-next-pokemon-swipe", cancellationToken, PokemonGoGameState.Appraisal.ToString());
+            "appraisal-next-pokemon-swipe", cancellationToken, PokemonGoGameState.Appraisal.ToString(),
+            requiredState: preSwipeWindowSkipped ? PokemonGoGameState.Appraisal : null);
         await _transport.SwipeAsync(_serial, start.X, start.Y, end.X, end.Y,
             _automationProfile.NextPokemonSwipe.DurationMilliseconds, cancellationToken);
         if (_navigationTrace is not null)

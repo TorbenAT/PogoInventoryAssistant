@@ -1896,7 +1896,7 @@ static async Task<int> RunCleanupProofAsync(
         HeaderAnalyzer = headerAnalyzer,
         Policy = rulePolicy
     };
-    var result = await new CleanupProofRunner().RunAsync(operations, request, cancellationToken, timing);
+    var result = await new CleanupProofRunner().RunAsync(operations, request, timing, cancellationToken);
     Console.WriteLine(JsonSerializer.Serialize(result, new JsonSerializerOptions
     {
         WriteIndented = true,
