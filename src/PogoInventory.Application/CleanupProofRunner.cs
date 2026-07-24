@@ -4,6 +4,7 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 using PogoInventory.Automation.Models;
 using PogoInventory.Automation.Services;
+using PogoInventory.Automation.Timing;
 using PogoInventory.Core.Analysis;
 using PogoInventory.Core.Models;
 using PogoInventory.Core.Policy;
@@ -85,11 +86,13 @@ public sealed class CleanupProofRunner
     public async Task<CleanupProofRunResult> RunAsync(
         ICleanupProofNamedOperations operations,
         CleanupProofRequest request,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken = default,
+        IOperationTimingCollector? timing = null)
     {
         ArgumentNullException.ThrowIfNull(operations);
         ArgumentNullException.ThrowIfNull(request);
         request.Validate();
+        timing ??= NullOperationTimingCollector.Instance;
         var output = Path.GetFullPath(request.OutputDirectory);
         var database = Path.GetFullPath(request.DatabasePath);
         Directory.CreateDirectory(output);
@@ -115,19 +118,20 @@ public sealed class CleanupProofRunner
             if (inventory != VerifiedSequenceState.Inventory)
             {
                 stopReason = "FilteredInventoryNotVerified";
-                return await FinishAsync("SafeStopped", stopReason, captures, runId, persistence, request, cancellationToken);
+                return await FinishAsync("SafeStopped", stopReason, captures, runId, persistence, request, timing, cancellationToken);
             }
             var opened = await operations.OpenFirstPokemonAsync(cancellationToken);
             if (opened != VerifiedSequenceState.PokemonDetails)
             {
                 stopReason = "FirstPokemonDetailsNotVerified";
-                return await FinishAsync("SafeStopped", stopReason, captures, runId, persistence, request, cancellationToken);
+                return await FinishAsync("SafeStopped", stopReason, captures, runId, persistence, request, timing, cancellationToken);
             }
 
             var appraisalOpen = false;
             for (var ordinal = 1; ordinal <= request.ItemLimit; ordinal++)
             {
                 cancellationToken.ThrowIfCancellationRequested();
+                timing.BeginItem(ordinal);
                 var identity = ordinal == 1
                     ? await operations.CaptureCleanupIdentityAsync(
                         request.MaximumCaptureFrames,
@@ -149,14 +153,14 @@ public sealed class CleanupProofRunner
                     else
                     {
                         stopReason = "UNRESOLVED_DETAILS:" + string.Join(';', retry.FailureReasons);
-                        return await FinishAsync("SafeStopped", stopReason, captures, runId, persistence, request, cancellationToken);
+                        return await FinishAsync("SafeStopped", stopReason, captures, runId, persistence, request, timing, cancellationToken);
                     }
                 }
 
                 var tags = await operations.ReadTagObservationAsync(cancellationToken);
                 var headerScreen = ordinal == 1 ? HeaderScreenType.PokemonDetails : HeaderScreenType.AppraisalBars;
                 var extraction = await BuildSemanticExtractionAsync(
-                    runId, ordinal, request, identity, tags, headerScreen, cancellationToken);
+                    runId, ordinal, request, identity, tags, headerScreen, timing, cancellationToken);
                 var observation = extraction.Observation;
                 var record = new CleanupProofObservationRecord
                 {
@@ -233,6 +237,7 @@ public sealed class CleanupProofRunner
                     cancellationToken,
                     enrichedRecord.ObservationStatus);
                 captures[^1] = enrichedRecord;
+                timing.EndItem(ordinal);
 
                 if (ordinal >= request.ItemLimit)
                 {
@@ -252,7 +257,7 @@ public sealed class CleanupProofRunner
                 if (advanced is AppraisalCarouselAdvanceResult.UNKNOWN_STOP)
                 {
                     stopReason = "CursorProgression:" + advanced;
-                    return await FinishAsync("SafeStopped", stopReason, captures, runId, persistence, request, cancellationToken);
+                    return await FinishAsync("SafeStopped", stopReason, captures, runId, persistence, request, timing, cancellationToken);
                 }
             }
 
@@ -266,7 +271,7 @@ public sealed class CleanupProofRunner
                     if (exited != VerifiedSequenceState.PokemonDetails)
                     {
                         stopReason = "AppraisalExitFailed:" + exited;
-                        return await FinishAsync("SafeStopped", stopReason, captures, runId, persistence, request, cancellationToken);
+                        return await FinishAsync("SafeStopped", stopReason, captures, runId, persistence, request, timing, cancellationToken);
                     }
                 }
                 var inventoryState = await operations.ReturnToInventoryAsync(cancellationToken);
@@ -282,12 +287,12 @@ public sealed class CleanupProofRunner
                 }
             }
             var finalStatus = captures.Count >= request.ItemLimit ? "Completed" : "CompletedPartial";
-            return await FinishAsync(finalStatus, stopReason, captures, runId, persistence, request, cancellationToken);
+            return await FinishAsync(finalStatus, stopReason, captures, runId, persistence, request, timing, cancellationToken);
         }
         catch (Exception exception) when (exception is not OperationCanceledException)
         {
             stopReason = exception.GetType().Name + ":" + exception.Message;
-            return await FinishAsync("SafeStopped", stopReason, captures, runId, persistence, request, cancellationToken);
+            return await FinishAsync("SafeStopped", stopReason, captures, runId, persistence, request, timing, cancellationToken);
         }
     }
 
@@ -323,6 +328,7 @@ public sealed class CleanupProofRunner
         CleanupProofIdentityCapture identity,
         VerifiedTagObservation tags,
         HeaderScreenType headerScreen,
+        IOperationTimingCollector timing,
         CancellationToken cancellationToken)
     {
         var speciesReference = request.SpeciesReference ?? new StaticSpeciesReference(Array.Empty<string>());
@@ -332,7 +338,7 @@ public sealed class CleanupProofRunner
         if (request.HeaderAnalyzer is not null && identity.ScreenshotPaths.Count >= 2)
         {
             headerConsensus = await AnalyzeHeaderConsensusAsync(
-                request.HeaderAnalyzer, identity.ScreenshotPaths, headerScreen, cancellationToken);
+                request.HeaderAnalyzer, identity.ScreenshotPaths, headerScreen, timing, cancellationToken);
         }
 
         var species = "Unknown";
@@ -403,6 +409,7 @@ public sealed class CleanupProofRunner
         PokemonHeaderAnalyzer analyzer,
         IReadOnlyList<string> screenshotPaths,
         HeaderScreenType screen,
+        IOperationTimingCollector timing,
         CancellationToken cancellationToken)
     {
         var frames = new List<PokemonHeaderResult>();
@@ -417,6 +424,7 @@ public sealed class CleanupProofRunner
             {
                 continue;
             }
+            using var _ = timing.Measure(TimingCategory.Ocr, "HeaderFrame");
             frames.Add(await analyzer.AnalyzeAsync(bytes, screen, cancellationToken));
         }
         return frames.Count < 2 ? null : PokemonHeaderAnalyzer.Consensus(frames);
@@ -514,6 +522,7 @@ public sealed class CleanupProofRunner
         string runId,
         InventoryPersistenceService persistence,
         CleanupProofRequest request,
+        IOperationTimingCollector timing,
         CancellationToken cancellationToken)
     {
         await persistence.CompleteCleanupRunAsync(
@@ -541,7 +550,7 @@ public sealed class CleanupProofRunner
             .ReadCleanupProofSqlSummaryAsync(cancellationToken);
         var comparative = CleanupProofComparativeAnalyzer.BuildComparativeSuggestions(rows);
         ValidateReports(rows, sqlSummary, request.OutputDirectory);
-        await WriteReportsAsync(request, runId, status, stopReason, captures, rows, sqlSummary, comparative, cancellationToken);
+        await WriteReportsAsync(request, runId, status, stopReason, captures, rows, sqlSummary, comparative, timing, cancellationToken);
         var counts = rows.GroupBy(row => row.CurrentRecommendation, StringComparer.Ordinal)
             .ToDictionary(group => group.Key, group => group.Count(), StringComparer.Ordinal);
         return new CleanupProofRunResult
@@ -587,9 +596,16 @@ public sealed class CleanupProofRunner
         IReadOnlyList<CleanupProofDatabaseRow> rows,
         CleanupProofSqlSummary sql,
         IReadOnlyList<CleanupProofComparativeSuggestion> comparative,
+        IOperationTimingCollector timing,
         CancellationToken cancellationToken)
     {
         var output = Path.GetFullPath(request.OutputDirectory);
+        var timingReport = timing.BuildReport();
+        if (!timingReport.IsEmpty)
+        {
+            await File.WriteAllTextAsync(Path.Combine(output, "timing-report.json"),
+                JsonSerializer.Serialize(timingReport, JsonOptions), cancellationToken);
+        }
         await File.WriteAllTextAsync(Path.Combine(output, "captured-observations.json"),
             JsonSerializer.Serialize(captures, JsonOptions), cancellationToken);
         var review = rows.Select(row => SemanticReview(row, request.SpeciesQuery)).ToArray();
@@ -702,12 +718,36 @@ public sealed class CleanupProofRunner
         proof.AppendLine();
         proof.AppendLine("- TAG_MUTATIONS=0; TRANSFER_ACTIONS=0; DELETE_ACTIONS=0; POWER_UP_ACTIONS=0; EVOLVE_ACTIONS=0; PURIFY_ACTIONS=0; PURCHASE_ACTIONS=0; FAVORITE_CHANGES=0; CALCY_ACTIONS=0.");
         proof.AppendLine();
+        if (!timingReport.IsEmpty)
+        {
+            AppendTimingSection(proof, timingReport);
+        }
         proof.AppendLine("## Limitations");
         proof.AppendLine();
         proof.AppendLine("- Species is QueryDerived from an exact species search, or Automated from >=2-frame header OCR consensus; CP is Automated from header OCR consensus; variant fields, catch date and location remain Unknown unless separately evidence-reviewed.");
         proof.AppendLine("- IVs are Automated only when >=2 independently analyzed appraisal evidence frames agree on the same (attack, defense, hp) triple with per-bar confidence at or above the visual profile threshold; no Calcy surface is used.");
         proof.AppendLine("- No tag, transfer, delete, power-up, evolve, purify, purchase or location-changing action is exposed by this command.");
         await File.WriteAllTextAsync(Path.Combine(output, "proof-summary.md"), proof.ToString(), cancellationToken);
+    }
+
+    private static void AppendTimingSection(StringBuilder proof, TimingReport report)
+    {
+        var breakdown = report.WallClockBreakdown();
+        proof.AppendLine("## Timing");
+        proof.AppendLine();
+        proof.AppendLine($"- Wall clock: {report.WallClockMilliseconds:F0} ms");
+        proof.AppendLine($"- Per-item mean: {report.PerItemMeanMilliseconds:F0} ms ({report.Items.Count} items)");
+        proof.AppendLine(
+            $"- capture-transfer {breakdown.ScreenCapturePercent:F1}% / " +
+            $"fixed-wait {breakdown.FixedWaitPercent:F1}% / " +
+            $"OCR {breakdown.OcrPercent:F1}% / " +
+            $"other {breakdown.OtherPercent:F1}%");
+        proof.AppendLine();
+        proof.AppendLine("| Operation | Count | Total ms | Mean ms |");
+        proof.AppendLine("|---|---:|---:|---:|");
+        foreach (var operation in report.Operations)
+            proof.AppendLine($"| {operation.Name} | {operation.Count} | {operation.TotalMilliseconds:F0} | {operation.MeanMilliseconds:F0} |");
+        proof.AppendLine();
     }
 
     private static object SemanticReview(CleanupProofDatabaseRow row, string query)

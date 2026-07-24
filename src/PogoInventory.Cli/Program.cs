@@ -10,6 +10,7 @@ using PogoInventory.Persistence;
 using PogoInventory.Automation.Errors;
 using PogoInventory.Automation.Models;
 using PogoInventory.Automation.Services;
+using PogoInventory.Automation.Timing;
 using PogoInventory.Automation.Transport;
 using PogoInventory.Bootstrap.Services;
 using PogoInventory.Calibration.Errors;
@@ -1846,13 +1847,16 @@ static async Task<int> RunCleanupProofAsync(
     AppraisalVisualProfile? appraisalProfile = File.Exists(appraisalPath)
         ? await AppraisalProfileLoader.LoadAsync(appraisalPath, cancellationToken)
         : null;
+    var timing = new OperationTimingCollector();
     var transport = CreateRealAndroidTransport(options);
+    transport = new TimingAndroidAutomationTransport(transport, timing);
     var selected = DeviceSnapshotService.SelectDevice(
         await transport.ListDevicesAsync(cancellationToken), Optional(options, "serial"));
     var evidence = Path.Combine(output, "evidence");
     Directory.CreateDirectory(evidence);
     var operations = new AndroidVerifiedInventoryNamedOperations(
-        transport, selected.Serial, automationProfile, evidence, appraisalProfile);
+        transport, selected.Serial, automationProfile, evidence, appraisalProfile,
+        timingCollector: timing);
     var recovery = await new CanonicalCloseUnwindService().UnwindToGameplayMapAsync(
         operations, cancellationToken);
     await File.WriteAllTextAsync(
@@ -1892,7 +1896,7 @@ static async Task<int> RunCleanupProofAsync(
         HeaderAnalyzer = headerAnalyzer,
         Policy = rulePolicy
     };
-    var result = await new CleanupProofRunner().RunAsync(operations, request, cancellationToken);
+    var result = await new CleanupProofRunner().RunAsync(operations, request, cancellationToken, timing);
     Console.WriteLine(JsonSerializer.Serialize(result, new JsonSerializerOptions
     {
         WriteIndented = true,

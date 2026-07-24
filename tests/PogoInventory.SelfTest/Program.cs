@@ -254,6 +254,12 @@ var tests = new (string Name, Func<Task> Run)[]
     ,("Offline analyze-cleanup-evidence reprocesses a database without touching the original", HeaderSemanticsCleanupTests.AnalyzeCleanupEvidenceEndToEndAsync)
     ,("Reprocess recomputes ObservationStatus from species+CP+IV completeness", HeaderSemanticsCleanupTests.ReprocessRecomputesObservationStatusAsync)
     ,("Cleanup proof item limit accepts 6-50 and rejects outside bounds", HeaderSemanticsCleanupTests.ItemLimitBoundsAsync)
+    ,("Timing collector sums capture-transfer milliseconds and bytes", OperationTimingCollectorTests.CaptureAggregationSumsMillisecondsAndBytesAsync)
+    ,("Timing collector accumulates fixed delay per reason", OperationTimingCollectorTests.FixedDelayAccumulatesPerReasonAsync)
+    ,("Timing collector attributes capture/delay/OCR to the right item ordinal", OperationTimingCollectorTests.PerItemAttributionSplitsCaptureDelayOcrAsync)
+    ,("Timing report percentages are derived and non-negative", OperationTimingCollectorTests.PercentagesAreDerivedAndBoundedAsync)
+    ,("Null timing collector is inert and its report is empty", OperationTimingCollectorTests.NullCollectorIsInertAndReportEmptyAsync)
+    ,("Cleanup runner writes timing report and summary section only when a collector is supplied", OperationTimingCollectorTests.RunnerWritesTimingReportAndSummarySectionAsync)
 };
 
 var failed = 0;

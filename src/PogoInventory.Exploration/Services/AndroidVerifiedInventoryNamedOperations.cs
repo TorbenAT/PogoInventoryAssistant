@@ -4,6 +4,7 @@ using PogoInventory.Appraisal.Services;
 using PogoInventory.Appraisal.Models;
 using PogoInventory.Automation.Models;
 using PogoInventory.Automation.Services;
+using PogoInventory.Automation.Timing;
 using PogoInventory.Device.Models;
 using PogoInventory.Device.Transport;
 using PogoInventory.Exploration.Models;
@@ -39,6 +40,7 @@ public sealed class AndroidVerifiedInventoryNamedOperations : ICleanupProofNamed
     private readonly PokemonDetailsIdentityAnalyzer _identityAnalyzer;
     private readonly GuardedInventoryRecovery _recovery = new();
     private readonly NavigationSafetyTraceRecorder? _navigationTrace;
+    private readonly IOperationTimingCollector _timing;
     private AndroidDeviceMetadata? _metadata;
     private PokemonIdentityConsensus? _lastIdentity;
     private byte[]? _lastScreenshot;
@@ -54,7 +56,8 @@ public sealed class AndroidVerifiedInventoryNamedOperations : ICleanupProofNamed
         string evidenceDirectory,
         AppraisalVisualProfile? appraisalProfile = null,
         PokemonIdentityFingerprintProfile? identityProfile = null,
-        NavigationSafetyTraceRecorder? navigationTrace = null)
+        NavigationSafetyTraceRecorder? navigationTrace = null,
+        IOperationTimingCollector? timingCollector = null)
     {
         _transport = transport ?? throw new ArgumentNullException(nameof(transport));
         ArgumentException.ThrowIfNullOrWhiteSpace(serial);
@@ -67,6 +70,7 @@ public sealed class AndroidVerifiedInventoryNamedOperations : ICleanupProofNamed
         _appraisalProfile = appraisalProfile;
         _identityAnalyzer = new PokemonDetailsIdentityAnalyzer(identityProfile);
         _navigationTrace = navigationTrace;
+        _timing = timingCollector ?? NullOperationTimingCollector.Instance;
     }
 
     public async Task<VerifiedSequenceState> OpenInventoryAsync(CancellationToken cancellationToken)
@@ -116,6 +120,7 @@ public sealed class AndroidVerifiedInventoryNamedOperations : ICleanupProofNamed
     public async Task<VerifiedSequenceState> EnsureFilteredInventoryAsync(
         string query, CancellationToken cancellationToken)
     {
+        using var _ = _timing.Measure(TimingCategory.NamedOperation, nameof(EnsureFilteredInventoryAsync));
         var opened = await OpenInventoryAsync(cancellationToken);
         if (opened != VerifiedSequenceState.Inventory)
             return VerifiedSequenceState.Unknown;
@@ -396,7 +401,7 @@ public sealed class AndroidVerifiedInventoryNamedOperations : ICleanupProofNamed
                 };
             }
             if (index < 4)
-                await Task.Delay(_automationProfile.PostActionSettleMilliseconds, cancellationToken);
+                await SettleAsync("PostActionSettle", _automationProfile.PostActionSettleMilliseconds, cancellationToken);
         }
         return null;
     }
@@ -420,7 +425,7 @@ public sealed class AndroidVerifiedInventoryNamedOperations : ICleanupProofNamed
                 return new StableChangedState(true, last[0], "CHANGED_STABLE_STATE", 3);
             }
             if (index < 4)
-                await Task.Delay(_automationProfile.PostActionSettleMilliseconds, cancellationToken);
+                await SettleAsync("PostActionSettle", _automationProfile.PostActionSettleMilliseconds, cancellationToken);
         }
         return new StableChangedState(false, states.LastOrDefault(),
             "NO_CHANGED_STABLE_STATE", states.Count);
@@ -455,6 +460,7 @@ public sealed class AndroidVerifiedInventoryNamedOperations : ICleanupProofNamed
 
     public async Task<VerifiedSequenceState> OpenFirstPokemonAsync(CancellationToken cancellationToken)
     {
+        using var _ = _timing.Measure(TimingCategory.NamedOperation, nameof(OpenFirstPokemonAsync));
         var inventory = await WaitForStateAsync(new[] { PokemonGoGameState.Inventory }, cancellationToken);
         var located = _locator.LocateInventoryCard(inventory.Screenshot);
         if (located is null) return VerifiedSequenceState.Unknown;
@@ -481,7 +487,7 @@ public sealed class AndroidVerifiedInventoryNamedOperations : ICleanupProofNamed
             var details = await WaitForStateAsync(new[] { PokemonGoGameState.PokemonDetails }, cancellationToken);
             frames.Add(new PokemonIdentityFrame { ScreenshotPng = details.Screenshot });
             await SaveEvidenceAsync($"identity-{index + 1}", details.Screenshot, cancellationToken);
-            if (index < 2) await Task.Delay(_automationProfile.PostActionSettleMilliseconds, cancellationToken);
+            if (index < 2) await SettleAsync("PostActionSettle", _automationProfile.PostActionSettleMilliseconds, cancellationToken);
         }
         _lastIdentity = _identityAnalyzer.Consensus(frames);
         return _lastIdentity;
@@ -500,6 +506,7 @@ public sealed class AndroidVerifiedInventoryNamedOperations : ICleanupProofNamed
         if (minimumPartialFrames < 2 || minimumPartialFrames > minimumCompleteFrames)
             throw new ArgumentOutOfRangeException(nameof(minimumPartialFrames));
 
+        using var _ = _timing.Measure(TimingCategory.NamedOperation, nameof(CaptureCleanupIdentityAsync));
         var frames = new List<PokemonIdentityFrame>(maximumFrames);
         var paths = new List<string>(maximumFrames);
         var failureReasons = new List<string>();
@@ -533,7 +540,7 @@ public sealed class AndroidVerifiedInventoryNamedOperations : ICleanupProofNamed
                     break;
             }
             if (index < maximumFrames - 1)
-                await Task.Delay(_automationProfile.PostActionSettleMilliseconds, cancellationToken);
+                await SettleAsync("PostActionSettle", _automationProfile.PostActionSettleMilliseconds, cancellationToken);
         }
 
         if (frames.Count == 0)
@@ -630,6 +637,7 @@ public sealed class AndroidVerifiedInventoryNamedOperations : ICleanupProofNamed
     public async Task<CleanupProofAppraisalCapture> CaptureCleanupAppraisalAsync(
         CancellationToken cancellationToken)
     {
+        using var _ = _timing.Measure(TimingCategory.NamedOperation, nameof(CaptureCleanupAppraisalAsync));
         var status = await CaptureAppraisalAsync(cancellationToken);
         if (status != "AppraisalBarsObserved")
         {
@@ -725,6 +733,7 @@ public sealed class AndroidVerifiedInventoryNamedOperations : ICleanupProofNamed
     public async Task<CleanupProofIdentityCapture> CaptureCleanupAppraisalIdentityAsync(
         CancellationToken cancellationToken)
     {
+        using var _ = _timing.Measure(TimingCategory.NamedOperation, nameof(CaptureCleanupAppraisalIdentityAsync));
         var frames = await CaptureRecoveryFramesAsync("carousel-appraisal-identity", cancellationToken);
         if (!GuardedInventoryRecovery.TryGetStableFrame(frames, out var stable) ||
             stable is null || stable.Kind != RecoveryFrameKind.AppraisalBars)
@@ -757,6 +766,7 @@ public sealed class AndroidVerifiedInventoryNamedOperations : ICleanupProofNamed
     public async Task<CleanupProofAppraisalCapture> CaptureCurrentCleanupAppraisalAsync(
         CancellationToken cancellationToken)
     {
+        using var _ = _timing.Measure(TimingCategory.NamedOperation, nameof(CaptureCurrentCleanupAppraisalAsync));
         var frames = await CaptureRecoveryFramesAsync("carousel-appraisal-observation", cancellationToken);
         if (!GuardedInventoryRecovery.TryGetStableFrame(frames, out var stable) ||
             stable is null || stable.Kind != RecoveryFrameKind.AppraisalBars)
@@ -779,6 +789,7 @@ public sealed class AndroidVerifiedInventoryNamedOperations : ICleanupProofNamed
         CancellationToken cancellationToken)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(previousAppraisalFingerprint);
+        using var _ = _timing.Measure(TimingCategory.NamedOperation, nameof(AdvanceToNextPokemonInAppraisalAsync));
         var before = await CaptureRecoveryFramesAsync("carousel-appraisal-pre-swipe", cancellationToken);
         if (!GuardedInventoryRecovery.TryGetStableFrame(before, out var stableBefore) ||
             stableBefore is null || stableBefore.Kind != RecoveryFrameKind.AppraisalBars)
@@ -868,6 +879,7 @@ public sealed class AndroidVerifiedInventoryNamedOperations : ICleanupProofNamed
 
     public async Task<VerifiedSequenceState> ExitAppraisalAsync(CancellationToken cancellationToken)
     {
+        using var _ = _timing.Measure(TimingCategory.NamedOperation, nameof(ExitAppraisalAsync));
         LastCleanupRecoveryInputCount = 0;
         var frames = await CaptureRecoveryFramesAsync("exit-appraisal", cancellationToken);
         _recovery.Begin(frames);
@@ -909,6 +921,7 @@ public sealed class AndroidVerifiedInventoryNamedOperations : ICleanupProofNamed
 
     public async Task<VerifiedTagObservation> ReadTagObservationAsync(CancellationToken cancellationToken)
     {
+        using var _ = _timing.Measure(TimingCategory.NamedOperation, nameof(ReadTagObservationAsync));
         var details = await WaitForStateAsync(new[] { PokemonGoGameState.PokemonDetails }, cancellationToken);
         var identity = _identityAnalyzer.Analyze(details.Screenshot);
         return new VerifiedTagObservation
@@ -1009,6 +1022,7 @@ public sealed class AndroidVerifiedInventoryNamedOperations : ICleanupProofNamed
 
     public async Task<VerifiedSequenceState> ReturnToInventoryAsync(CancellationToken cancellationToken)
     {
+        using var _ = _timing.Measure(TimingCategory.NamedOperation, nameof(ReturnToInventoryAsync));
         LastCleanupRecoveryInputCount = 0;
         var frames = await CaptureRecoveryFramesAsync("return-to-inventory", cancellationToken);
         var begin = _recovery.Begin(frames);
@@ -1038,6 +1052,7 @@ public sealed class AndroidVerifiedInventoryNamedOperations : ICleanupProofNamed
 
     public async Task<string> CloseInventoryAsync(CancellationToken cancellationToken)
     {
+        using var _ = _timing.Measure(TimingCategory.NamedOperation, nameof(CloseInventoryAsync));
         LastCleanupRecoveryInputCount = 0;
         var before = await WaitForStateAsync(
             new[] { PokemonGoGameState.Inventory }, cancellationToken);
@@ -1078,7 +1093,7 @@ public sealed class AndroidVerifiedInventoryNamedOperations : ICleanupProofNamed
             frames.Add(frame);
             if (GuardedInventoryRecovery.TryGetStableFrame(frames, out _))
                 return frames;
-            await Task.Delay(_automationProfile.PostActionSettleMilliseconds, cancellationToken);
+            await SettleAsync("PostActionSettle", _automationProfile.PostActionSettleMilliseconds, cancellationToken);
         }
         return frames;
     }
@@ -1103,7 +1118,7 @@ public sealed class AndroidVerifiedInventoryNamedOperations : ICleanupProofNamed
             frames.Add(new PokemonIdentityFrame { ScreenshotPng = screenshot });
             await SaveEvidenceAsync($"{label}-{index + 1}", screenshot, cancellationToken);
             if (index < 2)
-                await Task.Delay(_automationProfile.PostActionSettleMilliseconds, cancellationToken);
+                await SettleAsync("PostActionSettle", _automationProfile.PostActionSettleMilliseconds, cancellationToken);
         }
         return frames;
     }
@@ -1129,7 +1144,7 @@ public sealed class AndroidVerifiedInventoryNamedOperations : ICleanupProofNamed
             frames.Add(new PokemonIdentityFrame { ScreenshotPng = screenshot });
             await SaveEvidenceAsync($"{label}-{index + 1}", screenshot, cancellationToken);
             if (index < 2)
-                await Task.Delay(_automationProfile.PostActionSettleMilliseconds, cancellationToken);
+                await SettleAsync("PostActionSettle", _automationProfile.PostActionSettleMilliseconds, cancellationToken);
         }
 
         return _identityAnalyzer.Consensus(frames).Status ==
@@ -1218,7 +1233,7 @@ public sealed class AndroidVerifiedInventoryNamedOperations : ICleanupProofNamed
                 evidence.Add("carousel-transition-roi-changed");
             if (evidence.Count > 0)
                 return (true, observedState, evidence.Distinct(StringComparer.Ordinal).ToArray());
-            await Task.Delay(_automationProfile.StatePollMilliseconds, cancellationToken);
+            await SettleAsync("StatePoll", _automationProfile.StatePollMilliseconds, cancellationToken);
         }
         return (false, observedState, new[] { "no-observed-transition" });
     }
@@ -1285,7 +1300,7 @@ public sealed class AndroidVerifiedInventoryNamedOperations : ICleanupProofNamed
                 if (detection.State == PokemonGoGameState.Unknown)
                     await WriteAuditAsync("unknown", detection, cancellationToken);
             }
-            await Task.Delay(_automationProfile.StatePollMilliseconds, cancellationToken);
+            await SettleAsync("StatePoll", _automationProfile.StatePollMilliseconds, cancellationToken);
         }
         return (last ?? PokemonGoGameState.Unknown, screenshot ?? Array.Empty<byte>());
     }
@@ -1482,7 +1497,7 @@ public sealed class AndroidVerifiedInventoryNamedOperations : ICleanupProofNamed
             if (observation.HasUnsafeConfirmation)
                 await SaveEvidenceAsync("UnsafeConfirmation-MainMenuPrecondition", screenshot, cancellationToken);
             if (index < MainMenuPreconditionValidator.RequiredStableFrames - 1)
-                await Task.Delay(_automationProfile.PostActionSettleMilliseconds, cancellationToken);
+                await SettleAsync("PostActionSettle", _automationProfile.PostActionSettleMilliseconds, cancellationToken);
         }
         var precondition = MainMenuPreconditionValidator.TryCreate(frames);
         await WriteAuditAsync("open-inventory-precondition", new
@@ -1585,6 +1600,12 @@ public sealed class AndroidVerifiedInventoryNamedOperations : ICleanupProofNamed
     {
         public UnsafeConfirmationSurfaceException(string action, UnsafeConfirmationKind kind)
             : base($"Input '{action}' denied by unsafe {kind} confirmation surface.") { }
+    }
+
+    private Task SettleAsync(string reason, int milliseconds, CancellationToken cancellationToken)
+    {
+        _timing.RecordFixedDelay(reason, milliseconds);
+        return Task.Delay(milliseconds, cancellationToken);
     }
 
     private async Task<byte[]> CaptureAsync(string label, CancellationToken cancellationToken)
