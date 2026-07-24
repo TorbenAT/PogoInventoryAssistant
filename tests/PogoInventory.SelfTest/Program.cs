@@ -289,6 +289,7 @@ var tests = new (string Name, Func<Task> Run)[]
     ,("Null timing collector RecordInput is a no-op", OperationTimingCollectorTests.NullCollectorRecordInputIsInertAsync)
     ,("Timing summary section contains capture/input columns", OperationTimingCollectorTests.SummarySectionContainsNewColumnsAsync)
     ,("Adb path resolver honors explicit --adb values and bundled/PATH fallback", AdbPathResolverTests.RunAsync)
+    ,("Warm-background stability: MainMenu background fallback requires 3-of-3 sample points", WarmBackgroundDetectionStabilityTests.RunAsync)
 };
 
 var failed = 0;
