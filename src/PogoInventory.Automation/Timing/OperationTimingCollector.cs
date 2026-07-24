@@ -85,6 +85,8 @@ public interface IOperationTimingCollector
 /// <remarks>
 /// Per-item attribution assumes items are processed sequentially: BeginItem/EndItem delimit one item at a time.
 /// Concurrent item processing would misattribute samples recorded between overlapping Begin/End calls.
+/// The same sequential-only contract applies to the operation-name stack: overlapping named-operation
+/// scopes from concurrent flows would misattribute captures and inputs to the wrong operation.
 /// </remarks>
 public sealed class OperationTimingCollector : IOperationTimingCollector
 {
