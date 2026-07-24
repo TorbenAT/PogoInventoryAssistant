@@ -175,7 +175,7 @@ public static class CleanupEvidenceReprocessor
                     ["Species"] = speciesEvidence,
                     ["Cp"] = cpEvidence
                 };
-                var observationStatus = RecomputeObservationStatus(updatedObservation, row.ObservationStatus);
+                var observationStatus = CleanupObservationStatusRule.Recompute(updatedObservation, row.ObservationStatus);
 
                 await writeService.ReprocessCleanupSemanticsAsync(
                     runId, row.LocalPokemonId, updatedObservation, fieldEvidence, observationStatus, cancellationToken);
@@ -260,24 +260,6 @@ public static class CleanupEvidenceReprocessor
         if (!Directory.Exists(evidenceRoot)) return null;
         return Directory.EnumerateFiles(evidenceRoot, Path.GetFileName(storedPath), SearchOption.AllDirectories)
             .FirstOrDefault();
-    }
-
-    /// <summary>
-    /// Complete requires species + CP + all three IVs known; otherwise the
-    /// row is never better than Partial. Never upgrades beyond what the
-    /// evidence supports: a row that was Unresolved stays Unresolved rather
-    /// than being promoted to Partial just because it is not Complete.
-    /// </summary>
-    private static string RecomputeObservationStatus(PokemonObservation observation, string originalStatus)
-    {
-        var criticalTripleKnown =
-            !string.Equals(observation.Species, "Unknown", StringComparison.Ordinal) &&
-            observation.Cp is not null &&
-            observation.AttackIv is not null &&
-            observation.DefenseIv is not null &&
-            observation.HpIv is not null;
-        if (criticalTripleKnown) return "Complete";
-        return string.Equals(originalStatus, "Unresolved", StringComparison.Ordinal) ? "Unresolved" : "Partial";
     }
 
     private static async Task<PokemonHeaderConsensusResult?> AnalyzeHeaderFramesAsync(

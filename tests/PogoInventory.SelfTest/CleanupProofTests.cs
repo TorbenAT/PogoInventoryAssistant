@@ -107,6 +107,90 @@ internal static class CleanupProofTests
         }
     }
 
+    /// <summary>
+    /// Reproduces the fix for the close-animation race: <c>CloseInventoryAsync</c>
+    /// returns a non-GameplayMap state (the close animation raced the state
+    /// read), but the bounded, input-free re-observation confirms the phone
+    /// actually settles on GameplayMap moments later. The run must not fail
+    /// closed in this case: Status stays Completed, stopReason stays the
+    /// original safe-stop reason (ItemLimitReached), and the verification
+    /// result is written to disk either way.
+    /// </summary>
+    public static async Task LateMapSettleIsVerifiedAndDoesNotFailRunAsync()
+    {
+        var root = CreateTemporaryDirectory();
+        try
+        {
+            var evidence = await CreateEvidenceAsync(root);
+            var fake = new FakeCleanupOperations(
+                evidence,
+                partial: true,
+                closeInventoryFinalState: "PokemonDetails",
+                finalMapVerificationOverride: () => new CleanupFinalMapVerification
+                {
+                    FinalState = "GameplayMap",
+                    Verified = true,
+                    ObservedStates = new[] { "PokemonDetails", "GameplayMap", "GameplayMap", "GameplayMap" },
+                    EvidencePaths = Array.Empty<string>(),
+                    ElapsedMilliseconds = 250
+                });
+            var result = await RunProofAsync(root, fake);
+            AssertEqual(1, fake.FinalMapVerificationCallCount, "verification called exactly once");
+            AssertEqual("Completed", result.Status, "late settle must not fail the run");
+            AssertEqual("ItemLimitReached", result.StopReason, "verified late settle keeps the original stop reason");
+            AssertTrue(File.Exists(Path.Combine(root, "final-map-verification.json")), "verification json written on verified outcome");
+            var json = await File.ReadAllTextAsync(Path.Combine(root, "final-map-verification.json"));
+            AssertTrue(json.Contains("\"Verified\": true", StringComparison.Ordinal), "verification json records Verified true");
+            var summary = await File.ReadAllTextAsync(Path.Combine(root, "proof-summary.md"));
+            AssertTrue(summary.Contains("Final map verification: verified=True", StringComparison.Ordinal), "proof summary notes the late settle");
+        }
+        finally
+        {
+            DeleteDirectory(root);
+        }
+    }
+
+    /// <summary>
+    /// Same race, but the bounded re-observation never confirms GameplayMap
+    /// within the deadline: the run must stay fail-closed exactly as before
+    /// (<c>FinalMapNotVerified:&lt;finalState&gt;</c>, with the observed
+    /// states from the re-observation appended), and the verification result
+    /// is still written to disk.
+    /// </summary>
+    public static async Task UnsettledFinalMapStaysFailClosedAsync()
+    {
+        var root = CreateTemporaryDirectory();
+        try
+        {
+            var evidence = await CreateEvidenceAsync(root);
+            var fake = new FakeCleanupOperations(
+                evidence,
+                partial: true,
+                closeInventoryFinalState: "PokemonDetails",
+                finalMapVerificationOverride: () => new CleanupFinalMapVerification
+                {
+                    FinalState = "PokemonDetails",
+                    Verified = false,
+                    ObservedStates = new[] { "PokemonDetails", "PokemonDetails", "PokemonDetails" },
+                    EvidencePaths = Array.Empty<string>(),
+                    ElapsedMilliseconds = 5000
+                });
+            var result = await RunProofAsync(root, fake);
+            AssertEqual(1, fake.FinalMapVerificationCallCount, "verification called exactly once");
+            AssertTrue(result.StopReason.StartsWith("FinalMapNotVerified:PokemonDetails", StringComparison.Ordinal),
+                "unverified final map stays fail-closed");
+            AssertTrue(result.StopReason.Contains("PokemonDetails,PokemonDetails,PokemonDetails", StringComparison.Ordinal),
+                "unverified stop reason appends observed states");
+            AssertTrue(File.Exists(Path.Combine(root, "final-map-verification.json")), "verification json written on unverified outcome");
+            var json = await File.ReadAllTextAsync(Path.Combine(root, "final-map-verification.json"));
+            AssertTrue(json.Contains("\"Verified\": false", StringComparison.Ordinal), "verification json records Verified false");
+        }
+        finally
+        {
+            DeleteDirectory(root);
+        }
+    }
+
     private static async Task PartialObservationDoesNotTerminateBatchAsync()
     {
         var root = CreateTemporaryDirectory();
@@ -228,7 +312,10 @@ internal static class CleanupProofTests
         private readonly Func<CleanupProofAppraisalCapture>? _appraisalOverride;
         private readonly Func<int, VerifiedTagObservation>? _tagObservationOverride;
         private readonly Func<Task>? _beforeAdvance;
+        private readonly string _closeInventoryFinalState;
+        private readonly Func<CleanupFinalMapVerification>? _finalMapVerificationOverride;
         private int _tagReadCount;
+        public int FinalMapVerificationCallCount { get; private set; }
         public int AdvanceCount { get; private set; }
         public int AppraisalOpenCount { get; private set; }
         public int CurrentAppraisalCaptureCount { get; private set; }
@@ -245,7 +332,9 @@ internal static class CleanupProofTests
             bool throwAppraisal = false,
             Func<CleanupProofAppraisalCapture>? appraisalOverride = null,
             Func<int, VerifiedTagObservation>? tagObservationOverride = null,
-            Func<Task>? beforeAdvance = null)
+            Func<Task>? beforeAdvance = null,
+            string closeInventoryFinalState = "GameplayMap",
+            Func<CleanupFinalMapVerification>? finalMapVerificationOverride = null)
         {
             _evidence = evidence;
             _partial = partial;
@@ -255,6 +344,8 @@ internal static class CleanupProofTests
             _appraisalOverride = appraisalOverride;
             _tagObservationOverride = tagObservationOverride;
             _beforeAdvance = beforeAdvance;
+            _closeInventoryFinalState = closeInventoryFinalState;
+            _finalMapVerificationOverride = finalMapVerificationOverride;
         }
 
         public Task<VerifiedSequenceState> EnsureFilteredInventoryAsync(string query, CancellationToken cancellationToken) =>
@@ -350,7 +441,20 @@ internal static class CleanupProofTests
             return AppraisalCarouselAdvanceResult.SUCCESS_CHANGED_POKEMON;
         }
 
-        public Task<string> CloseInventoryAsync(CancellationToken cancellationToken) => Task.FromResult("GameplayMap");
+        public Task<string> CloseInventoryAsync(CancellationToken cancellationToken) => Task.FromResult(_closeInventoryFinalState);
+
+        public Task<CleanupFinalMapVerification> VerifyGameplayMapSettledAsync(CancellationToken cancellationToken)
+        {
+            FinalMapVerificationCallCount++;
+            return Task.FromResult(_finalMapVerificationOverride?.Invoke() ?? new CleanupFinalMapVerification
+            {
+                FinalState = "GameplayMap",
+                Verified = true,
+                ObservedStates = new[] { "GameplayMap", "GameplayMap", "GameplayMap" },
+                EvidencePaths = Array.Empty<string>(),
+                ElapsedMilliseconds = 0
+            });
+        }
 
         public Task<string> CaptureAppraisalAsync(CancellationToken cancellationToken) => Task.FromResult("Partial");
 

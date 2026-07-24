@@ -87,3 +87,22 @@ public sealed record AppraisalFrameIv
     public int? HpIv { get; init; }
     public required bool BarsConfident { get; init; }
 }
+
+/// <summary>
+/// Result of a bounded, capture-only re-observation performed after
+/// <c>CloseInventoryAsync</c> reports a final state other than GameplayMap --
+/// the close (Android Back) animation can still be settling onto GameplayMap
+/// moments after the state read that produced that non-GameplayMap result.
+/// This verification NEVER sends input; it only polls captures within a
+/// single <c>StateTimeoutSeconds</c> deadline and requires 3 consecutive
+/// GameplayMap detections (mirroring <c>WaitForStateAsync</c>'s own
+/// consensus rule) before declaring <see cref="Verified"/> true.
+/// </summary>
+public sealed record CleanupFinalMapVerification
+{
+    public required string FinalState { get; init; }
+    public required bool Verified { get; init; }
+    public required IReadOnlyList<string> ObservedStates { get; init; }
+    public required IReadOnlyList<string> EvidencePaths { get; init; }
+    public required double ElapsedMilliseconds { get; init; }
+}

@@ -139,6 +139,7 @@ public sealed class CleanupProofRunner
         var captures = new List<CleanupProofObservationRecord>();
         var stopReason = "ItemLimitReached";
         var safeState = false;
+        CleanupFinalMapVerification? finalMapVerification = null;
         try
         {
             var inventory = await operations.EnsureFilteredInventoryAsync(request.SpeciesQuery, cancellationToken);
@@ -249,16 +250,10 @@ public sealed class CleanupProofRunner
 
                 var appraisalOutcome = ApplyAppraisal(observation, appraisal);
                 var enrichedObservation = appraisalOutcome.Observation;
-                var criticalTripleKnown =
-                    !string.Equals(enrichedObservation.Species, "Unknown", StringComparison.Ordinal) &&
-                    enrichedObservation.Cp is not null &&
-                    enrichedObservation.AttackIv is not null &&
-                    enrichedObservation.DefenseIv is not null &&
-                    enrichedObservation.HpIv is not null;
                 var enrichedRecord = record with
                 {
                     Observation = enrichedObservation,
-                    ObservationStatus = criticalTripleKnown ? "Complete" : record.ObservationStatus,
+                    ObservationStatus = CleanupObservationStatusRule.Recompute(enrichedObservation, record.ObservationStatus),
                     AppraisalEvidence = appraisal.EvidencePaths.Count == 0
                         ? new[] { "AppraisalStatus:" + appraisal.Status }
                         : appraisal.EvidencePaths,
@@ -332,7 +327,31 @@ public sealed class CleanupProofRunner
                 {
                     var finalState = await operations.CloseInventoryAsync(cancellationToken);
                     if (!string.Equals(finalState, "GameplayMap", StringComparison.Ordinal))
-                        stopReason = "FinalMapNotVerified:" + finalState;
+                    {
+                        // The close (Android Back) animation can still be
+                        // settling onto GameplayMap moments after the state
+                        // read above produced this non-GameplayMap result.
+                        // Re-observe ONCE, capture-only, bounded by
+                        // StateTimeoutSeconds -- never a retry loop, never
+                        // input. Written to disk in BOTH outcomes so a
+                        // reviewer can see exactly what was (or was not)
+                        // observed after the close.
+                        finalMapVerification = await operations.VerifyGameplayMapSettledAsync(cancellationToken);
+                        await File.WriteAllTextAsync(
+                            Path.Combine(output, "final-map-verification.json"),
+                            JsonSerializer.Serialize(finalMapVerification, JsonOptions),
+                            cancellationToken);
+                        if (!finalMapVerification.Verified)
+                        {
+                            stopReason = "FinalMapNotVerified:" + finalState +
+                                ";ObservedStates=" + string.Join(',', finalMapVerification.ObservedStates);
+                        }
+                        // Verified: stopReason stays "ItemLimitReached" (or
+                        // whatever safe-stop reason was already set); the
+                        // late settle is noted in proof-summary.md instead of
+                        // masking the fact that the first read raced the
+                        // close animation.
+                    }
                 }
                 else
                 {
@@ -340,7 +359,7 @@ public sealed class CleanupProofRunner
                 }
             }
             var finalStatus = captures.Count >= request.ItemLimit ? "Completed" : "CompletedPartial";
-            return await FinishAsync(finalStatus, stopReason, captures, runId, persistence, request, timing, cancellationToken);
+            return await FinishAsync(finalStatus, stopReason, captures, runId, persistence, request, timing, cancellationToken, finalMapVerification);
         }
         catch (Exception exception) when (exception is not OperationCanceledException)
         {
@@ -578,7 +597,8 @@ public sealed class CleanupProofRunner
         InventoryPersistenceService persistence,
         CleanupProofRequest request,
         IOperationTimingCollector timing,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        CleanupFinalMapVerification? finalMapVerification = null)
     {
         await persistence.CompleteCleanupRunAsync(
             runId,
@@ -605,7 +625,7 @@ public sealed class CleanupProofRunner
             .ReadCleanupProofSqlSummaryAsync(cancellationToken);
         var comparative = CleanupProofComparativeAnalyzer.BuildComparativeSuggestions(rows);
         ValidateReports(rows, sqlSummary, request.OutputDirectory);
-        await WriteReportsAsync(request, runId, status, stopReason, captures, rows, sqlSummary, comparative, timing, cancellationToken);
+        await WriteReportsAsync(request, runId, status, stopReason, captures, rows, sqlSummary, comparative, timing, cancellationToken, finalMapVerification);
         var counts = rows.GroupBy(row => row.CurrentRecommendation, StringComparer.Ordinal)
             .ToDictionary(group => group.Key, group => group.Count(), StringComparer.Ordinal);
         return new CleanupProofRunResult
@@ -652,7 +672,8 @@ public sealed class CleanupProofRunner
         CleanupProofSqlSummary sql,
         IReadOnlyList<CleanupProofComparativeSuggestion> comparative,
         IOperationTimingCollector timing,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        CleanupFinalMapVerification? finalMapVerification = null)
     {
         var output = Path.GetFullPath(request.OutputDirectory);
         var timingReport = timing.BuildReport();
@@ -746,6 +767,9 @@ public sealed class CleanupProofRunner
         proof.AppendLine($"- KEEP / REVIEW / DELETE-CANDIDATE: {Count(counts, "KEEP")} / {Count(counts, "REVIEW")} / {Count(counts, "DELETE-CANDIDATE")}");
         proof.AppendLine($"- Comparative RETAINED / LIKELY_DELETE / INSUFFICIENT: {comparative.Count(item => item.Classification == "RETAINED_COMPARATOR")} / {comparative.Count(item => item.Classification == "LIKELY_DELETE_SUGGESTION")} / {comparative.Count(item => item.Classification == "INSUFFICIENT_COMPARISON_DATA")}");
         proof.AppendLine($"- Stop reason: `{stopReason}`");
+        if (finalMapVerification is not null)
+            proof.AppendLine(
+                $"- Final map verification: verified={finalMapVerification.Verified}, finalState=`{finalMapVerification.FinalState}`, observedStates=`{string.Join(",", finalMapVerification.ObservedStates)}`.");
         if (tagReadSkippedCount > 0)
             proof.AppendLine($"- Tag reads skipped (appraisal carousel): {tagReadSkippedCount}");
         proof.AppendLine();

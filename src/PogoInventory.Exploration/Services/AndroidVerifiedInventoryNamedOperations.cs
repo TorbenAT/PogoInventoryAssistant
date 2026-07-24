@@ -1146,6 +1146,65 @@ public sealed class AndroidVerifiedInventoryNamedOperations : ICleanupProofNamed
         return after.State.ToString();
     }
 
+    /// <summary>
+    /// Bounded, capture-only re-observation for the case where
+    /// <see cref="CloseInventoryAsync"/> returned a final state other than
+    /// GameplayMap: the close (Android Back) animation can still be settling
+    /// onto GameplayMap moments after that read. Polls with the same 3-
+    /// consecutive-frame consensus rule as <see cref="WaitForStateAsync"/>,
+    /// bounded by a single <c>StateTimeoutSeconds</c> deadline, and saves
+    /// every captured frame as evidence. NEVER sends input -- on deadline
+    /// this returns <see cref="CleanupFinalMapVerification.Verified"/> false
+    /// with the observed-state trail, and the caller stays fail-closed.
+    /// </summary>
+    public async Task<CleanupFinalMapVerification> VerifyGameplayMapSettledAsync(CancellationToken cancellationToken)
+    {
+        using var _ = _timing.Measure(TimingCategory.NamedOperation, nameof(VerifyGameplayMapSettledAsync));
+        var started = DateTime.UtcNow;
+        var deadline = started.AddSeconds(_automationProfile.StateTimeoutSeconds);
+        var observedStates = new List<string>();
+        var evidencePaths = new List<string>();
+        var last = PokemonGoGameState.Unknown;
+        var consecutive = 0;
+        while (DateTime.UtcNow < deadline)
+        {
+            var screenshot = await CaptureAsync("final-map-verify", cancellationToken);
+            var detection = _detector.Detect(screenshot, _appraisalProfile);
+            observedStates.Add(detection.State.ToString());
+            evidencePaths.Add(await SaveEvidenceAsync("final-map-verify", screenshot, cancellationToken));
+            if (detection.State == PokemonGoGameState.GameplayMap)
+            {
+                consecutive = last == detection.State ? consecutive + 1 : 1;
+                last = detection.State;
+                if (consecutive >= 3)
+                {
+                    return new CleanupFinalMapVerification
+                    {
+                        FinalState = detection.State.ToString(),
+                        Verified = true,
+                        ObservedStates = observedStates,
+                        EvidencePaths = evidencePaths,
+                        ElapsedMilliseconds = (DateTime.UtcNow - started).TotalMilliseconds
+                    };
+                }
+            }
+            else
+            {
+                last = detection.State;
+                consecutive = 0;
+            }
+            await SettleAsync("StatePoll", _automationProfile.StatePollMilliseconds, cancellationToken);
+        }
+        return new CleanupFinalMapVerification
+        {
+            FinalState = last.ToString(),
+            Verified = false,
+            ObservedStates = observedStates,
+            EvidencePaths = evidencePaths,
+            ElapsedMilliseconds = (DateTime.UtcNow - started).TotalMilliseconds
+        };
+    }
+
     public Task<IReadOnlyList<string>> ApplyIndexTagAsync(string tagName, CancellationToken cancellationToken) =>
         throw new NotSupportedException("Tag mutation is disabled for the read-only first acceptance.");
 

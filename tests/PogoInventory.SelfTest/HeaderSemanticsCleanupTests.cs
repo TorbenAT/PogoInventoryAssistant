@@ -31,6 +31,8 @@ internal static class HeaderSemanticsCleanupTests
         await PolicyFileLoadingAffectsRecommendationsAsync();
         await AnalyzeCleanupEvidenceEndToEndAsync();
         await ReprocessRecomputesObservationStatusAsync();
+        await RunnerDowngradesCompleteIdentityWithUnknownCpToPartialAsync();
+        await RunnerNeverPromotesUnresolvedAsync();
         await ItemLimitBoundsAsync();
     }
 
@@ -289,6 +291,96 @@ internal static class HeaderSemanticsCleanupTests
         {
             DeleteDirectory(root);
         }
+    }
+
+    /// <summary>
+    /// Reproduces the runner-side half of the status-recompute defect: the
+    /// per-item enrichment used to fall back to the identity-consensus status
+    /// ("Complete") whenever the appraisal-enriched triple was not fully
+    /// known, so a row with a Complete identity capture but an unknown CP was
+    /// persisted as "Complete" even though CP was never actually read. Species
+    /// and IVs are known here (via header OCR + IV consensus) but no CP
+    /// header text is ever supplied, so CP stays null; the fix must downgrade
+    /// this row to "Partial" instead of keeping the stale identity status.
+    /// </summary>
+    public static async Task RunnerDowngradesCompleteIdentityWithUnknownCpToPartialAsync()
+    {
+        var root = CreateTemporaryDirectory();
+        try
+        {
+            var evidence = await CreateEvidenceAsync(root);
+            var recognizer = new SequencedHeaderRecognizer(
+                cpTexts: Array.Empty<string?>(),
+                nameTexts: new[] { "Pidgey", "Pidgey" });
+            var speciesReference = new StaticSpeciesReference(new[] { "Pidgey" });
+            var fake = new CleanupProofTests.FakeCleanupOperations(
+                evidence,
+                partial: false,
+                appraisalOverride: () => new CleanupProofAppraisalCapture
+                {
+                    Status = "Complete",
+                    EvidencePaths = new[] { evidence },
+                    Frames = new[]
+                    {
+                        Frame(10, 11, 12),
+                        Frame(10, 11, 12),
+                        Frame(10, 11, 12)
+                    }
+                });
+            var request = new CleanupProofRequest
+            {
+                SpeciesQuery = "Pidgey",
+                ItemLimit = 6,
+                DatabasePath = Path.Combine(root, "cleanup-proof.sqlite"),
+                OutputDirectory = root,
+                DeviceSerial = "synthetic",
+                ContinueOnPartial = true,
+                SpeciesReference = speciesReference,
+                HeaderAnalyzer = new PokemonHeaderAnalyzer(recognizer, speciesReference)
+            };
+            var result = await new CleanupProofRunner().RunAsync(fake, request);
+            var rows = await new InventoryPersistenceService(request.DatabasePath).LoadCleanupProofRowsAsync(result.RunId);
+            var first = rows.Single(row => row.Ordinal == 1);
+            AssertEqual("Pidgey", first.Observation.Species, "species known via exact query classification");
+            AssertEqual((int?)null, first.Observation.Cp, "cp stays unknown: no header CP text supplied");
+            AssertEqual("Partial", first.ObservationStatus,
+                "a Complete identity capture must not survive appraisal enrichment when CP is unknown");
+        }
+        finally
+        {
+            DeleteDirectory(root);
+        }
+    }
+
+    /// <summary>
+    /// The shared <see cref="CleanupObservationStatusRule.Recompute"/> rule
+    /// (used by both <see cref="CleanupProofRunner"/> and
+    /// <see cref="CleanupEvidenceReprocessor"/>) must never promote an
+    /// Unresolved row to Partial just because its critical triple is
+    /// incomplete. Exercised directly against the shared rule rather than
+    /// through a full runner run: the live runner's identity-capture retry
+    /// (see <c>CleanupProofRunner.RunAsync</c>, the
+    /// <c>identity.Status == CleanupProofObservationStatus.Unresolved</c>
+    /// branch) always either recovers a non-Unresolved identity on retry or
+    /// stops the whole batch before a row is ever persisted -- so a per-row
+    /// "Unresolved" <c>ObservationStatus</c> can never reach this
+    /// enrichment step from the live capture path today. The rule itself
+    /// still must not promote it (this exact case DOES occur for rows
+    /// persisted directly, e.g. by a legacy database <see cref="CleanupEvidenceReprocessor"/>
+    /// reprocesses), and both call sites share this one rule, so verifying it
+    /// here covers the runner's call site too.
+    /// </summary>
+    public static Task RunnerNeverPromotesUnresolvedAsync()
+    {
+        var observation = new PokemonObservation
+        {
+            ExternalKey = "unresolved-triple-incomplete",
+            SequenceNumber = 1,
+            Species = "Unknown"
+        };
+        var recomputed = CleanupObservationStatusRule.Recompute(observation, "Unresolved");
+        AssertEqual("Unresolved", recomputed, "Unresolved with an incomplete triple must stay Unresolved, not be promoted to Partial");
+        return Task.CompletedTask;
     }
 
     /// <summary>
