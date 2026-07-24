@@ -22,6 +22,7 @@ public interface ICleanupProofNamedOperations : IVerifiedInventoryNamedOperation
 
     Task<AppraisalCarouselAdvanceResult> AdvanceToNextPokemonInAppraisalAsync(
         string previousAppraisalFingerprint,
+        CleanupProofAppraisalCapture? confirmedPreSwipeCapture,
         CancellationToken cancellationToken);
 
     Task<string> CloseInventoryAsync(CancellationToken cancellationToken);

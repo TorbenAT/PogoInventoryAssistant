@@ -781,19 +781,32 @@ public sealed class AndroidVerifiedInventoryNamedOperations : ICleanupProofNamed
         _lastCleanupAppraisalScreenshot = stable.Screenshot;
         foreach (var frame in frames.Where(frame => frame.Kind == RecoveryFrameKind.AppraisalBars).Take(3))
             _lastCleanupAppraisalEvidence.Add(await SaveEvidenceAsync("carousel-appraisal-bars", frame.Screenshot, cancellationToken));
-        return AnalyzeLastCleanupAppraisal();
+        var stableFingerprint = Convert.ToHexString(SHA256.HashData(stable.Screenshot)).ToLowerInvariant();
+        return AnalyzeLastCleanupAppraisal() with { StableFingerprintSha256 = stableFingerprint };
     }
 
     public async Task<AppraisalCarouselAdvanceResult> AdvanceToNextPokemonInAppraisalAsync(
         string previousAppraisalFingerprint,
+        CleanupProofAppraisalCapture? confirmedPreSwipeCapture,
         CancellationToken cancellationToken)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(previousAppraisalFingerprint);
         using var _ = _timing.Measure(TimingCategory.NamedOperation, nameof(AdvanceToNextPokemonInAppraisalAsync));
-        var before = await CaptureRecoveryFramesAsync("carousel-appraisal-pre-swipe", cancellationToken);
-        if (!GuardedInventoryRecovery.TryGetStableFrame(before, out var stableBefore) ||
-            stableBefore is null || stableBefore.Kind != RecoveryFrameKind.AppraisalBars)
-            return AppraisalCarouselAdvanceResult.UNKNOWN_STOP;
+
+        // When the caller (the cleanup-proof per-item loop) just established a
+        // stable, fingerprinted AppraisalBars frame for this same Pokémon one
+        // step earlier via CaptureCurrentCleanupAppraisalAsync, that frame is
+        // still the current on-screen state: no game input has happened since.
+        // Re-verifying pre-swipe stability here would be a redundant capture
+        // window for state we already confirmed. Only skip when a fingerprint
+        // is actually present (fail-closed for any other/unavailable capture).
+        if (confirmedPreSwipeCapture?.StableFingerprintSha256 is null)
+        {
+            var before = await CaptureRecoveryFramesAsync("carousel-appraisal-pre-swipe", cancellationToken);
+            if (!GuardedInventoryRecovery.TryGetStableFrame(before, out var stableBefore) ||
+                stableBefore is null || stableBefore.Kind != RecoveryFrameKind.AppraisalBars)
+                return AppraisalCarouselAdvanceResult.UNKNOWN_STOP;
+        }
 
         var (width, height) = await ScreenSizeAsync(cancellationToken);
         var start = _automationProfile.NextPokemonSwipe.Start.ToPixels(width, height);

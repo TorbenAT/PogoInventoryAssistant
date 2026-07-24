@@ -281,6 +281,8 @@ internal static class CleanupProofTests
                     ScreenshotHashes = new[] { Hash(_evidence), Hash(_evidence) }
                 });
 
+        public List<CleanupProofAppraisalCapture> AppraisalCapturesReturned { get; } = new();
+
         public async Task<CleanupProofAppraisalCapture> CaptureCleanupAppraisalAsync(CancellationToken cancellationToken)
         {
             AppraisalOpenCount++;
@@ -288,7 +290,9 @@ internal static class CleanupProofTests
                 await _beforeAppraisal();
             if (_throwAppraisal)
                 throw new InvalidOperationException("synthetic appraisal failure");
-            return _appraisalOverride?.Invoke() ?? new CleanupProofAppraisalCapture { Status = "Partial", EvidencePaths = new[] { _evidence } };
+            var capture = _appraisalOverride?.Invoke() ?? new CleanupProofAppraisalCapture { Status = "Partial", EvidencePaths = new[] { _evidence } };
+            AppraisalCapturesReturned.Add(capture);
+            return capture;
         }
 
         public Task<CleanupProofIdentityCapture> CaptureCleanupAppraisalIdentityAsync(CancellationToken cancellationToken) =>
@@ -306,13 +310,23 @@ internal static class CleanupProofTests
         private Task<CleanupProofAppraisalCapture> CaptureCurrentAsync()
         {
             CurrentAppraisalCaptureCount++;
-            return Task.FromResult(_appraisalOverride?.Invoke() ?? new CleanupProofAppraisalCapture { Status = "Partial", EvidencePaths = new[] { _evidence } });
+            var capture = _appraisalOverride?.Invoke() ?? new CleanupProofAppraisalCapture { Status = "Partial", EvidencePaths = new[] { _evidence } };
+            AppraisalCapturesReturned.Add(capture);
+            return Task.FromResult(capture);
         }
 
-        public Task<AppraisalCarouselAdvanceResult> AdvanceToNextPokemonInAppraisalAsync(string previousAppraisalFingerprint, CancellationToken cancellationToken)
+        public CleanupProofAppraisalCapture? LastConfirmedPreSwipeCapture { get; private set; }
+        public List<CleanupProofAppraisalCapture?> ConfirmedPreSwipeCaptures { get; } = new();
+
+        public Task<AppraisalCarouselAdvanceResult> AdvanceToNextPokemonInAppraisalAsync(
+            string previousAppraisalFingerprint,
+            CleanupProofAppraisalCapture? confirmedPreSwipeCapture,
+            CancellationToken cancellationToken)
         {
             if (CurrentAppraisalCaptureCount + 1 != AppraisalCarouselSwipeCount + 1)
                 AllRowsPersistedBeforeSwipe = false;
+            LastConfirmedPreSwipeCapture = confirmedPreSwipeCapture;
+            ConfirmedPreSwipeCaptures.Add(confirmedPreSwipeCapture);
             AppraisalCarouselSwipeCount++;
             AdvanceCount++;
             return Task.FromResult(AppraisalCarouselAdvanceResult.SUCCESS_CHANGED_POKEMON);

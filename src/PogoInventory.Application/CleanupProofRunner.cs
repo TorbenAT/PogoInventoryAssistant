@@ -256,6 +256,7 @@ public sealed class CleanupProofRunner
 
                 var advanced = await operations.AdvanceToNextPokemonInAppraisalAsync(
                     identity.Consensus.StableFingerprintSha256,
+                    appraisal,
                     cancellationToken);
                 if (advanced == AppraisalCarouselAdvanceResult.NO_EFFECT_OR_FILTER_END)
                 {

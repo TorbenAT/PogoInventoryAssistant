@@ -45,6 +45,17 @@ public sealed record CleanupProofAppraisalCapture
     /// depending on <c>AppraisalAnalyzer</c>'s own Calcy-verified-profile gate.
     /// </summary>
     public IReadOnlyList<AppraisalFrameIv> Frames { get; init; } = Array.Empty<AppraisalFrameIv>();
+
+    /// <summary>
+    /// SHA-256 fingerprint of the stable AppraisalBars frame this capture was
+    /// analyzed from, set only when a stable frame was actually confirmed
+    /// (never for an "AppraisalBarsNotStable"-unavailable result). Lets a
+    /// caller that just established this stable frame (e.g. the cleanup-proof
+    /// per-item loop) hand it back into <c>AdvanceToNextPokemonInAppraisalAsync</c>
+    /// as the pre-swipe reference, skipping a redundant re-capture of the same
+    /// state one step later.
+    /// </summary>
+    public string? StableFingerprintSha256 { get; init; }
 }
 
 /// <summary>
