@@ -1,5 +1,32 @@
 # Continuation prompt
 
+## Round-3 checkpoint (2026-07-24 evening) — frame diet shipped; gate-4 pilot blocked by a MEASURED detector defect with a ready fix brief
+
+Commits pushed: `5f99c7f` (frame diet: IV analysis shares the identity frames + ordinal>1 tag probe dropped — 12→7 captures/item, measured 13.0-14.3 s/item on the real phone), `29b32d7` (shared `CleanupObservationStatusRule` — Complete never survives Unknown CP/IV — plus bounded `VerifyGameplayMapSettledAsync`), `45c151a` (exit-settle verification: shared `VerifySettledStateAsync` core; the exit chain continues on late Details settle). Suite 243/243. All task-scoped reviews approved.
+
+**BLOCKER for the gate-4 pilot (root-caused, measured, fix designed):**
+Run1 stopped `CLEANUP_START_RECOVERY_BLOCKED`. Measured on 5 real frames
+(`local-data/validation/reid-pilot-2x50/run1/evidence/0006..0010`):
+`VisualControlLocator.LocateDetailsPageTopology` (VisualControlLocator.cs:112)
+requires modelArea >= 0.15 but the warm sunset-bokeh Details background measures
+0.103-0.158 — the state flickers Unknown/Details so no 3-consecutive consensus
+ever forms (exit verify + canonical-close precondition both starve). The blue-
+header fallback measures 0.000 (assumes a blue background). The X-button locator
+is fine (0.975 on every frame). Secondary: `IsMenuBackground` 2-of-3 fallback
+false-fired MainMenu on bokeh (frame 0006).
+**Execute `.superpowers/sdd/task-H-brief.md`** (double-corroborated branch:
+modelArea>=0.08 && cpArea>=0.50 && detailsPanel>=0.50, measured margins 0.958+/0.978;
+tighten IsMenuBackground to 3-of-3). A Task H subagent may have committed before
+session end — check `git log` first; if no commit, run the brief from scratch.
+Verify with CLI `game-state-detect-image` on the 5 evidence frames (all must
+classify PokemonDetails), then rerun the gate-4 pilot 2×50 (~11 min/scan):
+run1/run2 fresh dirs under `local-data/validation/reid-pilot-2x50/`, program
+restart between, then `analyze-reidentification --database-a ... --database-b ...`.
+Phone was left untouched on the Fletchling Details screen (sunset background) —
+the first recovery after the fix is itself the live test.
+SDD ledger: `.superpowers/sdd/progress.md`. Plan file:
+`~/.claude/plans/til-n-ste-iteration-st-r-cryptic-chipmunk.md`.
+
 ## Speed iteration checkpoint (2026-07-24) — SHIPPED, phone-measured
 
 Focused on run speed (Torben found runs very slow). All work via Superpowers
