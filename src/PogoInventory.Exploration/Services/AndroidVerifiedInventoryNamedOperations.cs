@@ -919,9 +919,32 @@ public sealed class AndroidVerifiedInventoryNamedOperations : ICleanupProofNamed
         return VerifiedSequenceState.Unknown;
     }
 
+    public const string TagReadSkippedAppraisalCarouselReason = "TagReadSkipped:AppraisalCarousel";
+
     public async Task<VerifiedTagObservation> ReadTagObservationAsync(CancellationToken cancellationToken)
     {
         using var _ = _timing.Measure(TimingCategory.NamedOperation, nameof(ReadTagObservationAsync));
+
+        // Ordinal-1 items are on PokemonDetails when this is called, but every
+        // later item is still inside the Appraisal carousel: PokemonDetails
+        // can never appear there, so waiting for it would burn the full
+        // StateTimeoutSeconds and then read tag pills off the wrong screen.
+        // Detect the current frame first and short-circuit the impossible
+        // wait instead of reading tags from a non-Details frame.
+        var probe = await CaptureAsync("tag-read-probe", cancellationToken);
+        var probeDetection = _detector.Detect(probe, _appraisalProfile);
+        if (probeDetection.State == PokemonGoGameState.Appraisal)
+        {
+            return new VerifiedTagObservation
+            {
+                TagCount = 0,
+                KnownTagNames = Array.Empty<string>(),
+                NamesComplete = false,
+                Section = null,
+                Evidence = new[] { TagReadSkippedAppraisalCarouselReason }
+            };
+        }
+
         var details = await WaitForStateAsync(new[] { PokemonGoGameState.PokemonDetails }, cancellationToken);
         var identity = _identityAnalyzer.Analyze(details.Screenshot);
         return new VerifiedTagObservation

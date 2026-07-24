@@ -226,6 +226,8 @@ internal static class CleanupProofTests
         private readonly Func<Task>? _beforeAppraisal;
         private readonly bool _throwAppraisal;
         private readonly Func<CleanupProofAppraisalCapture>? _appraisalOverride;
+        private readonly Func<int, VerifiedTagObservation>? _tagObservationOverride;
+        private int _tagReadCount;
         public int AdvanceCount { get; private set; }
         public int AppraisalOpenCount { get; private set; }
         public int CurrentAppraisalCaptureCount { get; private set; }
@@ -240,7 +242,8 @@ internal static class CleanupProofTests
             bool unresolved = false,
             Func<Task>? beforeAppraisal = null,
             bool throwAppraisal = false,
-            Func<CleanupProofAppraisalCapture>? appraisalOverride = null)
+            Func<CleanupProofAppraisalCapture>? appraisalOverride = null,
+            Func<int, VerifiedTagObservation>? tagObservationOverride = null)
         {
             _evidence = evidence;
             _partial = partial;
@@ -248,6 +251,7 @@ internal static class CleanupProofTests
             _beforeAppraisal = beforeAppraisal;
             _throwAppraisal = throwAppraisal;
             _appraisalOverride = appraisalOverride;
+            _tagObservationOverride = tagObservationOverride;
         }
 
         public Task<VerifiedSequenceState> EnsureFilteredInventoryAsync(string query, CancellationToken cancellationToken) =>
@@ -324,8 +328,12 @@ internal static class CleanupProofTests
             return Task.FromResult(VerifiedSequenceState.PokemonDetails);
         }
 
-        public Task<VerifiedTagObservation> ReadTagObservationAsync(CancellationToken cancellationToken) =>
-            Task.FromResult(new VerifiedTagObservation { TagCount = 0, NamesComplete = true, Section = null });
+        public Task<VerifiedTagObservation> ReadTagObservationAsync(CancellationToken cancellationToken)
+        {
+            _tagReadCount++;
+            return Task.FromResult(_tagObservationOverride?.Invoke(_tagReadCount) ??
+                new VerifiedTagObservation { TagCount = 0, NamesComplete = true, Section = null });
+        }
 
         public Task<VerifiedSequenceState> AdvanceToNextPokemonAsync(PokemonIdentityConsensus previous, CancellationToken cancellationToken)
         {
@@ -404,7 +412,7 @@ internal static class CleanupProofTests
 
     internal static byte[] FixtureBytes() => File.ReadAllBytes(RepositoryPath("data", "screen-fixtures", "PokemonDetails.png"));
 
-    private static async Task<string> CreateEvidenceAsync(string root)
+    internal static async Task<string> CreateEvidenceAsync(string root)
     {
         Directory.CreateDirectory(root);
         var path = Path.Combine(root, "evidence.png");

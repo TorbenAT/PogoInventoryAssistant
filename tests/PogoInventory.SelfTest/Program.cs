@@ -47,6 +47,9 @@ using PogoInventory.SelfTest;
 var tests = new (string Name, Func<Task> Run)[]
 {
     ("Real-state detector regression fixtures", StateDetectorRegressionTests.RunAsync),
+    ("Tag read short-circuits the Appraisal-carousel PokemonDetails wait", TagReadAppraisalShortCircuitTests.TagReadShortCircuitsInAppraisalCarouselAsync),
+    ("Tag read still works on the Details page", TagReadAppraisalShortCircuitTests.TagReadStillWorksOnDetailsAsync),
+    ("Cleanup runner reports skipped appraisal-carousel tag reads", TagReadAppraisalCarouselSummaryTests.RunAsync),
     ("Guarded inventory close enforces one map transition", GuardedInventoryCloseTests.RunAsync),
     ("Recovery ROI consensus ignores full-screen animation", GuardedInventoryRecoveryTests.RunRoiConsensusAsync),
     ("Guarded inventory recovery enforces stable bounded transitions", GuardedInventoryRecoveryTests.RunStateMachineAsync),

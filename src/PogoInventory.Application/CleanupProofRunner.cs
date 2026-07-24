@@ -77,6 +77,15 @@ public sealed record CleanupProofRunResult
 
 public sealed class CleanupProofRunner
 {
+    /// <summary>
+    /// Reason recorded in <see cref="VerifiedTagObservation.Evidence"/> when the
+    /// tag read was short-circuited because the phone was in the Appraisal
+    /// carousel (where PokemonDetails, and therefore tag pills, can never be
+    /// observed). Kept in sync with
+    /// AndroidVerifiedInventoryNamedOperations.TagReadSkippedAppraisalCarouselReason.
+    /// </summary>
+    private const string TagReadSkippedAppraisalCarouselReason = "TagReadSkipped:AppraisalCarousel";
+
     private static readonly JsonSerializerOptions JsonOptions = new()
     {
         WriteIndented = true,
@@ -500,7 +509,9 @@ public sealed class CleanupProofRunner
         ["Nickname"] = observation.Nickname is null ? "Unknown" : "Automated",
         ["CatchDateOrAge"] = "Unknown",
         ["CatchLocation"] = "Unknown",
-        ["ExistingTags"] = tags.NamesComplete ? "EvidenceReviewed" : "Unknown",
+        ["ExistingTags"] = tags.Evidence.Contains(TagReadSkippedAppraisalCarouselReason, StringComparer.Ordinal)
+            ? TagReadSkippedAppraisalCarouselReason
+            : tags.NamesComplete ? "EvidenceReviewed" : "Unknown",
         ["ObservationStatus"] = "Automated",
         ["IdentityConfidence"] = "Automated",
         ["ProtectionConfidence"] = "Automated",
@@ -676,6 +687,9 @@ public sealed class CleanupProofRunner
 
         var counts = rows.GroupBy(row => row.CurrentRecommendation, StringComparer.Ordinal)
             .ToDictionary(group => group.Key, group => group.Count(), StringComparer.Ordinal);
+        var tagReadSkippedCount = rows.Count(row =>
+            row.FieldEvidenceSources.TryGetValue("ExistingTags", out var existingTags) &&
+            existingTags == TagReadSkippedAppraisalCarouselReason);
         var proof = new StringBuilder();
         proof.AppendLine("# Real cleanup proof");
         proof.AppendLine();
@@ -688,6 +702,8 @@ public sealed class CleanupProofRunner
         proof.AppendLine($"- KEEP / REVIEW / DELETE-CANDIDATE: {Count(counts, "KEEP")} / {Count(counts, "REVIEW")} / {Count(counts, "DELETE-CANDIDATE")}");
         proof.AppendLine($"- Comparative RETAINED / LIKELY_DELETE / INSUFFICIENT: {comparative.Count(item => item.Classification == "RETAINED_COMPARATOR")} / {comparative.Count(item => item.Classification == "LIKELY_DELETE_SUGGESTION")} / {comparative.Count(item => item.Classification == "INSUFFICIENT_COMPARISON_DATA")}");
         proof.AppendLine($"- Stop reason: `{stopReason}`");
+        if (tagReadSkippedCount > 0)
+            proof.AppendLine($"- Tag reads skipped (appraisal carousel): {tagReadSkippedCount}");
         proof.AppendLine();
         proof.AppendLine("## Recommendations generated from reloaded SQLite rows");
         proof.AppendLine();
