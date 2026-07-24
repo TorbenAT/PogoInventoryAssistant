@@ -1163,7 +1163,8 @@ static async Task<int> CaptureDeviceSnapshotAsync(
 
     var commandTimeout = TimeSpan.FromSeconds(
         ParsePositiveInt(options, "timeout-seconds", 15));
-    var adbPath = Optional(options, "adb") ?? "adb";
+    var adbPath = AdbPathResolver.ResolveAdbPath(
+        Optional(options, "adb"), BundledAdbCandidateIfExists());
 
     var harnessOptions = new DeviceHarnessOptions
     {
@@ -1663,7 +1664,8 @@ static IAndroidAutomationTransport CreateRealAndroidTransport(
 {
     var harnessOptions = new DeviceHarnessOptions
     {
-        AdbPath = Optional(options, "adb") ?? "adb",
+        AdbPath = AdbPathResolver.ResolveAdbPath(
+            Optional(options, "adb"), BundledAdbCandidateIfExists()),
         CommandTimeout = TimeSpan.FromSeconds(
             ParsePositiveInt(options, "timeout-seconds", 15)),
         HarnessVersion = DeviceHarnessOptions.CurrentVersion
@@ -3436,6 +3438,21 @@ static string? Optional(IReadOnlyDictionary<string, string> options, string key)
     options.TryGetValue(key, out var value) && !string.IsNullOrWhiteSpace(value)
         ? value
         : null;
+
+/// <summary>
+/// Probes for the bundled adb.exe under `tools/platform-tools/` relative to
+/// the current working directory (the repo root when launched via `dotnet
+/// run` from there), returning its absolute path when present so
+/// <see cref="AdbPathResolver.ResolveAdbPath"/> can use it as the default
+/// when `--adb` is omitted. `tools/platform-tools/` is gitignored, so this
+/// intentionally returns null on fresh clones.
+/// </summary>
+static string? BundledAdbCandidateIfExists()
+{
+    var candidate = Path.GetFullPath(
+        Path.Combine("tools", "platform-tools", "adb.exe"));
+    return File.Exists(candidate) ? candidate : null;
+}
 
 static int UnknownCommand(string command)
 {

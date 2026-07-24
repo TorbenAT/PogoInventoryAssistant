@@ -269,6 +269,7 @@ var tests = new (string Name, Func<Task> Run)[]
     ,("Cleanup runner writes timing report and summary section only when a collector is supplied", OperationTimingCollectorTests.RunnerWritesTimingReportAndSummarySectionAsync)
     ,("MarkRunStart restarts the wall clock so pre-run work is excluded", OperationTimingCollectorTests.MarkRunStartRestartsWallClockAsync)
     ,("Advance time is attributed to the item it advances from", OperationTimingCollectorTests.AdvanceTimeIsAttributedToTheAdvancingItemAsync)
+    ,("Adb path resolver honors explicit --adb values and bundled/PATH fallback", AdbPathResolverTests.RunAsync)
 };
 
 var failed = 0;
