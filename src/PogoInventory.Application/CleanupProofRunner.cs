@@ -140,6 +140,7 @@ public sealed class CleanupProofRunner
         var stopReason = "ItemLimitReached";
         var safeState = false;
         CleanupFinalMapVerification? finalMapVerification = null;
+        CleanupFinalMapVerification? exitSettleVerification = null;
         try
         {
             var inventory = await operations.EnsureFilteredInventoryAsync(request.SpeciesQuery, cancellationToken);
@@ -318,8 +319,33 @@ public sealed class CleanupProofRunner
                     var exited = await operations.ExitAppraisalAsync(cancellationToken);
                     if (exited != VerifiedSequenceState.PokemonDetails)
                     {
-                        stopReason = "AppraisalExitFailed:" + exited;
-                        return await FinishAsync("SafeStopped", stopReason, captures, runId, persistence, request, timing, cancellationToken);
+                        // ExitAppraisalAsync's own postcondition wait can time
+                        // out mid Details-load/transition animation even
+                        // though the exit tap physically worked. Re-observe
+                        // ONCE, capture-only, bounded by StateTimeoutSeconds --
+                        // never a retry loop, never input. Written to disk in
+                        // BOTH outcomes so a reviewer can see exactly what was
+                        // (or was not) observed after the exit tap.
+                        exitSettleVerification = await operations.VerifyPokemonDetailsSettledAsync(cancellationToken);
+                        await File.WriteAllTextAsync(
+                            Path.Combine(output, "exit-settle-verification.json"),
+                            JsonSerializer.Serialize(exitSettleVerification, JsonOptions),
+                            cancellationToken);
+                        if (!exitSettleVerification.Verified)
+                        {
+                            stopReason = "AppraisalExitFailed:" + exited +
+                                ";ObservedStates=" + string.Join(',', exitSettleVerification.ObservedStates);
+                            return await FinishAsync(
+                                "SafeStopped", stopReason, captures, runId, persistence, request, timing,
+                                cancellationToken, finalMapVerification, exitSettleVerification);
+                        }
+                        // Verified: the exit tap actually worked and the phone
+                        // late-settled onto PokemonDetails. Continue the
+                        // normal exit chain instead of masking the fact that
+                        // the first read raced the Details load animation;
+                        // stopReason stays whatever safe-stop reason was
+                        // already set, and the late settle is noted in
+                        // proof-summary.md.
                     }
                 }
                 var inventoryState = await operations.ReturnToInventoryAsync(cancellationToken);
@@ -359,7 +385,9 @@ public sealed class CleanupProofRunner
                 }
             }
             var finalStatus = captures.Count >= request.ItemLimit ? "Completed" : "CompletedPartial";
-            return await FinishAsync(finalStatus, stopReason, captures, runId, persistence, request, timing, cancellationToken, finalMapVerification);
+            return await FinishAsync(
+                finalStatus, stopReason, captures, runId, persistence, request, timing, cancellationToken,
+                finalMapVerification, exitSettleVerification);
         }
         catch (Exception exception) when (exception is not OperationCanceledException)
         {
@@ -598,7 +626,8 @@ public sealed class CleanupProofRunner
         CleanupProofRequest request,
         IOperationTimingCollector timing,
         CancellationToken cancellationToken,
-        CleanupFinalMapVerification? finalMapVerification = null)
+        CleanupFinalMapVerification? finalMapVerification = null,
+        CleanupFinalMapVerification? exitSettleVerification = null)
     {
         await persistence.CompleteCleanupRunAsync(
             runId,
@@ -625,7 +654,9 @@ public sealed class CleanupProofRunner
             .ReadCleanupProofSqlSummaryAsync(cancellationToken);
         var comparative = CleanupProofComparativeAnalyzer.BuildComparativeSuggestions(rows);
         ValidateReports(rows, sqlSummary, request.OutputDirectory);
-        await WriteReportsAsync(request, runId, status, stopReason, captures, rows, sqlSummary, comparative, timing, cancellationToken, finalMapVerification);
+        await WriteReportsAsync(
+            request, runId, status, stopReason, captures, rows, sqlSummary, comparative, timing, cancellationToken,
+            finalMapVerification, exitSettleVerification);
         var counts = rows.GroupBy(row => row.CurrentRecommendation, StringComparer.Ordinal)
             .ToDictionary(group => group.Key, group => group.Count(), StringComparer.Ordinal);
         return new CleanupProofRunResult
@@ -673,7 +704,8 @@ public sealed class CleanupProofRunner
         IReadOnlyList<CleanupProofComparativeSuggestion> comparative,
         IOperationTimingCollector timing,
         CancellationToken cancellationToken,
-        CleanupFinalMapVerification? finalMapVerification = null)
+        CleanupFinalMapVerification? finalMapVerification = null,
+        CleanupFinalMapVerification? exitSettleVerification = null)
     {
         var output = Path.GetFullPath(request.OutputDirectory);
         var timingReport = timing.BuildReport();
@@ -770,6 +802,9 @@ public sealed class CleanupProofRunner
         if (finalMapVerification is not null)
             proof.AppendLine(
                 $"- Final map verification: verified={finalMapVerification.Verified}, finalState=`{finalMapVerification.FinalState}`, observedStates=`{string.Join(",", finalMapVerification.ObservedStates)}`.");
+        if (exitSettleVerification is not null)
+            proof.AppendLine(
+                $"- Exit settle verification: verified={exitSettleVerification.Verified}, finalState=`{exitSettleVerification.FinalState}`, observedStates=`{string.Join(",", exitSettleVerification.ObservedStates)}`.");
         if (tagReadSkippedCount > 0)
             proof.AppendLine($"- Tag reads skipped (appraisal carousel): {tagReadSkippedCount}");
         proof.AppendLine();

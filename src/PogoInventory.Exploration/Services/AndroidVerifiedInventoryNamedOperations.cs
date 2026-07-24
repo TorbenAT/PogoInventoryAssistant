@@ -1160,6 +1160,39 @@ public sealed class AndroidVerifiedInventoryNamedOperations : ICleanupProofNamed
     public async Task<CleanupFinalMapVerification> VerifyGameplayMapSettledAsync(CancellationToken cancellationToken)
     {
         using var _ = _timing.Measure(TimingCategory.NamedOperation, nameof(VerifyGameplayMapSettledAsync));
+        return await VerifySettledStateAsync(
+            PokemonGoGameState.GameplayMap, "final-map-verify", cancellationToken);
+    }
+
+    /// <summary>
+    /// Bounded, capture-only re-observation for the case where
+    /// <see cref="ExitAppraisalAsync"/> returned a final state other than
+    /// PokemonDetails: the exit tap's own postcondition wait can time out
+    /// mid Details-load/transition animation even though the tap physically
+    /// worked. Shares <see cref="VerifySettledStateAsync"/> with
+    /// <see cref="VerifyGameplayMapSettledAsync"/> -- same 3-consecutive-frame
+    /// consensus rule, same single <c>StateTimeoutSeconds</c> deadline, all
+    /// frames saved as evidence, NEVER sends input.
+    /// </summary>
+    public async Task<CleanupFinalMapVerification> VerifyPokemonDetailsSettledAsync(CancellationToken cancellationToken)
+    {
+        using var _ = _timing.Measure(TimingCategory.NamedOperation, nameof(VerifyPokemonDetailsSettledAsync));
+        return await VerifySettledStateAsync(
+            PokemonGoGameState.PokemonDetails, "exit-settle-verify", cancellationToken);
+    }
+
+    /// <summary>
+    /// Shared core for the two bounded, capture-only re-observations above.
+    /// Polls captures within a single <c>StateTimeoutSeconds</c> deadline and
+    /// requires 3 consecutive detections of <paramref name="target"/>
+    /// (mirroring <see cref="WaitForStateAsync"/>'s own consensus rule)
+    /// before declaring <see cref="CleanupFinalMapVerification.Verified"/>
+    /// true. Every captured frame is saved as evidence. NEVER sends input --
+    /// on deadline this returns Verified false with the observed-state trail.
+    /// </summary>
+    private async Task<CleanupFinalMapVerification> VerifySettledStateAsync(
+        PokemonGoGameState target, string evidenceLabel, CancellationToken cancellationToken)
+    {
         var started = DateTime.UtcNow;
         var deadline = started.AddSeconds(_automationProfile.StateTimeoutSeconds);
         var observedStates = new List<string>();
@@ -1168,11 +1201,11 @@ public sealed class AndroidVerifiedInventoryNamedOperations : ICleanupProofNamed
         var consecutive = 0;
         while (DateTime.UtcNow < deadline)
         {
-            var screenshot = await CaptureAsync("final-map-verify", cancellationToken);
+            var screenshot = await CaptureAsync(evidenceLabel, cancellationToken);
             var detection = _detector.Detect(screenshot, _appraisalProfile);
             observedStates.Add(detection.State.ToString());
-            evidencePaths.Add(await SaveEvidenceAsync("final-map-verify", screenshot, cancellationToken));
-            if (detection.State == PokemonGoGameState.GameplayMap)
+            evidencePaths.Add(await SaveEvidenceAsync(evidenceLabel, screenshot, cancellationToken));
+            if (detection.State == target)
             {
                 consecutive = last == detection.State ? consecutive + 1 : 1;
                 last = detection.State;

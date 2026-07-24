@@ -36,4 +36,14 @@ public interface ICleanupProofNamedOperations : IVerifiedInventoryNamedOperation
     /// input.
     /// </summary>
     Task<CleanupFinalMapVerification> VerifyGameplayMapSettledAsync(CancellationToken cancellationToken);
+
+    /// <summary>
+    /// Bounded, input-free re-observation used only when
+    /// <see cref="ICleanupProofNamedOperations.ExitAppraisalAsync"/> reported a
+    /// final state other than PokemonDetails: the exit tap's own postcondition
+    /// wait can time out mid Details-load/transition animation even though the
+    /// tap physically worked. Polls captures within a single
+    /// <c>StateTimeoutSeconds</c> deadline and never sends input.
+    /// </summary>
+    Task<CleanupFinalMapVerification> VerifyPokemonDetailsSettledAsync(CancellationToken cancellationToken);
 }
