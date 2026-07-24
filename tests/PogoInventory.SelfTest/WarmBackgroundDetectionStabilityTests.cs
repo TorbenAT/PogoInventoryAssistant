@@ -19,24 +19,31 @@ namespace PogoInventory.SelfTest;
 /// Change (1), a proposed double-corroborated relaxation of the Details
 /// topology gate (accept when modelArea &gt;= 0.08 &amp;&amp; cpArea &gt;= 0.50 &amp;&amp;
 /// detailsPanel &gt;= 0.50), was verified against the real evidence corpus
-/// under local-data/ and found UNSAFE: roughly 200 real frames confidently
-/// classified as MainMenu, Appraisal, Inventory or GameplayMap by the
-/// existing (trusted) detector pipeline also satisfy those three floors --
+/// under local-data/ and found UNSAFE on its own: roughly 200 real frames
+/// confidently classified as MainMenu, Appraisal, Inventory or GameplayMap by
+/// the existing (trusted) detector pipeline also satisfy those three floors --
 /// several with cpArea/detailsPanel magnitudes (0.95-1.00) indistinguishable
 /// from the five genuine warm-background Details frames (0.958-0.998 /
 /// 0.978). No threshold tuning within just these three regions separates
 /// the two populations, and at least one call site
 /// (<c>AndroidVerifiedInventoryNamedOperations.CaptureCleanupIdentityAsync</c>)
-/// treats a non-null topology result as "this is PokemonDetails" with NO
-/// additional state gating. Shipping the proposed constants would therefore
-/// make PokemonDetails easier to falsely claim on MainMenu/Appraisal/
-/// Inventory/GameplayMap screens -- the opposite of the fail-closed
-/// requirement. Change (1) is intentionally NOT implemented; see
-/// task-H-report.md for the full corroboration data and the escalation.
+/// treated a non-null topology result as "this is PokemonDetails" with NO
+/// additional state gating. Task I then measured a fourth, orthogonal
+/// corroboration signal (<see cref="VisualControlLocator.LocateCanonicalCloseControl"/>)
+/// against the full corpus and found it discriminates perfectly (0/168
+/// colliders pass it; all 5 evidence frames score 0.975). Task J implements
+/// the quadruple-corroborated branch (three area floors + the X signal) and
+/// tightens the two call sites to require Unknown, not "any non-PokemonDetails
+/// state", before trusting the topology fallback. See task-H-report.md,
+/// task-I-report.md and task-J-report.md, and
+/// <c>CanonicalCloseCorroborationTests</c> for the new branch's coverage.
 ///
-/// This test file documents that the existing (measured-safe) gate on
-/// <see cref="VisualControlLocator.LocateDetailsPageTopology"/> is
-/// unchanged, alongside the change (2) MainMenu regression coverage.
+/// This test file documents that the existing (measured-safe) *primary* gate
+/// on <see cref="VisualControlLocator.LocateDetailsPageTopology"/> is
+/// unchanged, alongside the change (2) MainMenu regression coverage. The
+/// degenerate-model-area test below now also carries the canonical-close X
+/// and strong cp/panel coverage so its null result is attributable to the
+/// modelArea axis specifically (see Task J review nit fix-in-passing).
 /// </summary>
 internal static class WarmBackgroundDetectionStabilityTests
 {
@@ -78,18 +85,24 @@ internal static class WarmBackgroundDetectionStabilityTests
     }
 
     /// <summary>
-    /// High CP/name-band and details-panel coverage with a low model area
-    /// (below both the 0.15 primary floor and a hypothetical 0.08 relaxed
-    /// floor) must still return null: the un-relaxed gate has no double
-    /// corroboration branch, and this floor is exactly what would need to
-    /// hold if one were ever added safely.
+    /// High CP/name-band and details-panel coverage (each independently
+    /// satisfying the relaxed branch's own >= 0.50 floors) with a degenerate
+    /// model area (spread-based <c>IsDetailsModelArea</c> never matches on
+    /// this frame -> ~0 coverage, below both the 0.15 primary floor and the
+    /// 0.08 relaxed floor) AND the canonical-close X present -- every other
+    /// signal the relaxed branch (Task J) needs is satisfied -- must still
+    /// return null. This isolates that the null is attributable to the
+    /// modelArea floor specifically, not to some other missing signal (the
+    /// pre-Task-J version of this test was over-determined: its frame also
+    /// failed the unrelated blue-header fallback for reasons that had
+    /// nothing to do with model area).
     /// </summary>
     private static void DetailsTopologyDegenerateFrameStillNull()
     {
-        var frame = CreateDegenerateModelAreaFrame();
+        var frame = CreateDegenerateModelAreaFrame(includeCanonicalClose: true);
         var located = new VisualControlLocator().LocateDetailsPageTopology(frame);
         AssertTrue(located is null,
-            "a frame with high cp/panel coverage but a degenerate model area must remain unclassified");
+            "a frame with high cp/panel coverage, the canonical-close X, but a degenerate model area must remain unclassified");
     }
 
     /// <summary>
@@ -132,9 +145,13 @@ internal static class WarmBackgroundDetectionStabilityTests
     /// High CP/name band (light) and a broad light details panel, but the
     /// model-area band is filled with a uniform bright color that fails
     /// <c>IsDetailsModelArea</c> (needs channel spread &gt;= 8) everywhere,
-    /// so modelArea measures 0.0.
+    /// so modelArea measures 0.0. Optionally draws a synthetic
+    /// canonical-close X (dark-teal circular shell with crossing light-green
+    /// strokes) in the lower-centre safe zone so Task J's relaxed branch has
+    /// every OTHER corroboration signal available, isolating the modelArea
+    /// floor as the reason for a null result.
     /// </summary>
-    private static byte[] CreateDegenerateModelAreaFrame()
+    private static byte[] CreateDegenerateModelAreaFrame(bool includeCanonicalClose = false)
     {
         const int width = 300;
         const int height = 600;
@@ -145,7 +162,47 @@ internal static class WarmBackgroundDetectionStabilityTests
         Paint(rgba, width, height, 0.25, 0.07, 0.75, 0.18, r: 240, g: 240, b: 240);
         // detailsPanel region (0.03,0.39)-(0.97,0.92): light -> IsDetailsPanelBroad true.
         Paint(rgba, width, height, 0.03, 0.39, 0.97, 0.92, r: 235, g: 240, b: 235);
+        // cx=148, cy=494 land exactly on LocateCanonicalCloseControl's
+        // candidate scan grid (x step 4 from width*0.32, y step 2 from
+        // height*0.74) for this 300x600 canvas, while still sitting in its
+        // lower-centre safe zone (x 0.45-0.55, y 0.76-0.91).
+        if (includeCanonicalClose)
+            DrawCanonicalClose(rgba, width, height, cx: 148, cy: 494, radius: 13);
         return PngEncoder.Encode(new PixelImage(width, height, rgba));
+    }
+
+    /// <summary>
+    /// Draws a dark-teal circular shell with crossing light-green X strokes
+    /// matching the shapes <c>IsCanonicalShell</c>/<c>IsCanonicalStroke</c>
+    /// require, in the lower-centre safe zone (x 0.45-0.55, y 0.76-0.91)
+    /// <see cref="VisualControlLocator.LocateCanonicalCloseControl"/> scores.
+    /// </summary>
+    private static void DrawCanonicalClose(byte[] rgba, int width, int height, int cx, int cy, int radius)
+    {
+        for (var y = cy - radius - 2; y <= cy + radius + 2; y++)
+        for (var x = cx - radius - 2; x <= cx + radius + 2; x++)
+        {
+            var distance = Math.Sqrt(Math.Pow(x - cx, 2) + Math.Pow(y - cy, 2));
+            if (distance is >= 11 and <= 15)
+                SetPixel(rgba, width, height, x, y, r: 0, g: 165, b: 175);
+        }
+        for (var offset = -9; offset <= 9; offset++)
+        {
+            SetPixel(rgba, width, height, cx + offset, cy + offset, r: 190, g: 235, b: 205);
+            SetPixel(rgba, width, height, cx + offset, cy + offset + 1, r: 190, g: 235, b: 205);
+            SetPixel(rgba, width, height, cx + offset, cy - offset, r: 190, g: 235, b: 205);
+            SetPixel(rgba, width, height, cx + offset, cy - offset + 1, r: 190, g: 235, b: 205);
+        }
+    }
+
+    private static void SetPixel(byte[] rgba, int width, int height, int x, int y, byte r, byte g, byte b)
+    {
+        if (x < 0 || y < 0 || x >= width || y >= height) return;
+        var offset = (y * width + x) * 4;
+        rgba[offset] = r;
+        rgba[offset + 1] = g;
+        rgba[offset + 2] = b;
+        rgba[offset + 3] = 255;
     }
 
     /// <summary>

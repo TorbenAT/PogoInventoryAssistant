@@ -515,7 +515,8 @@ public sealed class AndroidVerifiedInventoryNamedOperations : ICleanupProofNamed
             var screenshot = await CaptureAsync("cleanup-identity", cancellationToken);
             var detection = _detector.Detect(screenshot, _appraisalProfile);
             var topology = _locator.LocateDetailsPageTopology(screenshot);
-            var details = detection.State == PokemonGoGameState.PokemonDetails || topology is not null;
+            var details = detection.State == PokemonGoGameState.PokemonDetails ||
+                (detection.State == PokemonGoGameState.Unknown && topology is not null);
             var unsafeSurface = _unsafeSurfaceDetector.Detect(screenshot, "cleanup-proof-observation");
             if (unsafeSurface.IsUnsafe)
             {
@@ -1274,7 +1275,7 @@ public sealed class AndroidVerifiedInventoryNamedOperations : ICleanupProofNamed
             var detection = _detector.Detect(screenshot, _appraisalProfile);
             var detailsTopology = _locator.LocateDetailsPageTopology(screenshot);
             var isDetails = detection.State == PokemonGoGameState.PokemonDetails ||
-                (allowVisualDetailsFallback && detailsTopology is not null);
+                (allowVisualDetailsFallback && detection.State == PokemonGoGameState.Unknown && detailsTopology is not null);
             if (!isDetails)
                 return Array.Empty<PokemonIdentityFrame>();
             frames.Add(new PokemonIdentityFrame { ScreenshotPng = screenshot });

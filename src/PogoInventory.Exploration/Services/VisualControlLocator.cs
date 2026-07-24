@@ -111,17 +111,41 @@ public sealed class VisualControlLocator
         // lower-coverage frame only when each still contributes evidence.
         if (modelArea < 0.15 || cpArea < 0.10 || detailsPanel < 0.20)
         {
-            // NOTE (Task H): a proposed double-corroborated relaxation here
-            // (accept when modelArea >= 0.08 && cpArea >= 0.50 &&
-            // detailsPanel >= 0.50, to cover warm/sunset-background Details
+            // NOTE (Task H / Task I / Task J): the double-corroborated
+            // relaxation here (accept when modelArea >= 0.08 && cpArea >= 0.50
+            // && detailsPanel >= 0.50, to cover warm/sunset-background Details
             // frames whose model area flickers just under 0.15) was measured
-            // against the real local-data/ corpus and found UNSAFE: ~200 real
-            // frames confidently classified MainMenu/Appraisal/Inventory/
-            // GameplayMap by the existing detector pipeline also satisfy
-            // those three floors, several with cpArea/detailsPanel magnitudes
-            // indistinguishable from genuine Details frames. See
-            // WarmBackgroundDetectionStabilityTests and task-H-report.md.
-            // Intentionally NOT implemented; escalated instead of guessed.
+            // UNSAFE on its own against the real local-data/ corpus in Task H:
+            // ~200 real frames confidently classified MainMenu/Appraisal/
+            // Inventory/GameplayMap by the existing detector pipeline also
+            // satisfy those three floors. Task I measured a fourth, orthogonal
+            // corroboration signal -- LocateCanonicalCloseControl (the X-close
+            // button locator) -- against the full corpus and found it
+            // discriminates perfectly: 0/168 confidently-classified-other-state
+            // colliders pass the X locator's own quadruple gate (score/circle/
+            // strokes all >= 0.70, no conflicting candidate), while all 5
+            // gate-4 evidence frames score X = 0.975. Task J implements the
+            // QUADRUPLE-corroborated branch below (three area floors + the X
+            // signal). See task-H-report.md, task-I-report.md, task-J-report.md
+            // and CanonicalCloseCorroborationTests.
+            if (modelArea >= 0.08 && cpArea >= 0.50 && detailsPanel >= 0.50 &&
+                LocateCanonicalCloseControl(screenshotPng) is not null)
+            {
+                return new LocatedControl
+                {
+                    ControlName = "PokemonDetailsPageTopology",
+                    Target = new NormalizedPoint { X = 0.50, Y = 0.40 },
+                    Confidence = Math.Min(0.99, (modelArea + cpArea + detailsPanel) / 3),
+                    Evidence = new[]
+                    {
+                        "DetailsPagePanelDetected",
+                        "PokemonModelAreaDetected",
+                        "DetailsCpNameRegionDetected",
+                        "CanonicalCloseCorroborated"
+                    }
+                };
+            }
+
             var upperBlue = RegionMatch(image, 0.05, 0.05, 0.95, 0.36, IsDetailsPageBlue);
             var lowerPanel = RegionMatch(image, 0.03, 0.38, 0.97, 0.92, IsDetailsPanelBroad);
             if (upperBlue < 0.18 || lowerPanel < 0.25)

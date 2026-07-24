@@ -63,6 +63,7 @@ var tests = new (string Name, Func<Task> Run)[]
     ("Guarded inventory recovery enforces stable bounded transitions", GuardedInventoryRecoveryTests.RunStateMachineAsync),
     ("Appraisal exit uses one tap per substate and Back only from Details", GuardedInventoryRecoveryTests.RunExitActionsAsync),
     ("Canonical close locator rejects non-canonical X controls", CanonicalCloseLocatorTests.RunAsync),
+    ("Details topology canonical-close corroboration (Task J)", CanonicalCloseCorroborationTests.RunAsync),
     ("Perfect is kept", Sync(PerfectIsKept)),
     ("Trade nickname is kept", Sync(TradeNicknameIsKept)),
     ("Old Pokémon is kept", Sync(OldPokemonIsKept)),
