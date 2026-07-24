@@ -35,6 +35,26 @@ Evidence: `local-data/validation/ab-usb/comparison.md`.
 CLI note: must pass `--adb 'C:\Data\PokemonGo\tools\platform-tools\adb.exe'`
 (absolute path; bare `adb`/relative fails AdbNotFound). USB serial `01f5c502`.
 
+### Addendum (2026-07-24 evening): USB dropped, adb path fixed, full attribution
+
+- **USB is dead for long runs**: the phone loses charge while running over USB
+  (battery dropped during the A/B). Controller decision: WiFi only from now on.
+- **adb path fixed permanently** (`052b59d`): `--adb` is no longer needed —
+  `AdbPathResolver` auto-resolves the bundled `tools\platform-tools\adb.exe`
+  (Path.GetFullPath from the repo root, PATH fallback, `--adb` still overrides).
+- **Timing is now fully attributed** (`044165d`): swipes/taps measured as
+  `InputGesture`, every capture/input stamped with its enclosing named operation,
+  per-operation capture counts, per-item `ResidualMilliseconds`. Verified run
+  (12 items WiFi, no `--adb`, 12/12, integrity ok):
+  steady-state item ≈ 19,8 s = 11,9 s captures (~12 × 1025 ms) + 1,2 s input +
+  2,1 s fixed delay + 0,7 s OCR + 3,8 s analysis. Nothing unexplained.
+  Evidence + visual overview: `local-data/validation/timing-full/`
+  (timing-oversigt.html). Suite 231/231.
+- **Next speed lever** (confirmed by the numbers): capture PRICE, not transport —
+  ~1 s/frame is on-device PNG encode in `screencap -p`. A raw-framebuffer
+  capture path (if it can be made safe/verified) hits all ~12 frames/item at
+  once; theoretical floor with current price is ~16-17 s/item.
+
 **Still open for next iteration (design done, controller decisions taken —
 see plan `til-n-ste-iteration-st-r-cryptic-chipmunk.md`):**
 1. Runner-status defect (`CleanupProofRunner.cs:218` marks Complete despite
