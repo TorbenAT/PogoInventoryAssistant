@@ -1,5 +1,16 @@
 # Project state
 
+## Phase 2 field-completeness baseline (2026-07-26)
+
+Phase 2 measurement tooling is applied and the example acceptance fixture
+passes. A conservative audit of the two fresh Task-K pilot databases covered
+100 observations and 500 critical-field rows (Species, CP, AttackIV,
+DefenseIV and HpIV). All 500 values are `Unknown`, with 0 `Incorrect`; the
+tool therefore passed its fail-closed safety check but reported 0% correct
+coverage. No ground-truth labels are available for these phone observations,
+so this is not field-completeness acceptance and no OCR correctness claim is
+made. Phase 3 and phase 4 remain unapplied.
+
 ## Task-K sand-background detector repair
 
 The X-corroborated relaxed Details topology branch now requires

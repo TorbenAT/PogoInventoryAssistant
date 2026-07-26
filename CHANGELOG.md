@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+- Applied phase-2 field-completeness measurement tooling. A conservative audit
+  of 100 observations produced 500 Unknown critical-field values and 0
+  Incorrect values; the fail-closed safety check passed, but ground truth is
+  unavailable and no completeness acceptance is claimed.
+
 - Removed the measured-failing CP-area conjunct from the canonical-X-
   corroborated Details fallback for sand-background screens. Local evidence
   gate is 13/13 and self-tests are 245/245. The fresh pilot re-match rate is

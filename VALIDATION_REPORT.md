@@ -1,3 +1,15 @@
+## Phase 2 field-completeness baseline - 2026-07-26
+
+- Tooling: applied and pushed in `cba0bf8`.
+- Input: two fresh Task-K pilot databases, 100 observations total.
+- Rows: 500 critical fields (Species, CP, AttackIV, DefenseIV, HpIV).
+- Result: 0 Correct, 0 Incorrect, 500 Unknown; effective correct coverage 0%.
+- Safety: PASS; no incorrect automatic value was accepted. The tool emitted
+  its expected under-coverage warning because all values are Unknown.
+- Ground truth: unavailable. This is a conservative baseline, not field
+  completeness acceptance or an OCR correctness claim.
+- Phase 3 and phase 4 were not applied.
+
 ## Appraisal carousel real-phone acceptance - 2026-07-21
 
 - Acceptance: PASS, 20/20 items.

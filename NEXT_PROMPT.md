@@ -1,5 +1,16 @@
 # Continuation prompt
 
+## Phase 2 field-completeness baseline (2026-07-26)
+
+Phase 2 tooling is applied and pushed. The conservative measurement over the
+two fresh Task-K pilot databases contains 100 observations and 500 critical
+field rows. Every row is `Unknown` because no ground-truth labels are present;
+there are 0 incorrect values and the safety script passes with a coverage
+warning. Do not claim field completeness or OCR accuracy. The next useful
+iteration requires labeled frame/crop ground truth and extractor/version
+traceability. Phase 3 capture benchmarking and phase 4 SQLite/evidence
+hardening have not been applied.
+
 ## Task-K checkpoint (2026-07-26)
 
 Task-K is implemented and locally validated. The sand-background Details fix
