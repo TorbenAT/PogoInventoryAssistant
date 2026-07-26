@@ -16,6 +16,11 @@ tool passed after routing all 15 no-match cases to PossibleMatch review, but
 formal identity acceptance remains blocked by the low re-match rate and the
 missing ground-truth collision labels. Do not apply phases 2-4 yet.
 
+Mismatch diagnosis: all 15 no-match cases share same-ordinal species across
+the two fresh scans; 9 have missing CP, 3 missing IV, 2 Unknown species/CP and
+2 CP mismatches. Review this evidence before any phase-2 patch or automatic
+identity change.
+
 ## Round-4 checkpoint (2026-07-26) — detector fix v1 shipped and live-proven; pilot run 1 captured 50/50 but exit failed on SAND background; measured v2 fix briefed, CONTROLLER STOPPED
 
 Commits pushed: `ed5905e` (Task J: quadruple-corroborated Details relaxed branch —

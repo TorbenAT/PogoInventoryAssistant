@@ -15,6 +15,12 @@ CSV acceptance classified the 15 no-match cases as PossibleMatch review and
 passed 100% accounted/reviewed, but this is not formal ID-006 acceptance;
 the 70% re-match rate and lack of ground-truth labels remain blocking.
 
+Focused ordinal diagnosis of the 15 no-match cases found the same species at
+the same ordinal in all 15: 9 cases had missing CP, 3 missing IV, 2 Unknown
+species/CP, and 2 CP mismatches (categories overlap where a field is absent).
+This identifies field completeness/OCR as the next measured investigation;
+phase 2 remains unapplied until the identity gate is reviewed.
+
 ## Evidence-machine gates result (2026-07-21 aften)
 
 Gates 0-3 were executed against real evidence and the real phone.

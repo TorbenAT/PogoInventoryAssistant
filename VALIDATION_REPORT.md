@@ -526,6 +526,8 @@ been run for this checkpoint.
   because ground-truth labels are absent and the measured re-match rate is
   below the intended quality target.
 - Final phone state: GameplayMap, detector confidence 1.0.
+- No-match diagnosis: same-ordinal species in 15/15 cases; missing CP 9,
+  missing IV 3, Unknown species/CP 2, CP mismatch 2.
 
 ## Task-K sand-background detector repair - 2026-07-26
 
