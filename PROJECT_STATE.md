@@ -1,5 +1,17 @@
 # Project state
 
+## Task-K review-case ground truth (2026-07-26)
+
+The 15 NoMatch cases were manually labeled from paired Details/Appraisal
+evidence. All 15 pairs are evidence-backed same-ordinal matches with 0 true
+identity collisions and 0 false merges. Causes: 9 CP-related (7 missing, 2
+incorrect), 3 IV-not-extracted and 2 species-not-extracted; categories are
+case-primary and overlap with earlier aggregate diagnostics. Counterfactual
+re-match rates are CP-only 88% (44/50), IV-only 76% (38/50), species-only 70%
+(35/50), CP+IV 96% (48/50), and all documented extractor errors 100% (50/50).
+The single recommended next change is guarded CP extraction; it is not
+implemented here.
+
 ## Ground-truth labeling tooling (2026-07-26)
 
 Added offline `prepare-ground-truth` and `analyze-field-completeness` CLI

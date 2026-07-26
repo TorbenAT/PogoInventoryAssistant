@@ -1,5 +1,16 @@
 # Continuation prompt
 
+## Task-K 15-case ground-truth checkpoint (2026-07-26)
+
+All 15 review cases are now labeled from paired evidence. Each pair is
+evidence-backed as the same ordinal Pokémon; no true collision or false merge
+was found. Counterfactuals: CP alone 44/50 (88%), IV alone 38/50 (76%),
+species alone 35/50 (70%), CP+IV 48/50 (96%), all documented extractor errors
+50/50 (100%). The largest safe measured gain is CP extraction: 9 additional
+matches, 70% → 88%. Do not implement it in this measurement checkpoint. The
+next separate scanner iteration may improve guarded CP extraction while
+preserving Unknown/fail-closed behavior.
+
 ## Ground-truth labeling tooling checkpoint (2026-07-26)
 
 Offline tooling is implemented and locally reproduced. Run

@@ -179,8 +179,9 @@ public sealed class GroundTruthMeasurementService
         var rows2 = await LoadRowsAsync(run2Database, cancellationToken);
         var allRows = rows1.Concat(rows2).ToList();
         var byKey = labels.ToDictionary(x => Key(x.RunId, x.Ordinal));
-        var overall = Fields.Select(field => Metric(field, allRows.Select(row => (row, label: byKey[Key(row.RunId, row.Ordinal)])))).ToList();
-        var byRun = allRows.GroupBy(x => x.RunId).ToDictionary(
+        var labeledRows = allRows.Where(row => byKey.ContainsKey(Key(row.RunId, row.Ordinal))).ToList();
+        var overall = Fields.Select(field => Metric(field, labeledRows.Select(row => (row, label: byKey[Key(row.RunId, row.Ordinal)])))).ToList();
+        var byRun = labeledRows.GroupBy(x => x.RunId).ToDictionary(
             group => group.Key,
             group => (IReadOnlyList<GroundTruthFieldMetric>)Fields.Select(field => Metric(field, group.Select(row => (row, label: byKey[Key(row.RunId, row.Ordinal)])))).ToList());
 
@@ -192,8 +193,8 @@ public sealed class GroundTruthMeasurementService
             var match = SemanticIdentityMatcher.Match(prior, ToSemantic(row2));
             if (match.Outcome == SemanticMatchOutcome.Matched) continue;
             if (!rows1ByOrdinal.TryGetValue(row2.Ordinal, out var row1)) continue;
-            var label1 = byKey[Key(row1.RunId, row1.Ordinal)];
-            var label2 = byKey[Key(row2.RunId, row2.Ordinal)];
+            if (!byKey.TryGetValue(Key(row1.RunId, row1.Ordinal), out var label1) ||
+                !byKey.TryGetValue(Key(row2.RunId, row2.Ordinal), out var label2)) continue;
             var same = label1.GroundTruthEntityId is not null && label1.GroundTruthEntityId == label2.GroundTruthEntityId;
             var sameKnown = label1.GroundTruthEntityId is not null && label2.GroundTruthEntityId is not null ? same : (bool?)null;
             var feature = Cause(row1.Observation, row2.Observation, label1, label2);

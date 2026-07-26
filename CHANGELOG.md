@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+- Added the focused Task-K manual ground-truth review for all 15 NoMatch cases.
+  The measured counterfactual gain is 9 extra matches from CP correction alone
+  (70% to 88%); no false merges or collisions were found. The recommended CP
+  extraction repair is documented but not implemented.
+
 - Added offline Task-K ground-truth labeling pack generation and field-
   completeness analysis. The tools preserve scanner output separately, require
   evidence-backed manual labels, analyze all 15 review cases and fail closed

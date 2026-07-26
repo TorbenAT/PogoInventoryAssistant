@@ -1,3 +1,18 @@
+## Task-K 15-case manual ground-truth analysis - 2026-07-26
+
+- Manual labels: 30 run rows covering 15 ordinal pairs; all 30 are Verified
+  with concrete screenshot sources. The remaining 85 observations are outside
+  this focused review pack and remain Unverifiable.
+- Evidence result: all 15 pairs are same-ordinal/same-Pokémon by the documented
+  visible evidence; 0 true collisions and 0 false merges.
+- Primary causes: 7 CP-not-extracted, 2 CP-incorrect, 3 IV-not-extracted and
+  2 species-not-extracted.
+- Counterfactual re-match: CP 44/50 (88%), IV 38/50 (76%), species 35/50
+  (70%), CP+IV 48/50 (96%), all documented extractor errors 50/50 (100%).
+- Recommended next scanner change: guarded CP extraction; not implemented in
+  this checkpoint. Unknown remains the required outcome for unreadable CP.
+- Phone: not accessed.
+
 ## Ground-truth labeling measurement tooling - 2026-07-26
 
 - Offline CLI build: PASS.
