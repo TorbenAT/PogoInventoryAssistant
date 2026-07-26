@@ -1,5 +1,42 @@
 # Continuation prompt
 
+## Round-4 checkpoint (2026-07-26) — detector fix v1 shipped and live-proven; pilot run 1 captured 50/50 but exit failed on SAND background; measured v2 fix briefed, CONTROLLER STOPPED
+
+Commits pushed: `ed5905e` (Task J: quadruple-corroborated Details relaxed branch —
+modelArea>=0.08 && cpArea>=0.50 && detailsPanel>=0.50 && LocateCanonicalCloseControl
+non-null — plus both unsafe call sites gated on `detection.State == Unknown`;
+245/245; task-review approved no findings; c42f620 re-review also approved).
+Task I corpus verification GREEN (`.superpowers/sdd/task-I-report.md`): 0/168
+colliders pass the X locator; all 5 evidence frames X=0.975; 91/108 Unknown
+flips spot-checked genuine. Hard gate passed: `game-state-detect-image` 5/5
+PokemonDetails on `reid-pilot-2x50/run1/evidence/0006..0010`.
+
+**Pilot run 1 (attempt2/run1): the fix WORKS live** — start recovery from the
+untouched Fletchling Details screen succeeded (PokemonDetails →
+InventoryFiltered → GameplayMap, 2 canonical closes, READY). 50/50 items
+captured (35 Complete / 15 Partial / 0 Unresolved, integrity ok, 49 REVIEW +
+1 KEEP). BUT SafeStopped at the final exit:
+`AppraisalExitFailed:Unknown;ObservedStates=Unknown×8`. Root cause MEASURED:
+the 8 exit frames are genuine Details (Diglett) on a SANDY background —
+cpArea 0.073 (sunset frames had 0.958+), so both the primary gate and the v1
+relaxed floor (cpArea>=0.50) reject; m=0.099-0.107, p=0.964, X=0.975 all fine.
+A partial earlier attempt killed externally mid-run is preserved at
+`attempt2/run1-killed-external` (recovery also succeeded there).
+
+**v2 fix corpus-verified (2026-07-26, 3102 PNGs): drop the cpArea conjunct**
+(m>=0.08 && p>=0.50 && X non-null): 343 colliders (321 Appraisal, 18
+GameplayMap, 3 Inventory, 1 MainMenu) — 0/343 pass X; 9/9 new Unknown→Details
+flips visually verified genuine. Full brief with numbers:
+`.superpowers/sdd/task-K-brief.md`. Controller (Torben) chose STOP HERE —
+do not ship v2 or touch the phone without a new controller decision.
+
+**Next session:** execute task-K-brief (one-conjunct change + TDD + review),
+verify 8/8 exit frames + original 5/5 via `game-state-detect-image`, then
+fresh 2×50 pilot back-to-back (age0-1825 is RELATIVE — do not pair a stale
+run1 with a fresh run2), then `analyze-reidentification`. Phone state:
+GameplayMap-ish after run 1's failed exit chain (verify before input as
+always). SDD ledger: `.superpowers/sdd/progress.md`.
+
 ## Round-3 checkpoint (2026-07-24 evening) — frame diet shipped; gate-4 pilot blocked by a MEASURED detector defect with a ready fix brief
 
 Commits pushed: `5f99c7f` (frame diet: IV analysis shares the identity frames + ordinal>1 tag probe dropped — 12→7 captures/item, measured 13.0-14.3 s/item on the real phone), `29b32d7` (shared `CleanupObservationStatusRule` — Complete never survives Unknown CP/IV — plus bounded `VerifyGameplayMapSettledAsync`), `45c151a` (exit-settle verification: shared `VerifySettledStateAsync` core; the exit chain continues on late Details settle). Suite 243/243. All task-scoped reviews approved.
