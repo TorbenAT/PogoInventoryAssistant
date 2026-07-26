@@ -1,0 +1,3 @@
+source_observation_id,expected_record_id,actual_record_id,decision
+scan2-0001,pokemon-0001,pokemon-0001,ConfirmedMatch
+scan2-0002,pokemon-0002,,PossibleMatch
