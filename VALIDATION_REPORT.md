@@ -515,3 +515,11 @@ Limitations observed during validation:
 The persistent Appraisal carousel implementation builds successfully and the
 complete self-test suite passes 163/163. Real-phone acceptance has not yet
 been run for this checkpoint.
+## Task-K sand-background detector repair - 2026-07-26
+
+- Build: PASS.
+- Self-tests: PASS, 245/245.
+- Corpus verification: 0/343 colliders passed the canonical-close X locator.
+- Evidence gate: 13/13 frames classified `PokemonDetails` (8 sand-exit and 5
+  original frames), confidence 1.0.
+- Real-phone 2x50 pilot: pending.

@@ -26,12 +26,23 @@ internal static class CanonicalCloseCorroborationTests
     public static Task RunAsync()
     {
         WarmBackgroundFrameWithCanonicalCloseClassifiesAsDetails();
+        SandBackgroundFrameWithCanonicalCloseClassifiesAsDetails();
         WarmBackgroundFrameWithoutCanonicalCloseStaysNull();
         DegenerateModelAreaWithCanonicalCloseAndStrongCpPanelStillNull();
         CleanupIdentityCaptureNeverCountsConfidentMainMenuAsDetails();
         CallSiteDecisionExpressionMinimalHarness();
         EvidenceFramesFileBasedSanityCheck();
         return Task.CompletedTask;
+    }
+
+    private static void SandBackgroundFrameWithCanonicalCloseClassifiesAsDetails()
+    {
+        var frame = BuildDetailsShapedFrame(baseGray: 60, modelAreaTargetScore: 0.12,
+            includeCanonicalClose: true, sandCpArea: true);
+        var located = new VisualControlLocator().LocateDetailsPageTopology(frame);
+        AssertTrue(located is not null, "sand-background Details with X must classify despite low cpArea");
+        AssertTrue(new PokemonGoGameStateDetector().Detect(frame).State == PokemonGoGameState.PokemonDetails,
+            "sand-background frame must resolve PokemonDetails");
     }
 
     /// <summary>
@@ -247,14 +258,18 @@ internal static class CanonicalCloseCorroborationTests
     private static byte[] CreateMainMenuColliderFrame(double modelAreaTargetScore, bool includeCanonicalClose) =>
         BuildDetailsShapedFrame(baseGray: 200, modelAreaTargetScore, includeCanonicalClose);
 
-    private static byte[] BuildDetailsShapedFrame(byte baseGray, double modelAreaTargetScore, bool includeCanonicalClose)
+    private static byte[] BuildDetailsShapedFrame(byte baseGray, double modelAreaTargetScore,
+        bool includeCanonicalClose, bool sandCpArea = false)
     {
         const int width = 300;
         const int height = 600;
         var rgba = Fill(width, height, r: baseGray, g: baseGray, b: baseGray);
 
         // cpArea region (0.25,0.07)-(0.75,0.18): light, matches IsDetailsPanel -> ~1.0.
-        Paint(rgba, width, height, 0.25, 0.07, 0.75, 0.18, r: 240, g: 240, b: 240);
+        Paint(rgba, width, height, 0.25, 0.07, 0.75, 0.18,
+            r: sandCpArea ? (byte)185 : (byte)240,
+            g: sandCpArea ? (byte)170 : (byte)240,
+            b: sandCpArea ? (byte)130 : (byte)240);
         // detailsPanel region (0.03,0.39)-(0.97,0.92): light, matches IsDetailsPanelBroad -> ~1.0.
         Paint(rgba, width, height, 0.03, 0.39, 0.97, 0.92, r: 235, g: 240, b: 235);
 

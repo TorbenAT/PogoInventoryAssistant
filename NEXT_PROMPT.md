@@ -1,5 +1,14 @@
 # Continuation prompt
 
+## Task-K checkpoint (2026-07-26)
+
+Task-K is implemented and locally validated. The sand-background Details fix
+drops only the `cpArea` conjunct from the existing X-corroborated relaxed
+branch. Build and self-tests pass 245/245; the 8 sand-exit frames plus the 5
+original gate frames classify PokemonDetails (13/13, confidence 1.0). Next:
+run two fresh back-to-back `age0-1825` / 50-item read-only pilots, then run
+`analyze-reidentification`; do not combine a stale run with a fresh run.
+
 ## Round-4 checkpoint (2026-07-26) — detector fix v1 shipped and live-proven; pilot run 1 captured 50/50 but exit failed on SAND background; measured v2 fix briefed, CONTROLLER STOPPED
 
 Commits pushed: `ed5905e` (Task J: quadruple-corroborated Details relaxed branch —

@@ -1,5 +1,12 @@
 # Changelog
 
+## Unreleased
+
+- Removed the measured-failing CP-area conjunct from the canonical-X-
+  corroborated Details fallback for sand-background screens. Local evidence
+  gate is 13/13 and self-tests are 245/245; fresh 2x50 phone acceptance is
+  pending.
+
 ## Semantic integration: OCR wired into cleanup flow — 2026-07-21
 
 - `CleanupProofRunner` now derives species through `SearchQueryClassifier`

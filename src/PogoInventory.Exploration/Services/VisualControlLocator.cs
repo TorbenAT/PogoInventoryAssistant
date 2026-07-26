@@ -125,10 +125,13 @@ public sealed class VisualControlLocator
             // colliders pass the X locator's own quadruple gate (score/circle/
             // strokes all >= 0.70, no conflicting candidate), while all 5
             // gate-4 evidence frames score X = 0.975. Task J implements the
-            // QUADRUPLE-corroborated branch below (three area floors + the X
-            // signal). See task-H-report.md, task-I-report.md, task-J-report.md
+            // QUADRUPLE-corroborated branch below (model/details area floors
+            // plus the X signal). Task K measured cpArea at 0.073 on genuine
+            // sand-background Details while the X locator remained 0.975;
+            // therefore cpArea is intentionally not a conjunct here. See
+            // task-K-brief.md for the 0/343-collider corpus result.
             // and CanonicalCloseCorroborationTests.
-            if (modelArea >= 0.08 && cpArea >= 0.50 && detailsPanel >= 0.50 &&
+            if (modelArea >= 0.08 && detailsPanel >= 0.50 &&
                 LocateCanonicalCloseControl(screenshotPng) is not null)
             {
                 return new LocatedControl

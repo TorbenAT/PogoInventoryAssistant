@@ -1,5 +1,14 @@
 # Project state
 
+## Task-K sand-background detector repair
+
+The X-corroborated relaxed Details topology branch now requires
+`modelArea >= 0.08`, `detailsPanel >= 0.50` and a verified canonical close
+control; the brittle `cpArea >= 0.50` conjunct was removed. The measured
+corpus result is 0/343 colliders passing the X locator, and the local hard
+evidence gate classified 13/13 frames as PokemonDetails. Self-tests pass
+245/245. A fresh 2x50 phone pilot remains pending.
+
 ## Evidence-machine gates result (2026-07-21 aften)
 
 Gates 0-3 were executed against real evidence and the real phone.
