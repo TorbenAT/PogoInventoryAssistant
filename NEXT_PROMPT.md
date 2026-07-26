@@ -1,5 +1,13 @@
 # Continuation prompt
 
+## Run-local decision tag planner checkpoint (2026-07-26)
+
+`DecisionTagPlanner` is implemented and tested. It produces only allowlisted
+`AI-Indexed`/`AI-Review` plans, fails closed on uncertain current-item binding,
+and does not execute tags. Task-K run2 dry-run is documented in
+`docs/TAG_PLAN_DRY_RUN.md`. Next single action: review the dry-run plan before
+any future phone tag integration.
+
 ## Task-K 15-case ground-truth checkpoint (2026-07-26)
 
 All 15 review cases are now labeled from paired evidence. Each pair is

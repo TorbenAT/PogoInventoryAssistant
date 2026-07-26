@@ -1,4 +1,6 @@
 using PogoInventory.Automation.Models;
+using PogoInventory.Automation.Services;
+using PogoInventory.Core.Models;
 using PogoInventory.Persistence;
 
 namespace PogoInventory.Application;
@@ -7,6 +9,7 @@ public sealed class RunCoordinator
 {
     private readonly InventoryPersistenceService _persistence;
     private readonly TagWorkflowService _tags;
+    private readonly DecisionTagPlanner _tagPlanner = new();
     private readonly IPokemonGoTagExecutor? _tagExecutor;
 
     public RunCoordinator(string databasePath, IPokemonGoTagExecutor? tagExecutor = null)
@@ -74,6 +77,21 @@ public sealed class RunCoordinator
             TagErrors = tagErrors
         };
     }
+
+    public TagPlan PlanTag(
+        RealScanObservationRecord observation,
+        PokemonDecision decision,
+        string runId,
+        int ordinal,
+        string stableFingerprint,
+        bool cursorStateKnown = true) =>
+        _tagPlanner.Plan(
+            observation,
+            decision,
+            runId,
+            ordinal,
+            stableFingerprint,
+            cursorStateKnown);
 }
 
 public sealed record RunCycleResult

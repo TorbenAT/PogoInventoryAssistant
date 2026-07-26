@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+- Added a run-local, dry-run-only `DecisionTagPlanner`. KEEP maps to
+  `AI-Indexed`; REVIEW, DELETE-candidate, Partial and Unknown map to
+  `AI-Review`. Plans require current Details/Appraisal state, ordinal and
+  stable fingerprint. No phone tag, swipe, matcher or scanner path changed.
+
 - Added the focused Task-K manual ground-truth review for all 15 NoMatch cases.
   The measured counterfactual gain is 9 extra matches from CP correction alone
   (70% to 88%); no false merges or collisions were found. The recommended CP

@@ -1,5 +1,12 @@
 # Project state
 
+## Run-local decision tag planning (2026-07-26)
+
+Added a deterministic dry-run-only `DecisionTagPlanner`. It maps KEEP to
+`AI-Indexed` and every uncertain or destructive recommendation to
+`AI-Review`, bound to run ID, ordinal and stable fingerprint. It never invokes
+phone tagging or swipe logic and does not use cross-run identity or exact CP.
+
 ## Task-K review-case ground truth (2026-07-26)
 
 The 15 NoMatch cases were manually labeled from paired Details/Appraisal
