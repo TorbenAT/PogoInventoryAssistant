@@ -515,6 +515,18 @@ Limitations observed during validation:
 The persistent Appraisal carousel implementation builds successfully and the
 complete self-test suite passes 163/163. Real-phone acceptance has not yet
 been run for this checkpoint.
+## Task-K fresh 2x50 pilot and phase-1 measurement - 2026-07-26
+
+- Run 1: 50/50, 39 Complete, 11 Partial, 0 Unresolved, SQLite integrity ok.
+- Run 2: 50/50, 40 Complete, 10 Partial, 0 Unresolved, SQLite integrity ok.
+- Re-identification: 35 matched, 15 no-match candidates, 0 ambiguous, 0
+  false-merge guard blocks, 70% re-match rate.
+- Phase-1 CSV tool: PASS with 35 ConfirmedMatch and 15 PossibleMatch review;
+  100% accounted/reviewed. This is a pilot result, not formal ID-006 approval,
+  because ground-truth labels are absent and the measured re-match rate is
+  below the intended quality target.
+- Final phone state: GameplayMap, detector confidence 1.0.
+
 ## Task-K sand-background detector repair - 2026-07-26
 
 - Build: PASS.
@@ -522,4 +534,4 @@ been run for this checkpoint.
 - Corpus verification: 0/343 colliders passed the canonical-close X locator.
 - Evidence gate: 13/13 frames classified `PokemonDetails` (8 sand-exit and 5
   original frames), confidence 1.0.
-- Real-phone 2x50 pilot: pending.
+- Real-phone 2x50 pilot: complete; see the acceptance section above.

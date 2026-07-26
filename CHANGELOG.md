@@ -4,8 +4,10 @@
 
 - Removed the measured-failing CP-area conjunct from the canonical-X-
   corroborated Details fallback for sand-background screens. Local evidence
-  gate is 13/13 and self-tests are 245/245; fresh 2x50 phone acceptance is
-  pending.
+  gate is 13/13 and self-tests are 245/245. The fresh pilot re-match rate is
+  70% (35/50), with 15 cases routed to PossibleMatch review and zero
+  false-merge guard blocks; formal identity acceptance remains pending
+  ground-truth labeling.
 
 ## Semantic integration: OCR wired into cleanup flow — 2026-07-21
 

@@ -9,6 +9,13 @@ original gate frames classify PokemonDetails (13/13, confidence 1.0). Next:
 run two fresh back-to-back `age0-1825` / 50-item read-only pilots, then run
 `analyze-reidentification`; do not combine a stale run with a fresh run.
 
+Task-K pilots completed. Run 1: 50/50 (39 Complete, 11 Partial). Run 2:
+50/50 (40 Complete, 10 Partial). Re-identification: 35 matched, 15 review
+candidates, 0 ambiguous, 0 false-merge guard blocks, 70% re-match. The phase-1
+tool passed after routing all 15 no-match cases to PossibleMatch review, but
+formal identity acceptance remains blocked by the low re-match rate and the
+missing ground-truth collision labels. Do not apply phases 2-4 yet.
+
 ## Round-4 checkpoint (2026-07-26) — detector fix v1 shipped and live-proven; pilot run 1 captured 50/50 but exit failed on SAND background; measured v2 fix briefed, CONTROLLER STOPPED
 
 Commits pushed: `ed5905e` (Task J: quadruple-corroborated Details relaxed branch —

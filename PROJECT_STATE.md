@@ -7,7 +7,13 @@ The X-corroborated relaxed Details topology branch now requires
 control; the brittle `cpArea >= 0.50` conjunct was removed. The measured
 corpus result is 0/343 colliders passing the X locator, and the local hard
 evidence gate classified 13/13 frames as PokemonDetails. Self-tests pass
-245/245. A fresh 2x50 phone pilot remains pending.
+245/245. A fresh 2x50 phone pilot is complete: run 1 and run 2 each captured
+50/50 with SQLite integrity `ok` and final phone state `GameplayMap`. Offline
+re-identification found 35 matches, 15 no-match candidates, 0 ambiguous
+collisions and 0 false-merge guard blocks (70% re-match rate). The phase-1
+CSV acceptance classified the 15 no-match cases as PossibleMatch review and
+passed 100% accounted/reviewed, but this is not formal ID-006 acceptance;
+the 70% re-match rate and lack of ground-truth labels remain blocking.
 
 ## Evidence-machine gates result (2026-07-21 aften)
 
