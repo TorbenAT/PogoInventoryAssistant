@@ -1,5 +1,18 @@
 # Project state
 
+## Ground-truth labeling tooling (2026-07-26)
+
+Added offline `prepare-ground-truth` and `analyze-field-completeness` CLI
+commands. The preparation pack is generated from the two Task-K captured-
+observation JSON files and keeps scanner values in separate `Scanner*` CSV
+columns; manual ground truth starts `Unverifiable` and requires concrete
+evidence sources and a reviewer-assigned entity ID. The analyzer compares
+manual values against both SQLite runs, reports overall/per-run field metrics,
+and lists the 15 current NoMatch review cases with fail-closed causes and
+counterfactual gain scenarios. No scanner behavior was changed. The current
+pack has 100 Unverifiable rows, so field acceptance and gain estimates remain
+blocked pending manual labeling.
+
 ## Phase 2 field-completeness baseline (2026-07-26)
 
 Phase 2 measurement tooling is applied and the example acceptance fixture

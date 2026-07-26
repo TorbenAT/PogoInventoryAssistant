@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+- Added offline Task-K ground-truth labeling pack generation and field-
+  completeness analysis. The tools preserve scanner output separately, require
+  evidence-backed manual labels, analyze all 15 review cases and fail closed
+  when identity labels are incomplete. No scanner logic changed.
+
 - Applied phase-2 field-completeness measurement tooling. A conservative audit
   of 100 observations produced 500 Unknown critical-field values and 0
   Incorrect values; the fail-closed safety check passed, but ground truth is

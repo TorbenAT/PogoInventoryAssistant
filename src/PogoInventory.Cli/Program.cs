@@ -190,6 +190,12 @@ static async Task<int> MainAsync(string[] args)
             "analyze-reidentification" => await AnalyzeReidentificationAsync(
                 args.Skip(1).ToArray(),
                 cancellationSource.Token),
+            "prepare-ground-truth" => await PrepareGroundTruthAsync(
+                args.Skip(1).ToArray(),
+                cancellationSource.Token),
+            "analyze-field-completeness" => await AnalyzeFieldCompletenessAsync(
+                args.Skip(1).ToArray(),
+                cancellationSource.Token),
             "inventory-db-init" => await InitializeInventoryDbAsync(
                 args.Skip(1).ToArray(),
                 cancellationSource.Token),
@@ -296,6 +302,43 @@ static async Task<int> AnalyzeReidentificationAsync(
     Console.WriteLine($"Unmatched: {report.UnmatchedCount}");
     Console.WriteLine($"Re-match rate: {report.ReMatchRatePercent:F2}%");
     Console.WriteLine($"Report: {Path.Combine(Path.GetFullPath(outputDirectory), "reidentification-report.json")}");
+    return 0;
+}
+
+static async Task<int> PrepareGroundTruthAsync(
+    string[] args,
+    CancellationToken cancellationToken)
+{
+    var options = ParseOptions(args);
+    var count = await new GroundTruthMeasurementService().PrepareAsync(
+        Require(options, "evidence"),
+        Require(options, "out"),
+        cancellationToken);
+    Console.WriteLine("Ground-truth labeling material prepared. No phone was accessed.");
+    Console.WriteLine($"Rows: {count}");
+    Console.WriteLine($"CSV: {Path.GetFullPath(Path.Combine(Require(options, "out"), "ground-truth.csv"))}");
+    Console.WriteLine($"HTML: {Path.GetFullPath(Path.Combine(Require(options, "out"), "labeling.html"))}");
+    return 0;
+}
+
+static async Task<int> AnalyzeFieldCompletenessAsync(
+    string[] args,
+    CancellationToken cancellationToken)
+{
+    var options = ParseOptions(args);
+    var report = await new GroundTruthMeasurementService().AnalyzeAsync(
+        Require(options, "ground-truth"),
+        Require(options, "run1"),
+        Require(options, "run2"),
+        Require(options, "out"),
+        cancellationToken);
+    Console.WriteLine("Ground-truth field completeness analysis finished. No phone was accessed.");
+    Console.WriteLine($"Rows: {report.GroundTruthRows}; review cases: {report.ReviewCases.Count}");
+    foreach (var field in report.OverallFields)
+    {
+        Console.WriteLine($"{field.Field}: Correct={field.Correct}, Incorrect={field.Incorrect}, Unknown={field.Unknown}, Unverifiable={field.Unverifiable}");
+    }
+    Console.WriteLine($"Report: {Path.GetFullPath(Path.Combine(Require(options, "out"), "field-completeness-report.md"))}");
     return 0;
 }
 
@@ -3560,6 +3603,8 @@ static void PrintHelp()
     Console.WriteLine("  analyze-cleanup-evidence --database <cleanup-proof.sqlite> --evidence-root <dir> --out <dir>");
     Console.WriteLine("                           [--species-reference <species-reference.json>] [--policy <rule-policy.json>]");
     Console.WriteLine("                           [--tessdata <directory>] (default tools/tessdata-best)");
+    Console.WriteLine("  prepare-ground-truth --evidence <task-k-directory> --out <directory>");
+    Console.WriteLine("  analyze-field-completeness --ground-truth <ground-truth.csv> --run1 <sqlite> --run2 <sqlite> --out <directory>");
     Console.WriteLine("                           Offline reprocess: reruns header OCR + IV consensus over an existing");
     Console.WriteLine("                           cleanup-proof database's stored evidence and writes a NEW sqlite copy;");
     Console.WriteLine("                           never modifies the original database. Uses Tesseract for header OCR.");

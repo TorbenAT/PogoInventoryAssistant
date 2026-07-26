@@ -1,3 +1,22 @@
+## Ground-truth labeling measurement tooling - 2026-07-26
+
+- Offline CLI build: PASS.
+- Self-tests: PASS, 248/248, including CSV parsing, field metrics and review
+  cause classification.
+- `prepare-ground-truth`: PASS; generated 100 rows from the two Task-K
+  `captured-observations.json` inputs, with separate scanner columns and
+  evidence paths.
+- `analyze-field-completeness`: PASS; analyzed both Task-K SQLite databases,
+  produced 15 individual review cases and overall/per-run reports.
+- Current labels: 0 Verified, 100 Unverifiable, 0 NotApplicable. All six
+  fields are therefore Unverifiable=100 with no accuracy/completeness claim.
+- Review diagnosis: 8 CP-not-extracted, 3 IV-not-extracted, 2
+  species-not-extracted and 2 CP-conflict cases. These are scanner-output
+  diagnoses, not manually verified truth.
+- Counterfactual gain: not calculable until shared ground-truth entity IDs and
+  field values are manually verified.
+- Phone: not accessed; no scanner logic changed.
+
 ## Phase 2 field-completeness baseline - 2026-07-26
 
 - Tooling: applied and pushed in `cba0bf8`.

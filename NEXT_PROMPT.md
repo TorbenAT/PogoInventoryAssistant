@@ -1,5 +1,19 @@
 # Continuation prompt
 
+## Ground-truth labeling tooling checkpoint (2026-07-26)
+
+Offline tooling is implemented and locally reproduced. Run
+`prepare-ground-truth --evidence local-data/validation/reid-pilot-2x50/task-k`
+to regenerate 100 labeling rows and `labeling.html`; then manually fill only
+readable fields, set `Verified` plus a concrete source and shared entity ID
+only when carousel evidence proves identity. Run
+`analyze-field-completeness` against both Task-K SQLite databases afterward.
+The current generated pack is all `Unverifiable`: 15 review cases diagnose as
+8 CP-not-extracted, 3 IV-not-extracted, 2 species-not-extracted and 2 CP
+conflicts. No gain estimate or scanner code change is justified yet. Next
+single action: manually label the 15 review cases first, then expand to the
+remaining 85 rows if evidence permits.
+
 ## Phase 2 field-completeness baseline (2026-07-26)
 
 Phase 2 tooling is applied and pushed. The conservative measurement over the
