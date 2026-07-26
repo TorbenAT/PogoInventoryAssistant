@@ -1,0 +1,6 @@
+observation_id,field,result
+obs-0001,Species,Correct
+obs-0001,CP,Correct
+obs-0001,AttackIV,Correct
+obs-0001,DefenseIV,Correct
+obs-0001,HpIV,Correct
