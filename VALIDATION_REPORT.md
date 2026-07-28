@@ -773,3 +773,9 @@ Main consolidation merge: `192d1c7`.
 - Preserved dirty/active worktrees: VLM evidence bakeoff, Phase 5/6A
   integration `.codex_tmp`, worker branches, WIP branch and
   `tag-verification-guard`. They were not deleted.
+- Deleted local and remote branches: `integration/streaming-vision-phases-1-3`,
+  `integration/streaming-vision-consolidation`,
+  `feature/streaming-phase6a-ollama-benchmark`,
+  `feature/streaming-phase6a-semantic-offline` and
+  `feature/streaming-phase6b-shadow`. Every deleted tip is an ancestor of
+  `origin/main`.

@@ -14,6 +14,11 @@ worktree remains preserved separately because it is dirty, uncommitted and has
 no remote branch. No phone input, tagging, transfer or delete authority was
 added.
 
+Cleanup completed: obsolete clean streaming branches and worktrees were
+removed locally and remotely after ancestry verification. Dirty/active
+worktrees and unique worker/WIP branches remain preserved, including
+`tag-verification-guard` and the dirty VLM-evidence worktree.
+
 ## Streaming Vision Phase 6B shadow integration (2026-07-28)
 
 The additive Phase 6B shadow package is integrated on

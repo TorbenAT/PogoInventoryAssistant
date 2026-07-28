@@ -7,6 +7,9 @@
   Phase 6B shadow foundation. Validation is green; real semantic accuracy
   remains unmeasured and the dirty VLM evidence worktree is preserved.
 
+- Removed obsolete clean streaming branches/worktrees after verifying their
+  tips are ancestors of `main`; dirty and active work remains preserved.
+
 - Integrated additive Streaming Vision Phase 6B shadow capture and comparison:
   bounded BGRA lease copying, fail-closed analyzer/reference discrepancy
   reporting, atomic JSON/Markdown output, read-only live runner and 10/10
