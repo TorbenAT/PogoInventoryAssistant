@@ -33,6 +33,7 @@ public sealed class StreamingFrameSource : IStreamingFrameSource
     }
 
     public bool IsRunning => Volatile.Read(ref _running) == 1;
+    public Exception? LastError { get; private set; }
 
     public ValueTask StartAsync(CancellationToken cancellationToken = default)
     {
@@ -135,6 +136,10 @@ public sealed class StreamingFrameSource : IStreamingFrameSource
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
         {
+        }
+        catch (Exception error)
+        {
+            LastError = error;
         }
         finally
         {

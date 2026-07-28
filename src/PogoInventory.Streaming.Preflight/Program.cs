@@ -69,7 +69,7 @@ static class MarkdownReport
 {
     public static string Create(StreamingPreflightReport report)
     {
-        var lines = new List<string> { "# Streaming Vision preflight", "", $"- Device: `{report.DeviceSerial}`", $"- Final reason: `{report.FinalReasonCode}`", $"- Input commands sent: `{(report.InputCommandsSent ? 1 : 0)}`", "", "| Check | Result | Reason | Detail |", "|---|---|---|---|" };
+        var lines = new List<string> { "# Streaming Vision preflight", "", $"- Device: `{report.DeviceSerial}`", $"- Device model: `{report.DeviceModel ?? "Unknown"}`", $"- Final reason: `{report.FinalReasonCode}`", $"- Read-only configuration: `{report.ReadOnlyConfiguration}`", $"- Input commands sent: `{(report.InputCommandsSent ? 1 : 0)}`", "", "| Check | Result | Reason | Detail |", "|---|---|---|---|" };
         lines.AddRange(report.Checks.Select(x => $"| {x.Name} | {(x.Passed ? "PASS" : "FAIL")} | `{x.ReasonCode}` | {x.Detail.Replace("|", "\\|")} |"));
         if (report.Display is not null) lines.Add($"\n- Display: `{report.Display.Width}x{report.Display.Height}` ({report.Display.Orientation})");
         if (report.Stream is not null) lines.Add($"- Resolved stream: `{report.Stream.Width}x{report.Stream.Height}` from `{report.Stream.Source}`");

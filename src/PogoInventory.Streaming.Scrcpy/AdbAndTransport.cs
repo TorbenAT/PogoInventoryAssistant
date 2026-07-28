@@ -15,7 +15,7 @@ public sealed class AdbDeviceValidator {
 }
 
 public sealed class ScrcpyReadOnlyVideoTransport : IReadOnlyVideoTransport {
- readonly ScrcpyOptions _o; readonly AdbDeviceValidator _validator=new(); TcpClient? _tcp; Process? _server; CancellationTokenSource? _run; int _state=(int)ComponentLifecycle.Created; public ComponentLifecycle Lifecycle=>(ComponentLifecycle)Volatile.Read(ref _state); ComponentLifecycle IReadOnlyVideoTransport.Lifecycle=>Lifecycle; public VideoStreamMetadata? Metadata{get;private set;}
+ readonly ScrcpyOptions _o; readonly AdbDeviceValidator _validator=new(); TcpClient? _tcp; Process? _server; Task<string>? _serverError; CancellationTokenSource? _run; int _state=(int)ComponentLifecycle.Created; public ComponentLifecycle Lifecycle=>(ComponentLifecycle)Volatile.Read(ref _state); ComponentLifecycle IReadOnlyVideoTransport.Lifecycle=>Lifecycle; public VideoStreamMetadata? Metadata{get;private set;}
  public ScrcpyReadOnlyVideoTransport(ScrcpyOptions options){_o=options;_o.Validate();}
  public async IAsyncEnumerable<EncodedVideoPacket> ReadPacketsAsync([EnumeratorCancellation]CancellationToken cancellationToken){
   if(Interlocked.CompareExchange(ref _state,(int)ComponentLifecycle.Starting,(int)ComponentLifecycle.Created)!=(int)ComponentLifecycle.Created && Interlocked.CompareExchange(ref _state,(int)ComponentLifecycle.Starting,(int)ComponentLifecycle.Stopped)!=(int)ComponentLifecycle.Stopped)throw new InvalidOperationException("Transport may only be started once at a time.");
@@ -24,16 +24,15 @@ public sealed class ScrcpyReadOnlyVideoTransport : IReadOnlyVideoTransport {
   if(!File.Exists(_o.ScrcpyServerJar)){Volatile.Write(ref _state,(int)ComponentLifecycle.Faulted);throw new StreamTransportException(new(StreamFailureCode.ScrcpyServerMissing,"scrcpy server JAR not found",_o.ScrcpyServerJar));}
   var remote="/data/local/tmp/pogo-scrcpy-server.jar"; await RequireAdbAsync($"-s {Q(_o.DeviceSerial)} push {Q(_o.ScrcpyServerJar)} {remote}",startup.Token,StreamFailureCode.ScrcpyServerStartFailed);
   await RequireAdbAsync($"-s {Q(_o.DeviceSerial)} forward tcp:{_o.LocalPort} localabstract:scrcpy",startup.Token,StreamFailureCode.VideoSocketConnectionFailed);
-  var args=$"-s {Q(_o.DeviceSerial)} shell CLASSPATH={remote} app_process / {_o.JavaMainClass} {_o.ScrcpyServerVersion} tunnel_forward=true audio=false control=false cleanup=true raw_stream=true max_size={_o.MaxSize} max_fps={_o.MaxFps}";
-  _server=new Process{StartInfo=new(_o.AdbPath,args){RedirectStandardError=true,RedirectStandardOutput=true,UseShellExecute=false,CreateNoWindow=true}}; if(!_server.Start())throw new StreamTransportException(new(StreamFailureCode.ScrcpyServerStartFailed,"Could not start scrcpy server process."));
-  var displayOutput=(await AdbDeviceValidator.RunAsync(_o.AdbPath,$"-s {Q(_o.DeviceSerial)} shell wm size",startup.Token)).Output;
   DisplayDimensions display; ResolvedStreamDimensions resolved;
-  try { display=AdbDisplayDimensionParser.ParseWmSize(displayOutput); resolved=StreamDimensionResolver.Resolve(display,_o.MaxSize,_o.RequestedWidth,_o.RequestedHeight); }
+  try { var displayOutput=(await AdbDeviceValidator.RunAsync(_o.AdbPath,$"-s {Q(_o.DeviceSerial)} shell wm size",startup.Token)).Output; display=AdbDisplayDimensionParser.ParseWmSize(displayOutput); resolved=StreamDimensionResolver.Resolve(display,_o.MaxSize,_o.RequestedWidth,_o.RequestedHeight); }
   catch(StreamTransportException) { Volatile.Write(ref _state,(int)ComponentLifecycle.Faulted); throw; }
   catch(Exception e) { Volatile.Write(ref _state,(int)ComponentLifecycle.Faulted); throw new StreamTransportException(new(StreamFailureCode.StreamDimensionMismatch,"Could not resolve the expected raw stream dimensions.",e.Message)); }
-  _tcp=new TcpClient(); await _tcp.ConnectAsync("127.0.0.1",_o.LocalPort,startup.Token); var stream=_tcp.GetStream(); Metadata=new("h264",resolved.Width,resolved.Height,_o.MaxFps,_o.DeviceSerial); Volatile.Write(ref _state,(int)ComponentLifecycle.Running);
+  var args=$"-s {Q(_o.DeviceSerial)} shell CLASSPATH={remote} app_process / {_o.JavaMainClass} {_o.ScrcpyServerVersion} tunnel_forward=true audio=false control=false cleanup=true raw_stream=true max_size={_o.MaxSize} max_fps={_o.MaxFps}";
+  _server=new Process{StartInfo=new(_o.AdbPath,args){RedirectStandardError=true,RedirectStandardOutput=true,UseShellExecute=false,CreateNoWindow=true}}; if(!_server.Start())throw new StreamTransportException(new(StreamFailureCode.ScrcpyServerStartFailed,"Could not start scrcpy server process.")); _serverError=_server.StandardError.ReadToEndAsync();
+  await Task.Delay(500,startup.Token); _tcp=new TcpClient(); await _tcp.ConnectAsync("127.0.0.1",_o.LocalPort,startup.Token); var stream=_tcp.GetStream(); Metadata=new("h264",resolved.Width,resolved.Height,_o.MaxFps,_o.DeviceSerial); Volatile.Write(ref _state,(int)ComponentLifecycle.Running);
   var buffer=new byte[256*1024];long seq=0;var sw=Stopwatch.StartNew();
-  try{while(true){var n=await stream.ReadAsync(buffer,_run.Token);if(n==0)throw new StreamTransportException(new(StreamFailureCode.StreamEndedUnexpectedly,"scrcpy video stream ended."));var copy=new byte[n];Buffer.BlockCopy(buffer,0,copy,0,n);yield return new(copy,++seq,sw.Elapsed,DateTimeOffset.UtcNow,ContainsIdr(copy));}}
+  try{while(true){var n=await stream.ReadAsync(buffer,_run.Token);if(n==0){var detail=_server is not null&&_server.HasExited&&_serverError is not null?await _serverError:null;throw new StreamTransportException(new(StreamFailureCode.StreamEndedUnexpectedly,"scrcpy video stream ended.",detail?.Trim()));}var copy=new byte[n];Buffer.BlockCopy(buffer,0,copy,0,n);yield return new(copy,++seq,sw.Elapsed,DateTimeOffset.UtcNow,ContainsIdr(copy));}}
   finally{await StopAsync(CancellationToken.None);}
  }
  static bool ContainsIdr(ReadOnlySpan<byte>b){for(int i=0;i+4<b.Length;i++)if(b[i]==0&&b[i+1]==0&&(b[i+2]==1||b[i+2]==0&&b[i+3]==1)){int j=b[i+2]==1?i+3:i+4;if(j<b.Length&&(b[j]&0x1f)==5)return true;}return false;}

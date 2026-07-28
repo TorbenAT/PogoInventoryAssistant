@@ -1,5 +1,15 @@
 # Continuation prompt
 
+## Streaming Vision Phase 5 checkpoint (2026-07-28)
+
+Local ignored scrcpy v4.0/FFmpeg 8.1.2 tools are available and preflight is
+green. The requested read-only real-phone 30s/30s/60s observe runs reached
+`192.168.1.185:5555` but decoded/published 0 frames, so Phase 5 acceptance,
+gates, calibration, timing and evidence remain NOT ACCEPTED. Do not send input.
+Investigate the application-level no-frame path before rerunning bounded
+acceptance; do not start Phase 6. Preserve the three worktrees and the WIP
+identity branch.
+
 ## Streaming Vision Phase 4 checkpoint (2026-07-28)
 
 Fase 4 preflight, normalized OnePlus A6013 candidate profile and automatic

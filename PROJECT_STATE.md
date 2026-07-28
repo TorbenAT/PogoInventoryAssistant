@@ -1,5 +1,16 @@
 # Project state
 
+## Streaming Vision Phase 5 (2026-07-28)
+
+The local official scrcpy v4.0 and FFmpeg 8.1.2 toolchain is installed only
+under ignored `tools/local/` and preflight passes for the authorized
+`ONEPLUS_A6013`: `1080x2340` portrait resolves to `886x1920`. The requested
+read-only 30s/30s/60s real-phone observe runs produced zero frames, therefore
+real streaming acceptance, gate execution, regional calibration, timing and
+PNG evidence are NOT ACCEPTED. No input was sent. A future run must diagnose
+the remaining application-level no-frame condition before Phase 5 can close;
+Phase 6 is not started.
+
 ## Streaming Vision Phase 4 (2026-07-28)
 
 Fase 4 preflight and automatic stream-dimension resolution are integrated.

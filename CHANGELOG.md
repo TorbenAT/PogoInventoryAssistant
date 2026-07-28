@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+- Phase 5 toolchain and read-only real-phone probes were added locally. The
+  requested 30s/30s/60s runs reached the authorized OnePlus device but produced
+  no decoded frames; real streaming, gates and calibration remain NOT ACCEPTED.
+  No phone input was sent. See `docs/STREAMING_VISION_PHASE5.md`.
+
 - Added read-only Streaming Vision Phase 4 preflight with machine-readable
   reason codes, ADB/device/tool checks, normalized `wm size` dimension
   resolution, optional explicit dimensions, a OnePlus A6013 candidate ROI

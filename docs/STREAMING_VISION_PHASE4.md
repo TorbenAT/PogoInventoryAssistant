@@ -3,8 +3,9 @@
 ## Status
 
 Offline Fase 4 implementation is integrated and tested. Real-phone stream
-acceptance is not claimed: the authorized OnePlus A6013 is visible to ADB, but
-FFmpeg and the scrcpy server JAR are not installed in the workspace.
+acceptance is not claimed. Phase 5 installed the local ignored toolchain and
+performed bounded probes; see `docs/STREAMING_VISION_PHASE5.md` for the
+not-accepted zero-frame result.
 
 The read-only preflight nevertheless verified:
 
@@ -14,9 +15,9 @@ The read-only preflight nevertheless verified:
 - automatic bounded stream resolution `886x1920` at `max-size=1920`
 - `InputCommandsSent = 0`
 
-Preflight result was `FfmpegUnavailable`; scrcpy was also
-`ScrcpyServerMissing`. No stream, gate run, screenshot evidence or phone input
-was produced.
+Preflight now passes for ADB, FFmpeg and the scrcpy server. The Phase 5 observe
+runs nevertheless produced no decoded frames. No gate run, screenshot evidence
+or phone input was produced.
 
 ## Offline acceptance
 

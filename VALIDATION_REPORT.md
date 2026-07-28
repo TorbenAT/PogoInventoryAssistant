@@ -623,3 +623,19 @@ been run for this checkpoint.
 - Evidence gate: 13/13 frames classified `PokemonDetails` (8 sand-exit and 5
   original frames), confidence 1.0.
 - Real-phone 2x50 pilot: complete; see the acceptance section above.
+## Streaming Vision Phase 5 - 2026-07-28
+
+- Full Release solution build: PASS, 28 projects, 0 warnings, 0 errors.
+- Repository self-test: PASS, 249/249.
+- Phase 4 self-test: PASS, 7/7; input commands sent: 0.
+- Local toolchain preflight: PASS for ADB, FFmpeg, scrcpy server, authorized
+  `ONEPLUS_A6013`, and automatic `886x1920` portrait dimensions.
+- Real-phone observe runs requested by the handover: 30s, 30s and 60s. All
+  produced zero encoded/decoded/published frames and are **NOT ACCEPTED**.
+- Gate execution, regional calibration, timing acceptance and PNG evidence:
+  NOT RUN because the stream produced no frames.
+- An isolated read-only raw-protocol diagnostic read H.264 bytes from the same
+  phone/server combination; this is diagnostic evidence only and is not
+  application-level stream acceptance.
+- Input commands, navigation and state-changing phone operations: 0.
+- Local toolchain binaries remain ignored under `tools/local/`.
