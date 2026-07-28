@@ -638,7 +638,9 @@ been run for this checkpoint.
 - Phase 5 self-test: PASS, 8/8.
 - Three gate observations completed read-only with 68-80 frames and zero
   outstanding leases, but timed out conservatively on required Header
-  motion/sharpness. Regional gate calibration is NOT ACCEPTED.
+  motion/sharpness. Evidence shows the phone on the Pokémon GO map rather than
+  Details/Appraisal, so regional gate calibration is NOT ACCEPTED and requires
+  physical placement only; no navigation/input was performed.
 - An isolated read-only raw-protocol diagnostic read H.264 bytes from the same
   phone/server combination; this is diagnostic evidence only and is not
   application-level stream acceptance.

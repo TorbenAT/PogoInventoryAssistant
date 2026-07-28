@@ -41,8 +41,11 @@ All runs reported zero interruptions/freezes and clean lease shutdown.
 Three read-only 10-second gate observations completed with 68–80 frames and
 zero outstanding leases. They timed out on required Header motion/sharpness;
 no regional threshold or gate PASS is claimed. No phone placement request was
-made because generic stream acceptance was the only proven milestone and the
-screen did not provide valid calibration evidence.
+made during the run. The selected evidence frame
+`local-data/validation/streaming-phase5/gate-1-10s/frames/frame-00000049-BestHeaderFrame.png`
+shows the phone on the Pokémon GO map, not Details/Appraisal. Generic stream
+acceptance is complete; only physical placement on a valid Details or Appraisal
+screen remains before regional calibration can be rerun.
 
 ## Non-actions
 
