@@ -18,8 +18,9 @@ The cumulative read-only streaming delivery is integrated on
 self-tests pass 3/3 and 15/15. Continue with the full Release build/test and
 the repository-required scripts. Do not connect streaming automatically to
 navigation or cleanup, and do not claim real-phone acceptance without real
-scrcpy/ADB evidence. The baseline restore was blocked by inaccessible global
-NuGet.Config in the current environment.
+scrcpy/ADB evidence. An initial dirty-workspace restore attempt hit the
+sandbox's inaccessible global NuGet.Config; the clean baseline later verified
+full-solution restore/build successfully.
 
 ## Run-local decision tag planner checkpoint (2026-07-26)
 

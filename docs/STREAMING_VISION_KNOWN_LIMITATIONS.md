@@ -14,3 +14,9 @@
 - Repository-integration og ændring af eksisterende runtime-flow er ikke udført.
 - `PeakQueueDepth` rapporteres som `null`, fordi gate-motoren ikke har en særskilt observationskø. Streamens bounded subscriber-drops rapporteres gennem framekilden.
 - Real-phone evidence-PNG kan først verificeres efter build og faktisk streamingtest.
+
+# Historical delivery note
+
+The limitations below describe the standalone prototype package. Repository
+integration is now complete; current validation status is maintained in
+`VALIDATION_REPORT.md`.

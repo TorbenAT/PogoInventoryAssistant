@@ -1,3 +1,10 @@
+# Historical delivery note
+
+The original package-free delivery report below was produced before repository
+integration and records that delivery environment's unavailable SDK. It is
+kept as historical evidence; current integrated results are in
+`VALIDATION_REPORT.md` and `docs/STREAMING_VISION_PHASE4.md`.
+
 # Tests
 
 Self-testprojekt:

@@ -14,8 +14,9 @@
   regional temporal gates, bounded PNG evidence, JSON profiles and the
   `observe-stream`/`observe-gates` diagnostics. Existing navigation,
   screenshot and cleanup flows remain unchanged. Phase 2 and Phase 3
-  self-tests pass (3/3 and 15/15); baseline full-solution restore was blocked
-  by the environment's inaccessible global NuGet.Config.
+  self-tests pass (3/3 and 15/15). An initial dirty-workspace restore attempt
+  hit the sandbox's inaccessible global NuGet.Config; the clean baseline later
+  verified full-solution restore/build successfully.
 
 - Added a run-local, dry-run-only `DecisionTagPlanner`. KEEP maps to
   `AI-Indexed`; REVIEW, DELETE-candidate, Partial and Unknown map to

@@ -26,8 +26,8 @@
 - ZIP SHA-256 verified against handover: `9a409801e84b74f335bae37417884da1e940059e18057efa2658d6596943bce3`.
 - Phase 2 package-free self-test: PASS, 3/3.
 - Phase 3 package-free self-test: PASS, 15/15; `InputCommandsSent = 0`.
-- Baseline `dotnet restore`, full Release build and full test run: BLOCKED
-  before compilation because access to the global NuGet.Config was denied.
+- An initial dirty-workspace baseline restore was blocked before compilation
+  by the global NuGet.Config; the clean-worktree baseline above supersedes it.
 - Real-phone scrcpy/ADB acceptance: NOT RUN; no device evidence was available.
 - Repository scripts: build/demo/fake/device-free/iPhone/synthetic scripts
   passed. `test.ps1` reached 249/250; its single failure is the pre-existing
