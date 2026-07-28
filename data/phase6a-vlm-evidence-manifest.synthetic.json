@@ -1,0 +1,17 @@
+{
+  "schema": "phase6a-vlm-evidence-manifest-1",
+  "cases": [
+    {"caseId":"details-1","imagePath":"data/screen-fixtures/PokemonDetails.png","imageClass":"SyntheticKnown","screenStateTruth":"PokemonDetails","truthStatus":"SyntheticKnown","source":"committed synthetic screen fixture","verificationMethod":"fixture filename and detector regression"},
+    {"caseId":"details-2","imagePath":"data/screen-fixtures/PokemonMenuOpen.png","imageClass":"SyntheticKnown","screenStateTruth":"PokemonMenu","truthStatus":"SyntheticKnown","source":"committed synthetic screen fixture","verificationMethod":"fixture filename"},
+    {"caseId":"details-3","imagePath":"data/screen-fixtures/TagDialogOpen.png","imageClass":"SyntheticKnown","screenStateTruth":"TagDialogOpen","truthStatus":"SyntheticKnown","source":"committed synthetic screen fixture","verificationMethod":"fixture filename"},
+    {"caseId":"appraisal-1","imagePath":"data/screen-fixtures/AppraisalOpen.png","imageClass":"SyntheticKnown","screenStateTruth":"AppraisalOpen","truthStatus":"SyntheticKnown","source":"committed synthetic screen fixture","verificationMethod":"fixture filename"},
+    {"caseId":"appraisal-2","imagePath":"data/screen-fixtures/AppraisalOpenItem2.png","imageClass":"SyntheticKnown","screenStateTruth":"AppraisalOpen","truthStatus":"SyntheticKnown","source":"committed synthetic screen fixture","verificationMethod":"fixture filename"},
+    {"caseId":"appraisal-3","imagePath":"data/screen-fixtures/AppraisalOpenItem3.png","imageClass":"SyntheticKnown","screenStateTruth":"AppraisalOpen","truthStatus":"SyntheticKnown","source":"committed synthetic screen fixture","verificationMethod":"fixture filename"},
+    {"caseId":"inventory-1","imagePath":"data/screen-fixtures/InventoryList.png","imageClass":"SyntheticKnown","screenStateTruth":"InventoryList","truthStatus":"SyntheticKnown","source":"committed synthetic screen fixture","verificationMethod":"fixture filename"},
+    {"caseId":"inventory-2","imagePath":"data/screen-fixtures/InventoryListNoisy.png","imageClass":"SyntheticKnown","screenStateTruth":"InventoryList","truthStatus":"SyntheticKnown","source":"committed synthetic screen fixture","verificationMethod":"fixture filename"},
+    {"caseId":"map-1","imagePath":"data/screen-fixtures/Unknown.png","imageClass":"SyntheticKnown","screenStateTruth":"Unknown","truthStatus":"SyntheticKnown","source":"committed synthetic screen fixture","verificationMethod":"fixture filename"},
+    {"caseId":"negative-1","imagePath":"data/screen-fixtures/Conflict.png","imageClass":"SyntheticKnown","screenStateTruth":"Unknown","truthStatus":"SyntheticKnown","source":"committed synthetic screen fixture","verificationMethod":"negative fixture contract"},
+    {"caseId":"negative-2","imagePath":"data/screen-fixtures/Incomplete.png","imageClass":"SyntheticKnown","screenStateTruth":"Unknown","truthStatus":"SyntheticKnown","source":"committed synthetic screen fixture","verificationMethod":"negative fixture contract"},
+    {"caseId":"unsupported-1","imagePath":"data/screen-fixtures/Landscape.png","imageClass":"SyntheticKnown","screenStateTruth":"Unsupported","truthStatus":"SyntheticKnown","source":"committed synthetic screen fixture","verificationMethod":"orientation guard"}
+  ]
+}
