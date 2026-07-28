@@ -2,7 +2,7 @@
 
 ## Current canonical status (2026-07-28)
 
-Current canonical branch: `main` after the consolidation merge is pushed.
+Current canonical branch: `main`; consolidation merge commit is `192d1c7`.
 Streaming Vision Phases 1-5: ACCEPTED. Details gate: ACCEPTED. Appraisal
 gate: ACCEPTED. Phase 6A technical benchmark: ACCEPTED. Ollama provider:
 DIAGNOSTIC/CANDIDATE ONLY. Phase 6B shadow foundation: ACCEPTED. Real

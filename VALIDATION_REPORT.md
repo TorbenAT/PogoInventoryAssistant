@@ -749,6 +749,8 @@ Local manifests are outside Git at `C:\Data\PokemonGo-Tools\manifests`.
   is claimed. The runner intentionally preserves Unsupported readings.
 ## Consolidated Streaming Vision validation (2026-07-28)
 
+Main consolidation merge: `192d1c7`.
+
 - Consolidation branch build: PASS, 37 solution projects, 0 warnings, 0 errors.
 - Repository self-test: PASS 250/250; the local-data sanity check is skipped
   when `local-data/` is absent in this clone.
