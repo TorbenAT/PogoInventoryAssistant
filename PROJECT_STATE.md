@@ -24,9 +24,9 @@ projects have no phone-input reference or public input surface; diagnostics
 report `InputCommandsSent = 0`.
 
 Validation currently available: Phase 2 self-test 3/3 and Phase 3 self-test
-15/15. The initial full-solution restore/build/test baseline could not pass
-NuGet restore because this environment denied access to
-`C:\Users\torbe\AppData\Roaming\NuGet\NuGet.Config`.
+15/15. An initial dirty-workspace restore attempt hit the sandbox's
+inaccessible global NuGet.Config; the clean baseline later verified full
+solution restore/build successfully.
 
 ## Run-local decision tag planning (2026-07-26)
 
