@@ -12,6 +12,16 @@ bounded analyzers and compares candidates with an explicit reference provider;
 it reports conflicts, timeouts and coverage gaps fail-closed. EasyOCR/Ollama
 production wiring and verified screenshot reference evidence remain incomplete.
 
+## Phase 6A VLM evidence boundary (2026-07-28)
+
+`PogoInventory.Streaming.Semantics.Ollama.Evidence` is an offline, read-only
+benchmark runner. It sends the actual JSON schema object in Ollama's
+`format` field, records raw and parsed responses, and retains unknown,
+conflicting, occluded, unreadable, not-visible and unsupported outcomes.
+Model output is always a `Candidate`; the VLM is never a per-frame provider,
+never authorizes an action, and never reaches Device or Automation. Evidence
+accuracy remains unmeasured until verified Android/Calcy truth is available.
+
 ## Phase 6B bounded semantic shadow boundary (2026-07-28)
 
 `PogoInventory.Streaming.Semantics.Shadow` consumes copied BGRA evidence from

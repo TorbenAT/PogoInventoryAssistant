@@ -9,15 +9,24 @@ DIAGNOSTIC/CANDIDATE ONLY. Phase 6B shadow foundation: ACCEPTED. Real
 semantic accuracy: NOT MEASURABLE. Phase 7: NOT STARTED.
 
 The consolidation branch contains the verified Phase 5/Appraisal tip
-`48da170`, Ollama tip `5c7d1d0`, and Phase 6B tip `3ddd6b8`. The VLM evidence
-worktree remains preserved separately because it is dirty, uncommitted and has
-no remote branch. No phone input, tagging, transfer or delete authority was
-added.
+`48da170`, Ollama tip `5c7d1d0`, and Phase 6B tip `3ddd6b8`. VLM evidence
+tooling is merged into `main`; its source commit is `8e9769b` and the merge is
+being finalized in the current consolidation round. No phone input, tagging,
+transfer or delete authority was added.
 
-Cleanup completed: obsolete clean streaming branches and worktrees were
-removed locally and remotely after ancestry verification. Dirty/active
-worktrees and unique worker/WIP branches remain preserved, including
-`tag-verification-guard` and the dirty VLM-evidence worktree.
+Obsolete clean streaming branches may be removed only after ancestry
+verification. Dirty/active worktrees and unique worker/WIP branches remain
+preserved, including `tag-verification-guard` and the Phase 5/6A worktree with
+uncertain `.codex_tmp` contents.
+
+## VLM evidence bake-off (2026-07-28)
+
+Phase 6A technical benchmark: ACCEPTED. Stage 3 produced 139/144
+schema-valid responses. `qwen3-vl:2b-instruct` produced 67/72 valid responses
+(P50/P95/P99: 2911/4228/10476 ms) as the latency-first candidate.
+`gemma3:4b` produced 72/72 (6144/18250/22519 ms) as the schema-reliable
+diagnostic comparison. Accuracy is NOT MEASURABLE; FalseKnown and
+FalseComplete remain null. No model is production-approved.
 
 ## Streaming Vision Phase 6B shadow integration (2026-07-28)
 

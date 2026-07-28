@@ -2,10 +2,17 @@
 
 ## Unreleased
 
+- Merged the Phase 6A VLM evidence bake-off. Stage 3 produced 139/144
+  schema-valid responses; qwen3-vl:2b-instruct is the latency-first bounded
+  candidate and gemma3:4b is the schema-reliable diagnostic comparator.
+  Accuracy remains NOT MEASURABLE, with FalseKnown and FalseComplete null.
+  The offline/read-only runner sends the actual JSON schema object to Ollama
+  and reports InputCommandsSent=0.
+
 - Consolidated Streaming Vision Phases 1-6B onto `main`, including accepted
-  Details/Appraisal gates, the isolated Ollama candidate provider and the
-  Phase 6B shadow foundation. Validation is green; real semantic accuracy
-  remains unmeasured and the dirty VLM evidence worktree is preserved.
+  Details/Appraisal gates, the Ollama candidate provider and the Phase 6B
+  shadow foundation. Validation is green; real semantic accuracy remains
+  unmeasured.
 
 - Removed obsolete clean streaming branches/worktrees after verifying their
   tips are ancestors of `main`; dirty and active work remains preserved.
