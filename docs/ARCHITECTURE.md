@@ -25,6 +25,27 @@ mode. `-flags low_delay` remains enabled. Partial stdout reads are accumulated
 to exact `width × height × 4` BGRA frames, and Phase 6A semantic benchmarks
 remain offline and do not cross this boundary.
 
+## Appraisal gate calibration boundary (2026-07-28)
+
+Screen normalization for streaming calibration remains outside the streaming
+projects. `device-calibrate-appraisal-streaming-gates` performs a bounded
+read-only state consensus, then delegates the `PokemonDetails -> PokemonMenuOpen
+-> AppraisalIntro -> AppraisalBars` route to
+`AndroidVerifiedInventoryNamedOperations.CaptureAppraisalAsync`. The named
+host and `GuardedInventoryRecovery` own all input authorization, fresh-frame
+checks, postconditions, audit records and the six-input setup budget. Unknown,
+conflicting or unsafe states stop with zero input; AppraisalIntro receives at
+most one Continue tap and neither AppraisalIntro nor AppraisalBars authorizes
+Android Back.
+
+Once `AppraisalBars` is confirmed with three compatible frames among five,
+setup stops and `observe-gates` runs read-only with `control=false`,
+`audio=false` and `raw_stream=true`. The AppraisalBars profile requires the
+Header, AppraisalPanel and all three IV-bar regions; BottomControl is
+diagnostic-only, while Model and AnimatedBackground are volatile. Setup input
+and calibration input are reported separately, so the streaming layer remains
+read-only and cannot navigate or send arbitrary shell commands.
+
 ## Cleanup value-proof transition
 
 Cleanup proof uses a persistent Appraisal carousel for ordinary item

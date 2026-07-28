@@ -5,10 +5,11 @@
 The zero-frame root cause was fixed by removing FFmpeg `-fflags nobuffer` from
 the pipe-fed H.264 decoder. Read-only real-phone 30s/30s/60s acceptance now
 passes with decoded/published 837/837, 833/832 and 1691/1691 frames.
-Details gate calibration passes 3/3 on the manually placed ordinary Details
-screen after calibrating live Header sharpness to 0.06. Appraisal remains
-`PENDING_MANUAL_PLACEMENT`; do not open it automatically. Do not send input;
-preserve all worktrees. Stop before Phase 6B/7.
+Details gate calibration passes 3/3 on the ordinary Details screen after
+calibrating live Header sharpness to 0.06. Appraisal gate calibration also
+passes 3/3: the existing named route used 3 bounded setup inputs to reach
+AppraisalBars, then all gate runs used 0 input. The final phone state is
+AppraisalBars. Stop before Phase 6B/7.
 ## Phase 6A handoff (2026-07-28)
 
 The isolated branch `feature/streaming-phase6a-semantic-offline` implements
@@ -23,7 +24,7 @@ Phase 5 acceptance is recorded above; gate calibration remains conservative.
 
 Fase 4 preflight, normalized OnePlus A6013 candidate profile and automatic
 ADB `wm size` dimension resolution are implemented. Clean full solution build
-is green (28 projects, 0 warnings/errors), clean self-test is 249/249, and
+is green (28 projects, 0 warnings/errors), clean self-test is 250/250, and
 Fase 4 self-test is 7/7. The authorized phone reports 1080x2340 portrait and
 resolves to 886x1920 at max-size 1920. Real stream/gate acceptance remains
 blocked by missing FFmpeg and scrcpy server JAR; install/provide those tools

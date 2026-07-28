@@ -2,22 +2,30 @@
 
 ## Unreleased
 
+- Added the fail-closed `device-calibrate-appraisal-streaming-gates` command.
+  It uses the existing named Details-to-Appraisal route, a six-input setup
+  budget, separate setup/calibration input counts and bounded AppraisalBars
+  evidence. Real-phone Appraisal gate calibration passes 3/3 (10 s, 10 s,
+  20 s) with zero calibration input, stable Header/AppraisalPanel/IV bars,
+  volatile Model/background handling and final state AppraisalBars.
+  Added one package-free orchestration contract test; repository self-test is
+  now 250/250.
+
 - Completed read-only Streaming Vision Phase 5 Details gate calibration on
   the authorized OnePlus phone: 3/3 PASS (10 s, 10 s, 20 s), zero input,
   zero outstanding leases and clean shutdown. Added per-region P50/P95/P99
   gate metrics and calibrated the measured live Header sharpness floor to
-  0.06. Appraisal remains pending manual placement; Phase 6B/7 were not run.
+  0.06. Appraisal calibration is now also accepted; Phase 6B/7 were not run.
 
 - Fixed the Phase 5 zero-frame condition: FFmpeg `-fflags nobuffer` suppressed
   pipe-fed rawvideo output. Read-only 30s/30s/60s runs now pass with
   837/837, 833/832 and 1691/1691 decoded/published frames. Gate calibration
-  remains conservative NOT ACCEPTED after three Header motion/sharpness
-  timeouts.
+  was subsequently calibrated on the real Details screen.
 
 - Phase 5 toolchain and read-only real-phone probes were completed. The
   `-fflags nobuffer` zero-frame defect was fixed; 30s/30s/60s observe runs
   passed with decoded/published 837/837, 833/832 and 1691/1691 frames. Gate
-  calibration remains NOT ACCEPTED after conservative Header timeouts.
+  Details and Appraisal gate calibration is documented in the Phase 5 report.
 - Completed the local Phase 6A runtime benchmark: Python 3.13.14, PyTorch
   CUDA on RTX 4060 Ti, ResNet18 embedding-equivalent timing, EasyOCR fixed-crop
   timing and a synthetic-only truth manifest. Real screenshot field accuracy

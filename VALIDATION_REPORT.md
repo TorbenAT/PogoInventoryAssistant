@@ -1,3 +1,28 @@
+## Streaming Vision Phase 5 Appraisal gate calibration - 2026-07-28
+
+- Current phone state was detected with 4 compatible `PokemonDetails` frames
+  among 5; one `Unknown` frame was fail-closed and no input was authorized
+  from it.
+- Existing named route succeeded:
+  `PokemonDetails -> PokemonMenuOpen -> AppraisalIntro -> AppraisalBars`.
+  Setup sent exactly 3 named inputs, stayed within the 6-input budget, used no
+  Back and reached stable `AppraisalBars` with all three IV bars visible.
+- Appraisal gate profile:
+  `profiles/pokemon-go-appraisal-bars-oneplus6t-portrait.json`. Required:
+  Header, AppraisalPanel, AttackBar, DefenseBar, HpBar. DiagnosticOnly:
+  BottomControl. Volatile: Model, AnimatedBackground.
+- Appraisal gate result: **PASS 3/3** for 10 s, 10 s and 20 s requests.
+  Every run reported `CalibrationInputCommandsSent=0`,
+  `LeasesOutstandingAtShutdown=0`, `ShutdownResult=Clean`, and no errors.
+- Selected thresholds: motion `0.05`, difference `0.04`, similarity `0.94`,
+  sharpness `0.025`; the sharpness value is based on the measured AttackBar
+  distribution and not a forced-pass relaxation. Model/background-only and
+  unchanged-bars/header false transitions were 0.
+- Final phone state is `AppraisalBars`; no automatic exit was sent.
+- Repository self-test after adding the orchestration contract test: **250/250**
+  passed; the expected local-data sanity check is skipped in the clean test
+  clone. Phase 2/3/4/5/6A self-tests remain 3/3, 15/15, 7/7, 8/8 and 8/8.
+
 ## Streaming Vision Phase 5 gate calibration - 2026-07-28
 
 - Read-only Details preflight and three calibrated gate runs completed against
@@ -15,9 +40,8 @@
   `LeasesOutstandingAtShutdown=0`, `ShutdownResult=Clean`, and no errors.
   Per-region P50/P95/P99 metrics are in
   `docs/STREAMING_VISION_PHASE5.md`.
-- Appraisal was deliberately not opened:
-  `AppraisalGateCalibration = PENDING_MANUAL_PLACEMENT`. No Phase 6B or
-  Phase 7 work was started.
+- Appraisal setup and calibration are recorded in the section above. No Phase
+  6B or Phase 7 work was started.
 - Direct Release `--no-restore` build of the changed gate projects passed with
   0 warnings and 0 errors. Phase 2/3/4/5/6A package-free self-tests passed
   3/3, 15/15, 7/7, 8/8 and 8/8. The wrapper `build.ps1` and `test.ps1` were

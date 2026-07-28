@@ -178,6 +178,9 @@ static async Task<int> MainAsync(string[] args)
             "device-open-appraisal" => await OpenAppraisalFromInventoryAsync(
                 args.Skip(1).ToArray(),
                 cancellationSource.Token),
+            "device-calibrate-appraisal-streaming-gates" => await CalibrateAppraisalStreamingGatesAsync(
+                args.Skip(1).ToArray(),
+                cancellationSource.Token),
             "device-snapshot" => await CaptureDeviceSnapshotAsync(
                 args.Skip(1).ToArray(),
                 cancellationSource.Token),
@@ -3266,6 +3269,189 @@ static async Task<int> OpenAppraisalFromInventoryAsync(
     }
 }
 
+static async Task<int> CalibrateAppraisalStreamingGatesAsync(
+    string[] args,
+    CancellationToken cancellationToken)
+{
+    var options = ParseOptions(args);
+    var output = Path.GetFullPath(Require(options, "out"));
+    Directory.CreateDirectory(output);
+    var automationProfile = await AutomationProfileLoader.LoadAsync(
+        Require(options, "profile"), cancellationToken);
+    var appraisalProfile = await AppraisalProfileLoader.LoadAsync(
+        Require(options, "appraisal-profile"), cancellationToken);
+    var transport = CreateRealAndroidTransport(options);
+    var selected = DeviceSnapshotService.SelectDevice(
+        await transport.ListDevicesAsync(cancellationToken), Optional(options, "serial"));
+    var detector = new PokemonGoGameStateDetector();
+    var locator = new VisualControlLocator();
+    var initialFrames = new List<object>();
+    var compatibleDetails = 0;
+    var lastDetailsHash = string.Empty;
+    for (var index = 1; index <= 5; index++)
+    {
+        var screenshot = await transport.CaptureScreenshotPngAsync(selected.Serial, cancellationToken);
+        var detection = detector.Detect(screenshot, appraisalProfile);
+        var topology = locator.LocateDetailsPageTopology(screenshot);
+        var isDetails = detection.State == PokemonGoGameState.PokemonDetails ||
+            (detection.State == PokemonGoGameState.Unknown && topology is not null);
+        if (isDetails)
+        {
+            compatibleDetails++;
+            lastDetailsHash = detection.ScreenshotSha256;
+        }
+
+        var framePath = Path.Combine(output, "initial-state", $"frame-{index:00}.png");
+        Directory.CreateDirectory(Path.GetDirectoryName(framePath)!);
+        await File.WriteAllBytesAsync(framePath, screenshot, cancellationToken);
+        initialFrames.Add(new
+        {
+            frameId = index,
+            state = detection.State.ToString(),
+            effectiveState = isDetails ? PokemonGoGameState.PokemonDetails.ToString() : detection.State.ToString(),
+            confidence = detection.Confidence,
+            evidence = detection.Evidence,
+            screenshotSha256 = detection.ScreenshotSha256,
+            screenshotPath = Path.GetRelativePath(output, framePath)
+        });
+        if (index < 5)
+            await Task.Delay(Math.Max(250, automationProfile.StatePollMilliseconds), cancellationToken);
+    }
+
+    var initialState = compatibleDetails >= GuardedInventoryRecovery.ConsensusMatches
+        ? PokemonGoGameState.PokemonDetails
+        : PokemonGoGameState.Unknown;
+    if (initialState != PokemonGoGameState.PokemonDetails)
+    {
+        await WriteReportAsync(new
+        {
+            schemaVersion = "1.0",
+            command = "device-calibrate-appraisal-streaming-gates",
+            serial = selected.Serial,
+            detectedState = initialState.ToString(),
+            confidence = 0d,
+            stableFrameCount = compatibleDetails,
+            evidence = initialFrames,
+            setupInputCommandsSent = 0,
+            calibrationInputCommandsSent = 0,
+            totalInputCommandsSent = 0,
+            result = "NOT RUN",
+            reasonCode = "UnknownOrUnstableInitialState"
+        });
+        Console.Error.WriteLine("Calibration stopped fail-closed: initial state was not stable PokemonDetails.");
+        return 2;
+    }
+
+    var trace = new NavigationSafetyTraceRecorder(Path.Combine(output, "setup-trace"));
+    trace.BeginCycle(1);
+    var operations = new AndroidVerifiedInventoryNamedOperations(
+        transport,
+        selected.Serial,
+        automationProfile,
+        Path.Combine(output, "named-operation-evidence"),
+        appraisalProfile,
+        navigationTrace: trace);
+    string setupResult;
+    try
+    {
+        setupResult = await operations.CaptureAppraisalAsync(cancellationToken);
+    }
+    catch (Exception error)
+    {
+        var failedEntries = ReadTrace(Path.Combine(output, "setup-trace", "action-trace.jsonl"));
+        var failedInputs = failedEntries.Count(entry => entry.Phase == "INPUT_SENT");
+        await WriteReportAsync(new
+        {
+            schemaVersion = "1.0",
+            command = "device-calibrate-appraisal-streaming-gates",
+            serial = selected.Serial,
+            detectedState = initialState.ToString(),
+            initialStableFrameCount = compatibleDetails,
+            initialEvidence = initialFrames,
+            namedRoute = "PokemonDetails -> PokemonMenuOpen -> AppraisalIntro/AppraisalBars",
+            setupResult = "EXCEPTION",
+            setupInputCommandsSent = failedInputs,
+            calibrationInputCommandsSent = 0,
+            totalInputCommandsSent = failedInputs,
+            result = "NOT RUN",
+            reasonCode = "NamedOperationException",
+            error = error.Message
+        });
+        Console.Error.WriteLine($"Calibration setup stopped fail-closed: {error.Message}");
+        return 3;
+    }
+
+    var traceEntries = ReadTrace(Path.Combine(output, "setup-trace", "action-trace.jsonl"));
+    var setupInputs = traceEntries.Count(entry => entry.Phase == "INPUT_SENT");
+    var postFrames = new List<object>();
+    var appraisalFrames = new List<RecoveryFrame>();
+    var recovery = new GuardedInventoryRecovery();
+    for (var index = 1; index <= GuardedInventoryRecovery.ConsensusWindow; index++)
+    {
+        var screenshot = await transport.CaptureScreenshotPngAsync(selected.Serial, cancellationToken);
+        var frame = recovery.Observe(screenshot, appraisalProfile);
+        appraisalFrames.Add(frame);
+        var framePath = Path.Combine(output, "appraisal-preflight", $"frame-{index:00}.png");
+        Directory.CreateDirectory(Path.GetDirectoryName(framePath)!);
+        await File.WriteAllBytesAsync(framePath, screenshot, cancellationToken);
+        postFrames.Add(new
+        {
+            frameId = index,
+            state = frame.Detection.State.ToString(),
+            kind = frame.Kind.ToString(),
+            confidence = frame.Detection.Confidence,
+            evidence = frame.Detection.Evidence,
+            screenshotSha256 = frame.Detection.ScreenshotSha256,
+            screenshotPath = Path.GetRelativePath(output, framePath),
+            bars = frame.Bars.Select(bar => new { kind = bar.Kind.ToString(), fill = bar.FillFraction }).ToArray()
+        });
+        if (GuardedInventoryRecovery.TryGetStableFrame(appraisalFrames, out _))
+            break;
+        if (index < GuardedInventoryRecovery.ConsensusWindow)
+            await Task.Delay(Math.Max(250, automationProfile.StatePollMilliseconds), cancellationToken);
+    }
+
+    var appraisalBarsConfirmed = GuardedInventoryRecovery.TryGetStableFrame(appraisalFrames, out var stableBars) &&
+        stableBars is not null && stableBars.Kind == RecoveryFrameKind.AppraisalBars;
+    var finalState = appraisalBarsConfirmed ? "AppraisalBars" : appraisalFrames.LastOrDefault()?.Detection.State.ToString() ?? "Unknown";
+    var calibration = new
+    {
+        schemaVersion = "1.0",
+        command = "device-calibrate-appraisal-streaming-gates",
+        serial = selected.Serial,
+        detectedState = initialState.ToString(),
+        initialStableFrameCount = compatibleDetails,
+        initialEvidence = initialFrames,
+        namedRoute = "PokemonDetails -> PokemonMenuOpen -> AppraisalIntro/AppraisalBars",
+        setupResult,
+        setupInputCommandsSent = setupInputs,
+        calibrationInputCommandsSent = 0,
+        totalInputCommandsSent = setupInputs,
+        appraisalBarsConfirmed,
+        finalState,
+        appraisalEvidence = postFrames,
+        result = appraisalBarsConfirmed ? "READY_FOR_READ_ONLY_GATE_CALIBRATION" : "NOT RUN",
+        reasonCode = appraisalBarsConfirmed ? "AppraisalBarsConfirmed" : "InvalidCalibrationScreen",
+        noBackFromAppraisalIntroOrBars = true,
+        detailsHashFromPreflight = lastDetailsHash
+    };
+    await WriteReportAsync(calibration);
+    Console.WriteLine(JsonSerializer.Serialize(calibration, new JsonSerializerOptions { WriteIndented = true }));
+    return appraisalBarsConfirmed ? 0 : 4;
+
+    async Task WriteReportAsync(object value) => await File.WriteAllTextAsync(
+        Path.Combine(output, "setup-report.json"),
+        JsonSerializer.Serialize(value, new JsonSerializerOptions { WriteIndented = true }),
+        cancellationToken);
+
+    static IReadOnlyList<NavigationSafetyTraceEntry> ReadTrace(string path) => !File.Exists(path)
+        ? Array.Empty<NavigationSafetyTraceEntry>()
+        : File.ReadLines(path)
+            .Where(line => !string.IsNullOrWhiteSpace(line))
+            .Select(line => JsonSerializer.Deserialize<NavigationSafetyTraceEntry>(line)!)
+            .ToArray();
+}
+
 static async Task<int> CaptureDeviceUiSnapshotAsync(
     string[] args,
     CancellationToken cancellationToken)
@@ -3617,6 +3803,8 @@ static void PrintHelp()
     Console.WriteLine("  device-set-pokemon-tag --tag <name> --selected <true|false> --profile <tag-profile.json> --out <directory>");
     Console.WriteLine("  tag-selector-detect-image --image <screen.png> --profile <tag-profile.json> --tag <name> --out <result.json>");
     Console.WriteLine("  device-open-appraisal --profile <automation.json> --appraisal-profile <appraisal.json> --out <directory>");
+    Console.WriteLine("                        [--adb <adb.exe>] [--serial <serial>]");
+    Console.WriteLine("  device-calibrate-appraisal-streaming-gates --profile <automation.json> --appraisal-profile <appraisal.json> --out <directory>");
     Console.WriteLine("                        [--adb <adb.exe>] [--serial <serial>]");
     Console.WriteLine("  analyze-reidentification --database-a <sqlite> --database-b <sqlite> --out <directory>");
     Console.WriteLine("  inventory-db-init [--db <pogo-inventory.db>]");

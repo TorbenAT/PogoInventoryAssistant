@@ -4,8 +4,8 @@
 
 Generic read-only real-stream acceptance is **PASS**. Details gate
 calibration is **PASS (3/3)** after calibrating the live Header sharpness
-floor to `0.06`; Appraisal calibration remains
-`PENDING_MANUAL_PLACEMENT`.
+floor to `0.06`. Appraisal gate calibration is **PASS (3/3)** after safe
+named setup to AppraisalBars; setup used 3 inputs and gate calibration used 0.
 
 Device: `192.168.1.185:5555`, `ONEPLUS_A6013`, Android 11, physical
 `1080x2340` portrait, resolved stream `886x1920`. scrcpy v4.0 and FFmpeg
@@ -71,8 +71,57 @@ observed after initialization, and no transition evidence was emitted from
 the volatile regions. The three runs also serve as repeated start/stop
 cycles: no zombie process, forward, lease or input was reported.
 
-Appraisal was not opened or navigated to. `AppraisalGateCalibration =
-PENDING_MANUAL_PLACEMENT`; this does not invalidate the green Details gate.
+## Appraisal gate calibration
+
+The current state was read with five bounded screenshots: four compatible
+`PokemonDetails` frames and one `Unknown`; the stable consensus requirement
+was met with 3-of-5 compatible frames. The existing named route was then used:
+
+`PokemonDetails -> PokemonMenuOpen -> AppraisalIntro -> AppraisalBars`
+
+The route sent exactly three setup inputs (Details menu, Appraise, and the
+single guarded Intro Continue). No Back, raw ADB input, blind retry, modal
+confirmation or alternative action was used. AppraisalBars preflight confirmed
+`AppraisalBarsDetected`, all three IV bars, the fixed appraisal panel and no
+Details/map/list layout. The phone remained on AppraisalBars after setup.
+
+The Appraisal profile is
+`profiles/pokemon-go-appraisal-bars-oneplus6t-portrait.json`. Required regions
+are Header, AppraisalPanel, AttackBar, DefenseBar and HpBar. BottomControl is
+DiagnosticOnly because the lower arrows are not a progression signal; Model
+and AnimatedBackground are Volatile.
+
+| Run | Requested | Frames | Final | P50/P95/P99 observation ms | Calibration input | Leases | Shutdown |
+|---|---:|---:|---|---:|---:|---:|---|
+| appraisal-gate-1 | 10 s | 19 | Passed | 1.924 / 8.454 / 9.786 | 0 | 0 | Clean |
+| appraisal-gate-2 | 10 s | 21 | Passed | 1.861 / 6.717 / 8.957 | 0 | 0 | Clean |
+| appraisal-gate-3 | 20 s | 24 | Passed | 1.644 / 5.931 / 7.798 | 0 | 0 | Clean |
+
+Representative per-region metrics from the 20-second run (P50/P95/P99):
+
+| Region | Motion | Difference | Similarity | Sharpness |
+|---|---:|---:|---:|---:|
+| Header | 0.00026 / 0.00916 / 0.77219 | 0.00125 / 0.00233 / 0.77054 | 0.99963 / 0.99985 / 0.99986 | 0.04107 / 0.04286 / 0.04319 |
+| AppraisalPanel | 0.00072 / 0.00920 / 0.77234 | 0.00102 / 0.00268 / 0.77062 | 0.99985 / 0.99998 / 0.99999 | 0.18454 / 0.18481 / 0.18486 |
+| AttackBar | 0.00000 / 0.00087 / 0.77022 | 0.00097 / 0.00271 / 0.77063 | 0.99980 / 0.99997 / 0.99999 | 0.02923 / 0.02978 / 0.03005 |
+| DefenseBar | 0.00000 / 0.00160 / 0.77042 | 0.00070 / 0.00313 / 0.77073 | 0.99989 / 0.99998 / 0.99999 | 0.04664 / 0.04871 / 0.04897 |
+| HpBar | 0.00025 / 0.01100 / 0.77256 | 0.00083 / 0.00237 / 0.77055 | 0.99968 / 0.99999 / 0.99999 | 0.08341 / 0.08436 / 0.08459 |
+| Model | 0.00099 / 0.00294 / 0.77068 | 0.00117 / 0.00264 / 0.77061 | 0.99990 / 0.99998 / 0.99999 | 0.22805 / 0.22868 / 0.22874 |
+| AnimatedBackground | 0.02173 / 0.03159 / 0.77738 | 0.00461 / 0.00707 / 0.77167 | 0.98685 / 0.99353 / 0.99358 | 0.11643 / 0.11983 / 0.12017 |
+
+Selected thresholds are motion `0.05`, difference `0.04`, similarity `0.94`
+and sharpness `0.025`. The sharpness floor is above zero and below the
+measured AttackBar P50 (`0.02923`) by `0.00423`; it was selected from the
+observed IV-bar distribution, not to bypass a failing gate. The roughly 0.77
+P99 motion/difference values are first-frame initialization outliers; all
+three runs passed after the required stable sequence. Model-only and
+background-only changes produced no transition evidence, and unchanged IV
+bars/Header produced no false progression. Existing Phase 3 replay tests also
+cover stable A/B, no-transition, model-only, background-only and meaningful
+regional changes.
+
+`CalibrationInputCommandsSent = 0`; `TotalInputCommandsSent = 3` for setup
+plus calibration. Final state is `AppraisalBars`.
 
 ## Non-actions
 

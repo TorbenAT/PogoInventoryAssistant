@@ -8,11 +8,12 @@ under ignored `tools/local/` and preflight passes for the authorized
 root cause was FFmpeg `-fflags nobuffer` suppressing pipe-fed rawvideo output;
 removing it restored frames. Real observe acceptance passed 30s/30s/60s with
 837/837, 833/832 and 1691/1691 decoded/published frames, clean shutdown and
-zero input. Details gate calibration is now PASS 3/3 (10 s, 10 s, 20 s) on a
-manually placed ordinary Details screen. The live Header sharpness floor was
-calibrated to 0.06; Header, Panel and BottomControl are required and
-Model/AnimatedBackground remain volatile. Appraisal gate calibration is
-`PENDING_MANUAL_PLACEMENT`; no Appraisal navigation or input was performed.
+zero input. Details gate calibration is PASS 3/3 (10 s, 10 s, 20 s) on an
+ordinary Details screen. Appraisal gate calibration is also PASS 3/3 after
+the existing named route safely normalized `PokemonDetails` to `AppraisalBars`.
+Setup sent 3 named inputs; calibration sent 0. Header, AppraisalPanel and all
+three IV bars are required; Model/AnimatedBackground remain volatile. Final
+phone state is AppraisalBars. Phase 6B/7 were not started.
 ## Streaming Vision Phase 6A offline semantic foundation (2026-07-28)
 
 Local Phase 6A runtime completion is now evidenced: Python 3.13.14,
