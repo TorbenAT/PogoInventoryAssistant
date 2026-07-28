@@ -26,5 +26,10 @@
     <ProjectReference Include="..\PogoInventory.HeaderText\PogoInventory.HeaderText.csproj" />
     <ProjectReference Include="..\PogoInventory.HeaderOcr\PogoInventory.HeaderOcr.csproj" />
     <ProjectReference Include="..\PogoInventory.TesseractOcr\PogoInventory.TesseractOcr.csproj" />
+    <ProjectReference Include="..\PogoInventory.Streaming\PogoInventory.Streaming.csproj" />
+    <ProjectReference Include="..\PogoInventory.Streaming.Scrcpy\PogoInventory.Streaming.Scrcpy.csproj" />
+    <ProjectReference Include="..\PogoInventory.Streaming.Gates\PogoInventory.Streaming.Gates.csproj" />
+    <ProjectReference Include="..\PogoInventory.Streaming.Semantics\PogoInventory.Streaming.Semantics.csproj" />
+    <ProjectReference Include="..\PogoInventory.Semantics\PogoInventory.Semantics.csproj" />
   </ItemGroup>
 </Project>

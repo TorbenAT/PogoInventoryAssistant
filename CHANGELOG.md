@@ -2,6 +2,14 @@
 
 ## Unreleased
 
+- Added the minimal stream-first gated Pokemon reader command. It uses one
+  scrcpy/FFmpeg stream, three distinct AppraisalBars evidence frames, the
+  canonical semantic core, Tesseract fastpath, appraisal-bar analysis and
+  live JSONL/CSV/HTML evidence reports. Repeated same-frame observations no
+  longer satisfy semantic consensus. Real 3-item acceptance reached 3/3
+  items with 2/3 complete; the 10-item pilot remains not green due bounded
+  motion/sharpness gate stops.
+
 - Added the pure canonical semantic core contracts and shared fail-closed
   consensus helper. Cleanup IV consensus now uses the same helper. Added pure
   VisualFrame/FrameBarrier contracts and an arbitrary-stride BGRA32-to-RGBA32

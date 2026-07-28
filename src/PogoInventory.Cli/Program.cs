@@ -54,6 +54,9 @@ using PogoInventory.Vision.Profiles;
 using PogoInventory.Vision.Reporting;
 using PogoInventory.Verification.Models;
 using PogoInventory.Verification.Services;
+using PogoInventory.Streaming;
+using PogoInventory.Streaming.Gates;
+using PogoInventory.Streaming.Semantics;
 
 return await MainAsync(args);
 
@@ -161,6 +164,9 @@ static async Task<int> MainAsync(string[] args)
                 args.Skip(1).ToArray(),
                 cancellationSource.Token),
             "device-run-cleanup-proof" => await RunCleanupProofAsync(
+                args.Skip(1).ToArray(),
+                cancellationSource.Token),
+            "device-stream-read-pokemon" => await StreamPokemonReaderCommand.RunAsync(
                 args.Skip(1).ToArray(),
                 cancellationSource.Token),
             "device-unwind-to-map" => await RunCanonicalUnwindAsync(
@@ -3806,6 +3812,8 @@ static void PrintHelp()
     Console.WriteLine("                        [--adb <adb.exe>] [--serial <serial>]");
     Console.WriteLine("  device-calibrate-appraisal-streaming-gates --profile <automation.json> --appraisal-profile <appraisal.json> --out <directory>");
     Console.WriteLine("                        [--adb <adb.exe>] [--serial <serial>]");
+    Console.WriteLine("  device-stream-read-pokemon --device <serial> --profile <gate-profile.json> --appraisal-profile <appraisal.json> --items <n> --out <directory>");
+    Console.WriteLine("                        Continuous scrcpy/FFmpeg AppraisalBars reader; writes live.html, items.csv and items.jsonl.");
     Console.WriteLine("  analyze-reidentification --database-a <sqlite> --database-b <sqlite> --out <directory>");
     Console.WriteLine("  inventory-db-init [--db <pogo-inventory.db>]");
     Console.WriteLine("  inventory-db-summary [--db <pogo-inventory.db>]");

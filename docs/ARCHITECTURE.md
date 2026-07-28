@@ -641,3 +641,15 @@ EasyOCR queue capacity is one, timeouts are surfaced, and no retry turns an
 unknown result into a known result. The real-phone capture remains owned by the
 existing named device operation; the semantic package adds no Device or
 Automation input authority.
+# Minimal stream-first gated Pokemon reader
+
+`device-stream-read-pokemon` owns one `ScrcpyReadOnlyVideoTransport`,
+`FfmpegBgraVideoFrameDecoder` and `StreamingFrameSource` for the complete
+read. Named Android operations are limited to setup/navigation and the
+allowlisted carousel swipe; semantic and gate evidence comes from stream
+leases. `TemporalGateEngine` requires three distinct stable frames with the
+profile's Header, AppraisalPanel and three IV-bar regions. The canonical
+semantic analyzer validates every observation against both frame id and
+evidence hash, deduplicates repeated frame observations, and leaves missing
+or conflicting fields Unknown. Each item writes raw frame PNGs plus JSONL,
+CSV, summary and auto-refresh HTML reports. VLM is not on the default path.

@@ -144,10 +144,10 @@ public sealed class FrameSetSelector : IFrameSetSelector
 
         return role switch
         {
-            FrameRole.BestHeaderFrame => BestRegion(records, "Header", false),
+            FrameRole.BestHeaderFrame => BestRegion(records, "Header", false, alreadySelected),
             FrameRole.BestModelFrame => BestRegion(records, "Model", true),
-            FrameRole.BestPanelFrame => BestRegion(records, "Panel", false),
-            FrameRole.BestOverallStableFrame => BestStable(records, request.StableOptions),
+            FrameRole.BestPanelFrame => BestRegion(records, "AppraisalPanel", false, alreadySelected),
+            FrameRole.BestOverallStableFrame => BestStable(records, request.StableOptions, alreadySelected),
             FrameRole.PreTransitionFrame => PreTransition(records, request),
             FrameRole.TransitionFrame => Transition(records, request),
             FrameRole.PostTransitionFrame => PostTransition(records, request),
@@ -159,9 +159,12 @@ public sealed class FrameSetSelector : IFrameSetSelector
     private static CandidateSelection BestRegion(
         IReadOnlyList<GateFrameRecord> records,
         string regionName,
-        bool allowVolatileMotion)
+        bool allowVolatileMotion,
+        IReadOnlyDictionary<FrameRole, SelectedFrame>? alreadySelected = null)
     {
+        var selectedIds = alreadySelected?.Values.Select(x => x.FrameId).ToHashSet() ?? [];
         var candidates = records
+            .Where(x => !selectedIds.Contains(x.Observation.FrameId))
             .Where(x => x.Observation.TryGetRegion(regionName, out _))
             .Select(x =>
             {
@@ -184,9 +187,12 @@ public sealed class FrameSetSelector : IFrameSetSelector
 
     private static CandidateSelection BestStable(
         IReadOnlyList<GateFrameRecord> records,
-        StableRegionGateOptions options)
+        StableRegionGateOptions options,
+        IReadOnlyDictionary<FrameRole, SelectedFrame>? alreadySelected = null)
     {
+        var selectedIds = alreadySelected?.Values.Select(x => x.FrameId).ToHashSet() ?? [];
         var candidates = records
+            .Where(x => !selectedIds.Contains(x.Observation.FrameId))
             .Where(x => IsStable(x.Observation, options))
             .Select(x => new CandidateSelection(
                 x,

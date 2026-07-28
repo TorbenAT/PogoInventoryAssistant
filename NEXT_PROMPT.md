@@ -1,5 +1,12 @@
 # Continuation prompt
 
+Stabilize and re-run `device-stream-read-pokemon` on the authorized OnePlus:
+add a deterministic stream-only post-swipe settling barrier before each
+AppraisalBars gate, then run 3 items and only proceed to 10 when 3/3 is green.
+Keep the gate at three distinct frames among the latest five and retain
+Unknown for any missing or conflicting field. Record the 10-item outcome and
+input counts before considering any merge or Phase 7 work.
+
 Complete canonical stream capture after the phone recovery gate: implement the
 stream visual-frame provider over the accepted StreamingFrameSource, wire
 cleanup/reprocessor/Phase 6B to the canonical item service, and run the

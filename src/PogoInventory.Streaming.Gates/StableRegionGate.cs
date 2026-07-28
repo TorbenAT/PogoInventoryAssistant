@@ -63,7 +63,7 @@ public sealed class StableRegionGate : ITemporalGate
             ? 1d
             : Math.Min(1d, stableDuration.TotalMilliseconds / _options.MinimumStableDuration.TotalMilliseconds);
         var confidence = evaluation.Confidence * Math.Min(countProgress, durationProgress);
-        var requiredEvidenceCount = Math.Min(2, _options.MinimumStableFrames);
+        var requiredEvidenceCount = _options.MinimumStableFrames;
 
         if (_consecutiveStableFrames >= _options.MinimumStableFrames &&
             stableDuration >= _options.MinimumStableDuration &&

@@ -1,5 +1,23 @@
 # Project state
 
+## Minimal stream-first gated Pokemon reader (2026-07-28)
+
+The `feature/stream-gated-pokemon-reader` implementation adds the CLI command
+`device-stream-read-pokemon`. It starts one scrcpy/FFmpeg stream, gates
+AppraisalBars on Header/AppraisalPanel/AttackBar/DefenseBar/HpBar, requires
+three distinct stable evidence frames, and uses the canonical semantic core
+with Tesseract plus the existing appraisal analyzer. Evidence PNGs, JSONL,
+CSV and auto-refresh HTML are written under ignored local validation paths.
+No VLM, Calcy, tagging, transfer or destructive action is used.
+
+Real-phone 3-item acceptance produced 3/3 items and 9/9 distinct evidence
+frames: 2/3 complete; one CP remained Unknown under fail-closed consensus.
+A 10-item run stopped at item 2 with `MotionTooHigh`; a bounded 8-second
+post-swipe gate window was added, but the follow-up stopped at item 1 with
+`SharpnessTooLow` while the phone was not in a stable capture state. The
+10-item acceptance is therefore NOT GREEN and must be repeated after a
+deterministic stable-state handoff is added. Phase 7 remains NOT STARTED.
+
 ## Canonical semantic core and stream capture (2026-07-28)
 
 `feature/canonical-semantics-stream-capture` adds the pure

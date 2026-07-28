@@ -40,6 +40,30 @@ internal static class CanonicalSemanticCoreTests
         return Task.CompletedTask;
     }
 
+    public static Task AppraisalBarsHeaderSuppliesSpeciesAndCpAsync()
+    {
+        var analyzer = new PokemonItemSemanticAnalyzer();
+        var evidence = new PokemonItemEvidenceSet("item-2", [Frame(1, "a"), Frame(2, "b"), Frame(3, "c")], [Frame(1, "a"), Frame(2, "b"), Frame(3, "c")]);
+        var result = analyzer.Analyze(evidence,
+            [new("Mankey", .9, 1, "a"), new("Mankey", .8, 2, "b")],
+            [new(476, .9, 1, "a"), new(476, .8, 2, "b")],
+            []);
+        Assert(result.Species.Status == SemanticFieldStatus.Known && result.Cp.Status == SemanticFieldStatus.Known && result.Cp.Value == 476, "AppraisalBars header did not resolve species and CP.");
+        return Task.CompletedTask;
+    }
+
+    public static Task SameFrameCannotSatisfyConsensusAsync()
+    {
+        var analyzer = new PokemonItemSemanticAnalyzer();
+        var evidence = new PokemonItemEvidenceSet("item-3", [Frame(1, "a")], [Frame(1, "a")]);
+        var result = analyzer.Analyze(evidence,
+            [new("Mankey", .9, 1, "a"), new("Mankey", .8, 1, "a")],
+            [new(476, .9, 1, "a"), new(476, .8, 1, "a")],
+            []);
+        Assert(result.Species.Status == SemanticFieldStatus.Unknown && result.Cp.Status == SemanticFieldStatus.Unknown, "Repeated observations from one frame satisfied consensus.");
+        return Task.CompletedTask;
+    }
+
     private static PokemonEvidenceFrame Frame(long id, string hash) => new(id, DateTimeOffset.UtcNow, hash, "AppraisalBars", "test");
     private static FrameMetadata Metadata(long id, DateTimeOffset captured, string state) => new(new FrameId(id), new FrameTimestamp(id, captured, TimeSpan.Zero), new FrameDescriptor(2, 1, 8, FramePixelFormat.Bgra32), FrameQuality.Unknown, new FrameStability(0, 3, TimeSpan.FromMilliseconds(100), true), "test", new Dictionary<string, string> { ["screen"] = state });
     private static void Assert(bool condition, string message) { if (!condition) throw new InvalidOperationException(message); }

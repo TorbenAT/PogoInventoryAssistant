@@ -818,3 +818,21 @@ Main consolidation merge: `192d1c7`.
   close operation remained in `PokemonDetails` and did not establish a changed
   stable state. No forced input was sent.
 - ADB-vs-stream A/B and 6-10 item report remain pending this phone gate.
+## Minimal stream-first gated Pokemon reader - 2026-07-28
+
+- Release CLI project build: PASS, 0 warnings/errors.
+- Full solution build with `--no-restore`: PASS, 0 warnings/errors.
+- Package-free self-test: PASS, 255/255.
+- Real phone 3-item acceptance: PASS for flow completion, 3/3 items and
+  9/9 distinct evidence frames. Semantic results: 2/3 Complete; item 1
+  species Mankey and IV 10/14/12 were known, CP stayed Unknown because
+  consensus was not reached. Items 2-3 were Complete.
+- Reported semantic input commands: 0; VLM: disabled; carousel swipes in
+  the 3-item run: 2. Evidence PNGs, JSONL, CSV, summary and HTML were written
+  under `local-data/validation/stream-reader-3`.
+- First 10-item attempt stopped fail-closed at item 2 with `MotionTooHigh`;
+  the bounded gate window was then changed from 4 to 8 seconds. Follow-up
+  stopped at item 1 with `SharpnessTooLow`, so the 10-item pilot is NOT GREEN
+  and no 10-item success is claimed.
+- The wrapper restore path remains subject to the known user NuGet.Config ACL
+  issue; direct `--no-restore` builds and package-free tests were executed.
