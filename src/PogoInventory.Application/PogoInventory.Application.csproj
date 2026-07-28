@@ -11,5 +11,6 @@
     <ProjectReference Include="..\PogoInventory.Automation\PogoInventory.Automation.csproj" />
     <ProjectReference Include="..\PogoInventory.Core\PogoInventory.Core.csproj" />
     <ProjectReference Include="..\PogoInventory.HeaderText\PogoInventory.HeaderText.csproj" />
+    <ProjectReference Include="..\PogoInventory.Semantics\PogoInventory.Semantics.csproj" />
   </ItemGroup>
 </Project>

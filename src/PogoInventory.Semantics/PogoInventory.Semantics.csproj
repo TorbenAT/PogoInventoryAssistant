@@ -7,6 +7,5 @@
   </PropertyGroup>
   <ItemGroup>
     <ProjectReference Include="..\PogoInventory.Streaming\PogoInventory.Streaming.csproj" />
-    <ProjectReference Include="..\PogoInventory.Vision\PogoInventory.Vision.csproj" />
   </ItemGroup>
 </Project>

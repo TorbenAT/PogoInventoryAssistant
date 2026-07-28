@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+- Added the pure canonical semantic core contracts and shared fail-closed
+  consensus helper. Cleanup IV consensus now uses the same helper. Added pure
+  VisualFrame/FrameBarrier contracts and an arbitrary-stride BGRA32-to-RGBA32
+  pixel bridge, with regression tests. Full self-test remains 253/253.
+  Real-phone baseline is blocked by the existing safe close postcondition in
+  PokemonDetails; no navigation workaround was added.
+
 - Added the Phase 6B real semantic results sprint: persistent EasyOCR worker,
   fail-closed header/IV candidate analyzers, screenshot-reference replay,
   SemanticShadowRunner wiring, crops and CSV/Markdown/HTML reporting. The

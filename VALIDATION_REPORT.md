@@ -808,3 +808,13 @@ Main consolidation merge: `192d1c7`.
   the provider was not attached to the capture stream.
 - 10-item pilot: NOT RUN; 3-item clean-provider gate not met.
 - Full required script suite: pending final integration validation.
+# Canonical semantic core and stream capture — 2026-07-28
+
+- Pure semantic and streaming contracts build: PASS, 0 warnings/errors.
+- Full `PogoInventory.SelfTest`: PASS, 253/253.
+- New tests cover channel order/stride, freshness barrier and distinct-frame
+  consensus.
+- Phone baseline attempt: BLOCKED fail-closed because the existing canonical
+  close operation remained in `PokemonDetails` and did not establish a changed
+  stable state. No forced input was sent.
+- ADB-vs-stream A/B and 6-10 item report remain pending this phone gate.

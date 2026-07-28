@@ -46,6 +46,9 @@ using PogoInventory.SelfTest;
 
 var tests = new (string Name, Func<Task> Run)[]
 {
+    ("Canonical semantic pixel bridge preserves channels and stride", CanonicalSemanticCoreTests.PixelBridgePreservesChannelsAndStrideAsync),
+    ("Canonical semantic freshness barrier rejects stale and wrong state", CanonicalSemanticCoreTests.FreshnessBarrierRejectsStaleAndWrongStateAsync),
+    ("Canonical semantic consensus requires distinct evidence", CanonicalSemanticCoreTests.CanonicalConsensusRequiresDistinctEvidenceAsync),
     ("Appraisal streaming calibration is named and fail-closed", AppraisalStreamingCalibrationTests.RunAsync),
     ("Decision tag planner is bound and fail-closed", DecisionTagPlannerTests.RunAsync),
     ("Real-state detector regression fixtures", StateDetectorRegressionTests.RunAsync),

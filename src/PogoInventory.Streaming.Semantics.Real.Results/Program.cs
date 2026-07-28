@@ -42,7 +42,6 @@ foreach (var row in rows)
     var metadata = new FrameMetadata(new FrameId(row.Ordinal), new FrameTimestamp(row.Ordinal, DateTimeOffset.UtcNow, TimeSpan.Zero), new FrameDescriptor(png.Width, png.Height, png.Width * 4, FramePixelFormat.Bgra32), FrameQuality.Unknown, new FrameStability(0, 3, TimeSpan.FromMilliseconds(200), true), "verified-replay", new Dictionary<string, string> { ["screen"] = "AppraisalBars", ["truth"] = "Verified" });
     var input = new ShadowFrameInput(new SemanticFrameObservation(row.Ordinal, hash, png.Width, png.Height, png.Width >= png.Height ? "Landscape" : "Portrait", new Dictionary<string, NormalizedRegion> { ["FullFrame"] = new() { X = 0, Y = 0, Width = 1, Height = 1 } }), metadata, bgra, new[] { "StableFrame", "AppraisalBars" });
     var app = analyzer.Analyze(png, profile, allowComplete: false);
-    var head = await header.AnalyzeAsync(bytes, HeaderScreenType.AppraisalBars);
     async IAsyncEnumerable<ShadowFrameInput> OneFrame()
     {
         yield return input;
@@ -64,10 +63,18 @@ foreach (var row in rows)
             ["DefenseIV"] = row.DefenseIv,
             ["HPIV"] = row.HpIv
         }),
-        new SemanticShadowOptions { MaximumFrames = 1, AnalyzerTimeout = TimeSpan.FromSeconds(3), MaximumDuration = TimeSpan.FromSeconds(8) });
+        new SemanticShadowOptions { MaximumFrames = 1, AnalyzerTimeout = TimeSpan.FromSeconds(5), MaximumDuration = TimeSpan.FromSeconds(10) });
+    var headerCandidates = shadow.Frames.SelectMany(frame => frame.Executions)
+        .Where(execution => execution.Analyzer == "EasyOCR-header")
+        .SelectMany(execution => execution.Candidates)
+        .ToArray();
+    var observedSpecies = headerCandidates.FirstOrDefault(candidate => candidate.FieldName == "Species")?.Value;
+    var observedCp = ParseNullableInt(headerCandidates.FirstOrDefault(candidate => candidate.FieldName == "CP")?.Value);
+    var observedSpeciesConfidence = headerCandidates.FirstOrDefault(candidate => candidate.FieldName == "Species")?.Confidence ?? 0;
+    var observedCpConfidence = headerCandidates.FirstOrDefault(candidate => candidate.FieldName == "CP")?.Confidence ?? 0;
     await WriteCropsAsync(output, row, png, app);
-    records.Add(new ItemReport(row.Ordinal, row.Species, row.Cp, row.AttackIv, row.DefenseIv, row.HpIv, source, hash, head.Species, head.Cp, head.SpeciesConfidence, head.CpConfidence, app.AttackIv, app.DefenseIv, app.HpIv, app.Confidence, app.Status.ToString(), worker.DroppedRequests, "SemanticShadowRunner: EasyOCR-header+IV-bar-geometry+verified-screenshot-reference", "OfflineVerifiedReplay", true));
-    await File.WriteAllTextAsync(Path.Combine(output, "responses", $"item-{row.Ordinal:000}.json"), JsonSerializer.Serialize(new { row, header = head, appraisal = app, shadow }, jsonOptions));
+    records.Add(new ItemReport(row.Ordinal, row.Species, row.Cp, row.AttackIv, row.DefenseIv, row.HpIv, source, hash, observedSpecies, observedCp, observedSpeciesConfidence, observedCpConfidence, app.AttackIv, app.DefenseIv, app.HpIv, app.Confidence, app.Status.ToString(), worker.DroppedRequests, "SemanticShadowRunner: EasyOCR-header+IV-bar-geometry+verified-screenshot-reference", "OfflineVerifiedReplay", true));
+    await File.WriteAllTextAsync(Path.Combine(output, "responses", $"item-{row.Ordinal:000}.json"), JsonSerializer.Serialize(new { row, shadow, appraisal = app }, jsonOptions));
 }
 
 var summary = new { mode = "offline-verified-replay", items = records.Count, verifiedFields = records.Count * 5, records, falseKnown = 0, falseComplete = 0, inputCommandsSent = 0, authorizesPhoneInput = false, workerDroppedJobs = worker.DroppedRequests, accuracyScope = "Verified Task-K fields only; scanner output excluded as truth.", realPhonePilot = "BLOCKED_PENDING_PROVIDER_WIRING_VALIDATION" };
@@ -116,6 +123,7 @@ static TruthRow[] ReadTruth(string path, string root)
 static string Csv(IEnumerable<ItemReport> records) => "Ordinal,TruthSpecies,TruthCP,TruthAttackIV,TruthDefenseIV,TruthHPIV,ObservedSpecies,ObservedCP,ObservedAttackIV,ObservedDefenseIV,ObservedHPIV,Source,Status,WorkerDroppedJobs\n" + string.Join(Environment.NewLine, records.Select(x => string.Join(',', x.Ordinal, x.TruthSpecies, x.TruthCp, x.TruthAttackIv, x.TruthDefenseIv, x.TruthHpIv, x.ObservedSpecies, x.ObservedCp, x.ObservedAttackIv, x.ObservedDefenseIv, x.ObservedHpIv, x.AnalyzerSource, x.AppraisalStatus, x.WorkerDroppedJobs)));
 static string DisplayString(string? value) => string.IsNullOrWhiteSpace(value) ? "Unknown" : value;
 static string DisplayInt(int? value) => value?.ToString() ?? "Unknown";
+static int? ParseNullableInt(string? value) => int.TryParse(value, out var parsed) ? parsed : null;
 static string Markdown(IEnumerable<ItemReport> records, int drops) => "# Phase 6B real semantic results\n\nOffline verified Task-K replay. FalseKnown=0; FalseComplete=0; InputCommandsSent=0.\n\nWorker dropped jobs: " + drops + "\n\n|Item|Truth species/CP|OCR species/CP|IV geometry|Status|\n|---:|---|---|---|---|\n" + string.Join(Environment.NewLine, records.Select(x => $"|{x.Ordinal}|{x.TruthSpecies}/{x.TruthCp}|{DisplayString(x.ObservedSpecies)}/{DisplayInt(x.ObservedCp)}|{DisplayInt(x.ObservedAttackIv)}/{DisplayInt(x.ObservedDefenseIv)}/{DisplayInt(x.ObservedHpIv)}|{x.AppraisalStatus}|"));
 static string Html(IEnumerable<ItemReport> records) => "<!doctype html><meta charset='utf-8'><title>Phase 6B real semantic results</title><style>body{font-family:sans-serif}td{padding:.3rem}.verified{background:#d9f7d9}.unknown{background:#fff3bf}img{max-width:240px;max-height:160px}</style><h1>Phase 6B real semantic results</h1><p>Offline verified replay; no phone input. Green=verified truth scope, yellow=candidate/unknown.</p><table border='1'><tr><th>Item</th><th>Evidence</th><th>Truth</th><th>Observed header</th><th>IV geometry</th><th>Source</th></tr>" + string.Join("", records.Select(x => $"<tr><td>{x.Ordinal}</td><td>{(x.EvidenceAvailable ? $"<img src='crops/item-{x.Ordinal:000}-header.png' alt='item {x.Ordinal} header crop'>" : "missing")}</td><td class='verified'>{System.Net.WebUtility.HtmlEncode(x.TruthSpecies)}/{x.TruthCp} IV {x.TruthAttackIv}/{x.TruthDefenseIv}/{x.TruthHpIv}</td><td class='unknown'>{System.Net.WebUtility.HtmlEncode(DisplayString(x.ObservedSpecies))}/{DisplayInt(x.ObservedCp)}</td><td class='unknown'>{DisplayInt(x.ObservedAttackIv)}/{DisplayInt(x.ObservedDefenseIv)}/{DisplayInt(x.ObservedHpIv)}</td><td>{System.Net.WebUtility.HtmlEncode(x.SourcePath)}</td></tr>")) + "</table>";
 

@@ -9,6 +9,7 @@ using PogoInventory.Core.Analysis;
 using PogoInventory.Core.Models;
 using PogoInventory.Core.Policy;
 using PogoInventory.HeaderText;
+using PogoInventory.Semantics;
 using PogoInventory.Persistence;
 
 namespace PogoInventory.Application;
@@ -567,12 +568,7 @@ public sealed class CleanupProofRunner
             .ToArray();
         if (confidentTriples.Length < 2) return null;
 
-        var groups = confidentTriples
-            .GroupBy(triple => triple)
-            .Where(group => group.Count() >= 2)
-            .OrderByDescending(group => group.Count())
-            .ToArray();
-        return groups.Length == 0 ? null : groups[0].Key;
+        return SemanticConsensus.TryResolve(confidentTriples, out var resolved) ? resolved : null;
     }
 
     private static IReadOnlyDictionary<string, string> FieldEvidence(

@@ -1,8 +1,9 @@
 # Continuation prompt
 
-Resolve the observed EasyOCR shadow timeout and wire verified EasyOCR, the
-selected Ollama candidate and screenshot-reference providers into the live
-Phase 6B shadow boundary. Use
+Complete canonical stream capture after the phone recovery gate: implement the
+stream visual-frame provider over the accepted StreamingFrameSource, wire
+cleanup/reprocessor/Phase 6B to the canonical item service, and run the
+ADB-vs-stream A/B. Keep the existing Tesseract fastpath and use
 `qwen3-vl:2b-instruct` only as a bounded fallback candidate and `gemma3:4b` as
 an optional diagnostic comparator. Build verified multi-item Android truth
 evidence with zero false-Known and zero false-Complete observations before

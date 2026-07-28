@@ -1,5 +1,15 @@
 # Project state
 
+## Canonical semantic core and stream capture (2026-07-28)
+
+`feature/canonical-semantics-stream-capture` adds the pure
+`PogoInventory.Semantics` item contracts and shared fail-closed consensus
+helper. Cleanup IV consensus uses that helper. `VisualFrame`, `FrameBarrier`
+and the tested arbitrary-stride BGRA-to-RGBA bridge are in the pure streaming
+semantics project. Full self-test is 253/253. Real-phone baseline is blocked
+by the existing canonical close postcondition in `PokemonDetails`; no forced
+input was introduced. Stream A/B remains pending.
+
 ## Phase 6B real semantic results sprint (2026-07-28)
 
 The verified replay covers 30 rows / 150 fields with FalseKnown=0,
