@@ -1,5 +1,15 @@
 # Continuation prompt
 
+## Phase 6A handoff (2026-07-28)
+
+The isolated branch `feature/streaming-phase6a-semantic-offline` implements
+offline semantic contracts and fail-closed consensus in
+`src/PogoInventory.Streaming.Semantics`, with benchmark CLI and 8/8 self-test.
+Local manifests are under `C:\Data\PokemonGo-Tools\manifests`. Do not claim
+GPU/OCR acceptance: Python, FFmpeg, scrcpy and model weights were unavailable,
+and no verified Phase 6A truth manifest exists. Phase 5 and phone acceptance
+remain untouched.
+
 ## Streaming Vision Phase 4 checkpoint (2026-07-28)
 
 Fase 4 preflight, normalized OnePlus A6013 candidate profile and automatic

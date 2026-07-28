@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+- Added isolated Streaming Vision Phase 6A offline semantic contracts,
+  validated normalized ROIs, fail-closed field consensus, an unsupported
+  baseline analyzer, and a package-free benchmark/self-test pair.
+- Recorded that no verified truth manifest or local FFmpeg/scrcpy/Python/model
+  runtime was available; no GPU benchmark or real semantic accuracy claim is made.
+
 - Added read-only Streaming Vision Phase 4 preflight with machine-readable
   reason codes, ADB/device/tool checks, normalized `wm size` dimension
   resolution, optional explicit dimensions, a OnePlus A6013 candidate ROI

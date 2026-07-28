@@ -1,5 +1,21 @@
 # Project state
 
+## Streaming Vision Phase 6A offline semantic foundation (2026-07-28)
+
+An isolated worktree from baseline `4ecfad3` adds
+`PogoInventory.Streaming.Semantics` and its package-free benchmark/self-test.
+The contracts validate frame dimensions/orientation/ROIs, preserve explicit
+Known/Conflicting/Occluded/Unreadable/NotVisible/Unsupported/Unknown states,
+bind every Known result to evidence, and use deterministic order-independent
+field consensus. No live streaming, Device, Automation, phone input, tagging,
+Calcy, or decision-engine code was changed.
+
+The clean baseline contains 23 committed iPhone pretest fixtures and synthetic
+screen fixtures, but no Phase 6A verified truth manifest. The synthetic
+benchmark produced one correct CP consensus and `False Complete = 0`; Phase 6A
+self-test is 8/8. The host has an NVIDIA GeForce RTX 4060 Ti (8188 MiB), but
+FFmpeg, scrcpy, Python, CUDA runtime, and model weights were unavailable.
+
 ## Streaming Vision Phase 4 (2026-07-28)
 
 Fase 4 preflight and automatic stream-dimension resolution are integrated.

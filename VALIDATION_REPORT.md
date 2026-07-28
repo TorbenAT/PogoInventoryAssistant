@@ -623,3 +623,27 @@ been run for this checkpoint.
 - Evidence gate: 13/13 frames classified `PokemonDetails` (8 sand-exit and 5
   original frames), confidence 1.0.
 - Real-phone 2x50 pilot: complete; see the acceptance section above.
+# Validation report — Streaming Vision Phase 6A
+
+Date: 2026-07-28
+
+## Executed results
+
+- Solution restore/build: PASS, 33 projects, 0 warnings, 0 errors.
+- Repository self-test: PASS, 249/249; one expected local-data sanity check skipped.
+- Phase 2 self-test: PASS, 3/3; Phase 3: PASS, 15/15; Phase 4: PASS, 7/7.
+- Phase 6A self-test: PASS, 8/8.
+- Required build/demo/fake/offline scripts: PASS, 15/15 returned exit code 0.
+- Phase 6A benchmark: PASS, offline synthetic case; false Complete 0; input commands 0.
+
+## Limitations
+
+The clean worktree has no real Android evidence or verified Phase 6A truth
+manifest. The committed iPhone fixtures are pretest evidence only. The host
+reported an NVIDIA GeForce RTX 4060 Ti with 8188 MiB, but no FFmpeg, scrcpy,
+Python, CUDA runtime, ONNX Runtime GPU, or model weights were available.
+GPU embedding, alternative OCR, latency/resource comparison, and real
+screenshot field accuracy are therefore not claimed. Read-only Android
+preparation reported ADB unavailable and sent no input.
+
+Local manifests are outside Git at `C:\Data\PokemonGo-Tools\manifests`.
