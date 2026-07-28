@@ -1,5 +1,16 @@
 # Architecture
 
+## Phase 6B bounded semantic shadow boundary (2026-07-28)
+
+`PogoInventory.Streaming.Semantics.Shadow` consumes copied BGRA evidence from
+the existing streaming leases and runs named semantic adapters in bounded
+parallelism. It compares analyzer candidates with an explicit reference
+provider and preserves conflicts, timeouts, faults and coverage gaps rather
+than resolving them. `PogoInventory.Streaming.Observe.Shadow` is an opt-in
+read-only composition root for scrcpy/FFmpeg; it has no phone-input surface.
+EasyOCR, Ollama and screenshot-reference implementations remain adapter
+points until real verification evidence exists.
+
 ## Phase 6A offline semantic boundary
 
 `PogoInventory.Streaming.Semantics` is isolated from Device, Automation, live

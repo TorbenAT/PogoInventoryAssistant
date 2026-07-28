@@ -1,5 +1,14 @@
 # Continuation prompt
 
+## Streaming Vision Phase 6B checkpoint (2026-07-28)
+
+Phase 6B shadow integration is complete on `feature/streaming-phase6b-shadow`.
+Build and all package/repository self-tests are green; live AppraisalBars
+shadow capture is read-only and reports zero input. Before any later phase,
+integrate only verified EasyOCR/Ollama/reference providers, then produce the
+required 20-Pokémon zero-false-Complete verification report. Do not add
+navigation, tagging, transfer or delete behavior.
+
 ## Streaming Vision Phase 5 checkpoint (2026-07-28)
 
 The zero-frame root cause was fixed by removing FFmpeg `-fflags nobuffer` from

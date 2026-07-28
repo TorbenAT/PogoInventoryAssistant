@@ -732,3 +732,18 @@ field accuracy remains NOT MEASURABLE because the crop truth is Unverifiable.
 Read-only Android preparation reported ADB unavailable and sent no input.
 
 Local manifests are outside Git at `C:\Data\PokemonGo-Tools\manifests`.
+## Streaming Vision Phase 6B shadow integration - 2026-07-28
+
+- Supplied Phase 6B ZIP SHA-256 verified as
+  `0AAFD7A8BB54B1DD17073E7E6C71B72E520A09B014939092FF50EB324CE37178`.
+- Release solution build: PASS, 0 warnings, 0 errors.
+- Phase 6B self-test: PASS 10/10.
+- Phase 2/3/4/5/6A self-tests: PASS 3/3, 15/15, 7/7, 8/8 and 8/8.
+- Repository self-test: PASS 250/250; the existing local-data sanity check is
+  skipped when local-data is absent in the clone.
+- Live shadow run: PASS bounded completion with 3 stable AppraisalBars frames,
+  0 known candidates, 0 analyzer faults, 0 analyzer timeouts,
+  `AuthorizesPhoneInput=false`, `InputCommandsSent=0`.
+- Limitation: no production EasyOCR/Ollama/reference provider is present, so
+  no semantic field accuracy and no Details/wrong-screen real-phone acceptance
+  is claimed. The runner intentionally preserves Unsupported readings.

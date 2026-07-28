@@ -1,5 +1,15 @@
 # Project state
 
+## Streaming Vision Phase 6B shadow integration (2026-07-28)
+
+The additive Phase 6B shadow package is integrated on
+`feature/streaming-phase6b-shadow`. The supplied package hash was verified,
+the solution builds with 0 warnings/errors, and the package self-test passes
+10/10. The live read-only shadow runner completed 3 stable AppraisalBars
+frames on the authorized OnePlus with zero input. Semantic providers remain
+Unsupported until EasyOCR/Ollama and screenshot-reference accuracy are
+verified; no real field accuracy or wrong-screen acceptance is claimed.
+
 ## Streaming Vision Phase 5 (2026-07-28)
 
 The local official scrcpy v4.0 and FFmpeg 8.1.2 toolchain is installed only

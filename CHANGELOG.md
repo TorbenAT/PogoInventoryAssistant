@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+- Integrated additive Streaming Vision Phase 6B shadow capture and comparison:
+  bounded BGRA lease copying, fail-closed analyzer/reference discrepancy
+  reporting, atomic JSON/Markdown output, read-only live runner and 10/10
+  package-free self-test. Live AppraisalBars shadow capture completed with
+  zero input; semantic accuracy remains unverified pending production
+  EasyOCR/Ollama/reference providers.
+
 - Added the fail-closed `device-calibrate-appraisal-streaming-gates` command.
   It uses the existing named Details-to-Appraisal route, a six-input setup
   budget, separate setup/calibration input counts and bounded AppraisalBars

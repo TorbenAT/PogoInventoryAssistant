@@ -1,0 +1,13 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\PogoInventory.Streaming\PogoInventory.Streaming.csproj" />
+    <ProjectReference Include="..\PogoInventory.Streaming.Gates\PogoInventory.Streaming.Gates.csproj" />
+    <ProjectReference Include="..\PogoInventory.Streaming.Semantics\PogoInventory.Streaming.Semantics.csproj" />
+  </ItemGroup>
+</Project>
