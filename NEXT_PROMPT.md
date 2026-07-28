@@ -8,6 +8,15 @@ passes with decoded/published 837/837, 833/832 and 1691/1691 frames. Three
 gate observations timed out conservatively on required Header motion/sharpness;
 do not claim regional calibration PASS. Phase 6A is ready to integrate from
 its separate clean branch. Do not send input; preserve all worktrees.
+## Phase 6A handoff (2026-07-28)
+
+The isolated branch `feature/streaming-phase6a-semantic-offline` implements
+offline semantic contracts and fail-closed consensus in
+`src/PogoInventory.Streaming.Semantics`, with benchmark CLI and 8/8 self-test.
+Local manifests are under `C:\Data\PokemonGo-Tools\manifests`. Python 3.13.14,
+PyTorch CUDA, ResNet18 and EasyOCR benchmarks are completed; real screenshot
+field accuracy remains unmeasurable because crop truth is Unverifiable.
+Phase 5 acceptance is recorded above; gate calibration remains conservative.
 
 ## Streaming Vision Phase 4 checkpoint (2026-07-28)
 

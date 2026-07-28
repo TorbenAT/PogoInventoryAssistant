@@ -13,8 +13,9 @@
 - Preflight: ADB PASS; authorized serial `192.168.1.185:5555`, model
   `ONEPLUS_A6013`, physical display `1080x2340` portrait, resolved stream
   `886x1920` at max-size 1920, output directory PASS, InputCommandsSent=0.
-- Preflight blocked real streaming with `FfmpegUnavailable` and
-  `ScrcpyServerMissing`; no real stream/gate acceptance is claimed.
+- Historical Phase 4 preflight was blocked before the local toolchain was
+  installed; the completed Phase 5 preflight and observe acceptance are
+  recorded in the Phase 5 section below.
 - ROI profile candidate: `profiles/pokemon-go-oneplus6t-portrait.json`.
   It is normalized and unverified against stream evidence.
 - Real-phone gate calibration, frame timing, bounded PNG evidence and
@@ -643,3 +644,38 @@ been run for this checkpoint.
   application-level stream acceptance.
 - Input commands, navigation and state-changing phone operations: 0.
 - Local toolchain binaries remain ignored under `tools/local/`.
+# Validation report — Streaming Vision Phase 6A
+
+Date: 2026-07-28
+
+## Local runtime completion update
+
+- Python 3.13.14 local embeddable runtime: PASS.
+- GPU: NVIDIA GeForce RTX 4060 Ti, driver 591.86, 8188 MiB.
+- PyTorch 2.11.0+cu128: PASS; CUDA 12.8 and `cuda:0` tensor smoke test.
+- Embedding-equivalent ResNet18 benchmark: PASS; P50/P95/P99 3.570/3.883/
+  4.016 ms, peak VRAM 112,626,688 bytes.
+- EasyOCR 1.7.2 fixed-crop benchmark: PASS; P50/P95/P99 69.848/73.289/
+  73.289 ms, peak VRAM 344,411,648 bytes.
+- Synthetic truth manifest: PASS and versioned at
+  `data/phase6a-truth-manifest.synthetic.json`.
+- Real screenshot field accuracy: NOT MEASURABLE; real crop truth is
+  Unverifiable. False Known and False Complete are null for that crop.
+
+## Executed results
+
+- Solution restore/build: PASS, 33 projects, 0 warnings, 0 errors.
+- Repository self-test: PASS, 249/249; one expected local-data sanity check skipped.
+- Phase 2 self-test: PASS, 3/3; Phase 3: PASS, 15/15; Phase 4: PASS, 7/7.
+- Phase 6A self-test: PASS, 8/8.
+- Required build/demo/fake/offline scripts: PASS, 15/15 returned exit code 0.
+- Phase 6A benchmark: PASS, offline synthetic case; false Complete 0; input commands 0.
+
+## Limitations
+
+The committed iPhone fixtures are pretest evidence only. Phase 6A local runtime
+and GPU/OCR benchmarks are recorded in the Phase 6A section; real screenshot
+field accuracy remains NOT MEASURABLE because the crop truth is Unverifiable.
+Read-only Android preparation reported ADB unavailable and sent no input.
+
+Local manifests are outside Git at `C:\Data\PokemonGo-Tools\manifests`.

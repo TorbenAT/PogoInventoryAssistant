@@ -1,5 +1,13 @@
 # Architecture
 
+## Phase 6A offline semantic boundary
+
+`PogoInventory.Streaming.Semantics` is isolated from Device, Automation, live
+streaming and the decision engine. It accepts replay metadata and normalized
+geometry, binds Known fields to evidence, and applies deterministic
+fail-closed consensus. It can later adapt to a `FrameLease` without changing
+Phase 5 runtime behavior.
+
 ## Opt-in Streaming Vision read-only boundary (2026-07-28)
 
 Streaming Vision Phases 1-3 form an isolated observation path:

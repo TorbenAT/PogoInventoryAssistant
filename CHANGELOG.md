@@ -8,10 +8,20 @@
   remains conservative NOT ACCEPTED after three Header motion/sharpness
   timeouts.
 
-- Phase 5 toolchain and read-only real-phone probes were added locally. The
-  requested 30s/30s/60s runs reached the authorized OnePlus device but produced
-  no decoded frames; real streaming, gates and calibration remain NOT ACCEPTED.
-  No phone input was sent. See `docs/STREAMING_VISION_PHASE5.md`.
+- Phase 5 toolchain and read-only real-phone probes were completed. The
+  `-fflags nobuffer` zero-frame defect was fixed; 30s/30s/60s observe runs
+  passed with decoded/published 837/837, 833/832 and 1691/1691 frames. Gate
+  calibration remains NOT ACCEPTED after conservative Header timeouts.
+- Completed the local Phase 6A runtime benchmark: Python 3.13.14, PyTorch
+  CUDA on RTX 4060 Ti, ResNet18 embedding-equivalent timing, EasyOCR fixed-crop
+  timing and a synthetic-only truth manifest. Real screenshot field accuracy
+  remains unmeasurable; no live semantic integration or phone input was used.
+
+- Added isolated Streaming Vision Phase 6A offline semantic contracts,
+  validated normalized ROIs, fail-closed field consensus, an unsupported
+  baseline analyzer, and a package-free benchmark/self-test pair.
+- Recorded the synthetic-only truth boundary and local GPU/OCR benchmark;
+  real screenshot field accuracy remains unmeasurable.
 
 - Added read-only Streaming Vision Phase 4 preflight with machine-readable
   reason codes, ADB/device/tool checks, normalized `wm size` dimension

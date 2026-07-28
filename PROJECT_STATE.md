@@ -10,6 +10,28 @@ removing it restored frames. Real observe acceptance passed 30s/30s/60s with
 837/837, 833/832 and 1691/1691 decoded/published frames, clean shutdown and
 zero input. Three gate observations timed out on required Header
 motion/sharpness, so regional calibration is not accepted.
+## Streaming Vision Phase 6A offline semantic foundation (2026-07-28)
+
+Local Phase 6A runtime completion is now evidenced: Python 3.13.14,
+RTX 4060 Ti/driver 591.86/8188 MiB, PyTorch 2.11.0+cu128 CUDA smoke test,
+ResNet18 embedding-equivalent benchmark and EasyOCR 1.7.2 fixed-crop
+benchmark. The synthetic truth manifest is versioned, while real screenshot
+field accuracy remains NOT MEASURABLE and no live semantic integration exists.
+
+An isolated worktree from baseline `4ecfad3` adds
+`PogoInventory.Streaming.Semantics` and its package-free benchmark/self-test.
+The contracts validate frame dimensions/orientation/ROIs, preserve explicit
+Known/Conflicting/Occluded/Unreadable/NotVisible/Unsupported/Unknown states,
+bind every Known result to evidence, and use deterministic order-independent
+field consensus. No live streaming, Device, Automation, phone input, tagging,
+Calcy, or decision-engine code was changed.
+
+The clean baseline contains 23 committed iPhone pretest fixtures and synthetic
+screen fixtures. The synthetic benchmark produced one correct CP consensus and
+`False Complete = 0`; Phase 6A self-test is 8/8. Local runtime completion is
+documented in `docs/STREAMING_VISION_PHASE6A.md`: Python 3.13.14, RTX 4060 Ti,
+PyTorch CUDA, ResNet18 timing and EasyOCR fixed-crop timing. Real screenshot
+field accuracy remains NOT MEASURABLE because crop truth is Unverifiable.
 
 ## Streaming Vision Phase 4 (2026-07-28)
 
@@ -21,9 +43,9 @@ Fase 4 self-test is 7/7.
 
 The authorized OnePlus A6013 (`192.168.1.185:5555`) was verified read-only by
 ADB: `1080x2340` portrait, automatically resolved to `886x1920` at max-size
-1920. Real streaming is blocked by missing FFmpeg and scrcpy server JAR;
-real-phone/gate/calibration acceptance is therefore not claimed. Input count
-remains zero.
+1920. Generic real-stream acceptance is PASS after the `-fflags nobuffer` fix;
+gate calibration remains conservative NOT ACCEPTED after three Header
+motion/sharpness timeouts. Input count remains zero.
 
 ## Streaming Vision Phases 1-3 integration (2026-07-28)
 
