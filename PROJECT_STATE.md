@@ -1,5 +1,19 @@
 # Project state
 
+## Streaming Vision Phase 4 (2026-07-28)
+
+Fase 4 preflight and automatic stream-dimension resolution are integrated.
+The clean branch baseline is 28 projects with full restore/build green at
+0 warnings and 0 errors; clean `test.ps1` is 249/249 with one absent
+`local-data` sanity check skipped. Fase 2/3 self-tests are 3/3 and 15/15;
+Fase 4 self-test is 7/7.
+
+The authorized OnePlus A6013 (`192.168.1.185:5555`) was verified read-only by
+ADB: `1080x2340` portrait, automatically resolved to `886x1920` at max-size
+1920. Real streaming is blocked by missing FFmpeg and scrcpy server JAR;
+real-phone/gate/calibration acceptance is therefore not claimed. Input count
+remains zero.
+
 ## Streaming Vision Phases 1-3 integration (2026-07-28)
 
 The cumulative Phase 3 delivery is integrated on the opt-in integration

@@ -54,13 +54,15 @@ internal static class Program
                 AdbPath = parsed.AdbPath,
                 ScrcpyServerJar = parsed.ScrcpyServerJar,
                 MaxFps = parsed.MaxFps,
-                MaxSize = parsed.MaxSize
+                MaxSize = parsed.MaxSize,
+                RequestedWidth = parsed.Width,
+                RequestedHeight = parsed.Height
             };
             var decoderOptions = new FfmpegDecoderOptions
             {
                 FfmpegPath = parsed.FfmpegPath,
-                Width = parsed.Width,
-                Height = parsed.Height
+                Width = parsed.Width ?? 0,
+                Height = parsed.Height ?? 0
             };
 
             var transport = new ScrcpyReadOnlyVideoTransport(scrcpyOptions);
@@ -160,13 +162,13 @@ internal static class Program
 
 internal sealed class ObserveGateArguments
 {
-    public const string Usage = "observe-gates --device SERIAL --server PATH --ffmpeg PATH --width PX --height PX [--profile NAME_OR_JSON] [--duration 30] [--buffer-seconds 2] [--max-fps 30] [--max-size 1920] [--adb adb] [--output evidence]";
+    public const string Usage = "observe-gates --device SERIAL --server PATH --ffmpeg PATH [--width PX --height PX] [--profile NAME_OR_JSON] [--duration 30] [--buffer-seconds 2] [--max-fps 30] [--max-size 1920] [--adb adb] [--output evidence]";
 
     public required string DeviceSerial { get; init; }
     public required string ScrcpyServerJar { get; init; }
     public required string FfmpegPath { get; init; }
-    public required int Width { get; init; }
-    public required int Height { get; init; }
+    public int? Width { get; init; }
+    public int? Height { get; init; }
     public string AdbPath { get; init; } = "adb";
     public string Profile { get; init; } = "StableHeaderAndPanel";
     public string OutputDirectory { get; init; } = "evidence-gates";
@@ -183,6 +185,12 @@ internal sealed class ObserveGateArguments
             return index >= 0 && index + 1 < args.Length ? args[index + 1] : defaultValue;
         }
 
+        string? GetOptional(string name)
+        {
+            var index = Array.IndexOf(args, name);
+            return index >= 0 && index + 1 < args.Length ? args[index + 1] : null;
+        }
+
         var device = Get("--device", string.Empty);
         var server = Get("--server", string.Empty);
         var ffmpeg = Get("--ffmpeg", "ffmpeg");
@@ -196,8 +204,12 @@ internal sealed class ObserveGateArguments
             throw new ArgumentException("--server must point to the matching scrcpy server JAR.");
         }
 
-        var width = ParsePositiveInt(Get("--width", "0"), "--width");
-        var height = ParsePositiveInt(Get("--height", "0"), "--height");
+        var width = ParseOptionalPositiveInt(GetOptional("--width"), "--width");
+        var height = ParseOptionalPositiveInt(GetOptional("--height"), "--height");
+        if (width.HasValue != height.HasValue)
+        {
+            throw new ArgumentException("--width and --height must be supplied together.");
+        }
         return new ObserveGateArguments
         {
             DeviceSerial = device,
@@ -215,6 +227,11 @@ internal sealed class ObserveGateArguments
         };
     }
 
+    private static int? ParseOptionalPositiveInt(string? value, string name)
+    {
+        return value is null ? null : ParsePositiveInt(value, name);
+    }
+
     private static int ParsePositiveInt(string value, string name)
     {
         if (!int.TryParse(value, System.Globalization.NumberStyles.Integer, System.Globalization.CultureInfo.InvariantCulture, out var parsed) || parsed <= 0)
@@ -224,6 +241,7 @@ internal sealed class ObserveGateArguments
 
         return parsed;
     }
+
 }
 
 internal sealed class GateObservationReport

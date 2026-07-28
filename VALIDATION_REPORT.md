@@ -1,3 +1,26 @@
+## Streaming Vision Phase 4 - 2026-07-28
+
+- Clean integration worktree baseline: 28 solution projects; `dotnet restore`
+  passed; `dotnet build PogoInventoryAssistant.sln --configuration Release
+  --no-restore` passed with 0 warnings and 0 errors on .NET SDK 10.0.302
+  (8.0.423 installed).
+- Clean `scripts/test.ps1`: 249/249 passed, with one local-data evidence
+  sanity check skipped because `local-data/` is absent in the clean clone.
+  The earlier 249/250 result is only from the dirty workspace's pre-existing
+  identity test change and is not caused by streaming integration.
+- Phase 2 self-test: 3/3 PASS. Phase 3 self-test: 15/15 PASS.
+- Phase 4 self-test: 7/7 PASS.
+- Preflight: ADB PASS; authorized serial `192.168.1.185:5555`, model
+  `ONEPLUS_A6013`, physical display `1080x2340` portrait, resolved stream
+  `886x1920` at max-size 1920, output directory PASS, InputCommandsSent=0.
+- Preflight blocked real streaming with `FfmpegUnavailable` and
+  `ScrcpyServerMissing`; no real stream/gate acceptance is claimed.
+- ROI profile candidate: `profiles/pokemon-go-oneplus6t-portrait.json`.
+  It is normalized and unverified against stream evidence.
+- Real-phone gate calibration, frame timing, bounded PNG evidence and
+  shutdown lease measurement: NOT RUN because the decoder/server toolchain is
+  unavailable. No transition PASS is claimed.
+
 ## Streaming Vision Phases 1-3 integration - 2026-07-28
 
 - ZIP SHA-256 verified against handover: `9a409801e84b74f335bae37417884da1e940059e18057efa2658d6596943bce3`.

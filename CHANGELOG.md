@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+- Added read-only Streaming Vision Phase 4 preflight with machine-readable
+  reason codes, ADB/device/tool checks, normalized `wm size` dimension
+  resolution, optional explicit dimensions, a OnePlus A6013 candidate ROI
+  profile and a 7-test package-free self-test. ADB/device/display preflight
+  passed; real streaming remains unclaimed because FFmpeg and the scrcpy
+  server JAR are unavailable.
+
 - Integrated the opt-in, read-only Streaming Vision Phases 1-3: pooled BGRA32
   frames with bounded leases/subscriptions, scrcpy/FFmpeg observation,
   regional temporal gates, bounded PNG evidence, JSON profiles and the

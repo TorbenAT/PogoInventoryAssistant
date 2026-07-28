@@ -1,5 +1,16 @@
 # Continuation prompt
 
+## Streaming Vision Phase 4 checkpoint (2026-07-28)
+
+Fase 4 preflight, normalized OnePlus A6013 candidate profile and automatic
+ADB `wm size` dimension resolution are implemented. Clean full solution build
+is green (28 projects, 0 warnings/errors), clean self-test is 249/249, and
+Fase 4 self-test is 7/7. The authorized phone reports 1080x2340 portrait and
+resolves to 886x1920 at max-size 1920. Real stream/gate acceptance remains
+blocked by missing FFmpeg and scrcpy server JAR; install/provide those tools
+before claiming phone calibration or transition/timing acceptance. Do not
+send phone input.
+
 ## Streaming Vision Phases 1-3 checkpoint (2026-07-28)
 
 The cumulative read-only streaming delivery is integrated on

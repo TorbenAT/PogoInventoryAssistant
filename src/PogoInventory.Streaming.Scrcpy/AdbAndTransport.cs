@@ -26,7 +26,12 @@ public sealed class ScrcpyReadOnlyVideoTransport : IReadOnlyVideoTransport {
   await RequireAdbAsync($"-s {Q(_o.DeviceSerial)} forward tcp:{_o.LocalPort} localabstract:scrcpy",startup.Token,StreamFailureCode.VideoSocketConnectionFailed);
   var args=$"-s {Q(_o.DeviceSerial)} shell CLASSPATH={remote} app_process / {_o.JavaMainClass} {_o.ScrcpyServerVersion} tunnel_forward=true audio=false control=false cleanup=true raw_stream=true max_size={_o.MaxSize} max_fps={_o.MaxFps}";
   _server=new Process{StartInfo=new(_o.AdbPath,args){RedirectStandardError=true,RedirectStandardOutput=true,UseShellExecute=false,CreateNoWindow=true}}; if(!_server.Start())throw new StreamTransportException(new(StreamFailureCode.ScrcpyServerStartFailed,"Could not start scrcpy server process."));
-  _tcp=new TcpClient(); await _tcp.ConnectAsync("127.0.0.1",_o.LocalPort,startup.Token); var stream=_tcp.GetStream(); Metadata=new("h264",0,0,_o.MaxFps,_o.DeviceSerial); Volatile.Write(ref _state,(int)ComponentLifecycle.Running);
+  var displayOutput=(await AdbDeviceValidator.RunAsync(_o.AdbPath,$"-s {Q(_o.DeviceSerial)} shell wm size",startup.Token)).Output;
+  DisplayDimensions display; ResolvedStreamDimensions resolved;
+  try { display=AdbDisplayDimensionParser.ParseWmSize(displayOutput); resolved=StreamDimensionResolver.Resolve(display,_o.MaxSize,_o.RequestedWidth,_o.RequestedHeight); }
+  catch(StreamTransportException) { Volatile.Write(ref _state,(int)ComponentLifecycle.Faulted); throw; }
+  catch(Exception e) { Volatile.Write(ref _state,(int)ComponentLifecycle.Faulted); throw new StreamTransportException(new(StreamFailureCode.StreamDimensionMismatch,"Could not resolve the expected raw stream dimensions.",e.Message)); }
+  _tcp=new TcpClient(); await _tcp.ConnectAsync("127.0.0.1",_o.LocalPort,startup.Token); var stream=_tcp.GetStream(); Metadata=new("h264",resolved.Width,resolved.Height,_o.MaxFps,_o.DeviceSerial); Volatile.Write(ref _state,(int)ComponentLifecycle.Running);
   var buffer=new byte[256*1024];long seq=0;var sw=Stopwatch.StartNew();
   try{while(true){var n=await stream.ReadAsync(buffer,_run.Token);if(n==0)throw new StreamTransportException(new(StreamFailureCode.StreamEndedUnexpectedly,"scrcpy video stream ended."));var copy=new byte[n];Buffer.BlockCopy(buffer,0,copy,0,n);yield return new(copy,++seq,sw.Elapsed,DateTimeOffset.UtcNow,ContainsIdr(copy));}}
   finally{await StopAsync(CancellationToken.None);}
