@@ -2,6 +2,14 @@
 
 ## Unreleased
 
+- Integrated the opt-in, read-only Streaming Vision Phases 1-3: pooled BGRA32
+  frames with bounded leases/subscriptions, scrcpy/FFmpeg observation,
+  regional temporal gates, bounded PNG evidence, JSON profiles and the
+  `observe-stream`/`observe-gates` diagnostics. Existing navigation,
+  screenshot and cleanup flows remain unchanged. Phase 2 and Phase 3
+  self-tests pass (3/3 and 15/15); baseline full-solution restore was blocked
+  by the environment's inaccessible global NuGet.Config.
+
 - Added a run-local, dry-run-only `DecisionTagPlanner`. KEEP maps to
   `AI-Indexed`; REVIEW, DELETE-candidate, Partial and Unknown map to
   `AI-Review`. Plans require current Details/Appraisal state, ordinal and

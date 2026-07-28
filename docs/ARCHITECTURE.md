@@ -1,5 +1,16 @@
 # Architecture
 
+## Opt-in Streaming Vision read-only boundary (2026-07-28)
+
+Streaming Vision Phases 1-3 form an isolated observation path:
+scrcpy raw H.264 (`control=false`, `audio=false`, `raw_stream=true`) is
+decoded to pooled BGRA32 frames, published through bounded leases and
+subscriptions, analyzed by regional temporal observers, and evaluated by
+fail-closed gates. `observe-stream` and `observe-gates` emit diagnostics and
+bounded evidence only. These projects do not reference `PogoInventory.Device`
+or any navigation, tap, swipe, clipboard, tagging or destructive operation;
+the existing screenshot and cleanup flows remain unchanged.
+
 ## Cleanup value-proof transition
 
 Cleanup proof uses a persistent Appraisal carousel for ordinary item

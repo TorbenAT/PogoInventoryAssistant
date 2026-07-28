@@ -1,5 +1,15 @@
 # Continuation prompt
 
+## Streaming Vision Phases 1-3 checkpoint (2026-07-28)
+
+The cumulative read-only streaming delivery is integrated on
+`integration/streaming-vision-phases-1-3`. Phase 2 and Phase 3 package-free
+self-tests pass 3/3 and 15/15. Continue with the full Release build/test and
+the repository-required scripts. Do not connect streaming automatically to
+navigation or cleanup, and do not claim real-phone acceptance without real
+scrcpy/ADB evidence. The baseline restore was blocked by inaccessible global
+NuGet.Config in the current environment.
+
 ## Run-local decision tag planner checkpoint (2026-07-26)
 
 `DecisionTagPlanner` is implemented and tested. It produces only allowlisted

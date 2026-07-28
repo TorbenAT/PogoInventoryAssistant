@@ -1,5 +1,19 @@
 # Project state
 
+## Streaming Vision Phases 1-3 integration (2026-07-28)
+
+The cumulative Phase 3 delivery is integrated on the opt-in integration
+branch. It adds `PogoInventory.Streaming`, read-only scrcpy/FFmpeg transport,
+regional temporal gates, `observe-stream`, `observe-gates`, built-in JSON
+profiles, bounded PNG evidence and package-free self-tests. The streaming
+projects have no phone-input reference or public input surface; diagnostics
+report `InputCommandsSent = 0`.
+
+Validation currently available: Phase 2 self-test 3/3 and Phase 3 self-test
+15/15. The initial full-solution restore/build/test baseline could not pass
+NuGet restore because this environment denied access to
+`C:\Users\torbe\AppData\Roaming\NuGet\NuGet.Config`.
+
 ## Run-local decision tag planning (2026-07-26)
 
 Added a deterministic dry-run-only `DecisionTagPlanner`. It maps KEEP to

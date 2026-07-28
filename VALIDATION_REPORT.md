@@ -1,3 +1,20 @@
+## Streaming Vision Phases 1-3 integration - 2026-07-28
+
+- ZIP SHA-256 verified against handover: `9a409801e84b74f335bae37417884da1e940059e18057efa2658d6596943bce3`.
+- Phase 2 package-free self-test: PASS, 3/3.
+- Phase 3 package-free self-test: PASS, 15/15; `InputCommandsSent = 0`.
+- Baseline `dotnet restore`, full Release build and full test run: BLOCKED
+  before compilation because access to the global NuGet.Config was denied.
+- Real-phone scrcpy/ADB acceptance: NOT RUN; no device evidence was available.
+- Repository scripts: build/demo/fake/device-free/iPhone/synthetic scripts
+  passed. `test.ps1` reached 249/250; its single failure is the pre-existing
+  dirty-worktree test `Tag mutation binding ignores tags and rejects identity
+  changes` (changed CP header rejected), outside the streaming files.
+- `prepare-android-phone.ps1`: NOT RUN successfully; ADB was unavailable.
+- Streaming wrapper build and self-test scripts: PASS.
+- CLI validation: both observe commands reject missing `--device` with
+  explicit validation; no device stream was started.
+
 ## Task-K 15-case manual ground-truth analysis - 2026-07-26
 
 - Manual labels: 30 run rows covering 15 ordinal pairs; all 30 are Verified
