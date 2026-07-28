@@ -11,6 +11,12 @@ bounded evidence only. These projects do not reference `PogoInventory.Device`
 or any navigation, tap, swipe, clipboard, tagging or destructive operation;
 the existing screenshot and cleanup flows remain unchanged.
 
+The FFmpeg pipe binding intentionally omits `-fflags nobuffer`: real-phone
+evidence showed that flag suppresses rawvideo output for this pipe-fed H.264
+mode. `-flags low_delay` remains enabled. Partial stdout reads are accumulated
+to exact `width × height × 4` BGRA frames, and Phase 6A semantic benchmarks
+remain offline and do not cross this boundary.
+
 ## Cleanup value-proof transition
 
 Cleanup proof uses a persistent Appraisal carousel for ordinary item

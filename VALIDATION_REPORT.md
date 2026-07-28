@@ -630,10 +630,14 @@ been run for this checkpoint.
 - Phase 4 self-test: PASS, 7/7; input commands sent: 0.
 - Local toolchain preflight: PASS for ADB, FFmpeg, scrcpy server, authorized
   `ONEPLUS_A6013`, and automatic `886x1920` portrait dimensions.
-- Real-phone observe runs requested by the handover: 30s, 30s and 60s. All
-  produced zero encoded/decoded/published frames and are **NOT ACCEPTED**.
-- Gate execution, regional calibration, timing acceptance and PNG evidence:
-  NOT RUN because the stream produced no frames.
+- Zero-frame root cause: FFmpeg `-fflags nobuffer` suppressed rawvideo output
+  in the pipe-fed H.264 mode; removing it restored decoded BGRA frames.
+- Real-phone observe acceptance: PASS for 30s/30s/60s; decoded/published
+  frames were 837/837, 833/832 and 1691/1691; all shutdowns clean.
+- Phase 5 self-test: PASS, 8/8.
+- Three gate observations completed read-only with 68-80 frames and zero
+  outstanding leases, but timed out conservatively on required Header
+  motion/sharpness. Regional gate calibration is NOT ACCEPTED.
 - An isolated read-only raw-protocol diagnostic read H.264 bytes from the same
   phone/server combination; this is diagnostic evidence only and is not
   application-level stream acceptance.

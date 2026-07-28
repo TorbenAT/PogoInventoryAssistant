@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+- Fixed the Phase 5 zero-frame condition: FFmpeg `-fflags nobuffer` suppressed
+  pipe-fed rawvideo output. Read-only 30s/30s/60s runs now pass with
+  837/837, 833/832 and 1691/1691 decoded/published frames. Gate calibration
+  remains conservative NOT ACCEPTED after three Header motion/sharpness
+  timeouts.
+
 - Phase 5 toolchain and read-only real-phone probes were added locally. The
   requested 30s/30s/60s runs reached the authorized OnePlus device but produced
   no decoded frames; real streaming, gates and calibration remain NOT ACCEPTED.

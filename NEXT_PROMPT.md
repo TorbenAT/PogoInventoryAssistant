@@ -2,13 +2,12 @@
 
 ## Streaming Vision Phase 5 checkpoint (2026-07-28)
 
-Local ignored scrcpy v4.0/FFmpeg 8.1.2 tools are available and preflight is
-green. The requested read-only real-phone 30s/30s/60s observe runs reached
-`192.168.1.185:5555` but decoded/published 0 frames, so Phase 5 acceptance,
-gates, calibration, timing and evidence remain NOT ACCEPTED. Do not send input.
-Investigate the application-level no-frame path before rerunning bounded
-acceptance; do not start Phase 6. Preserve the three worktrees and the WIP
-identity branch.
+The zero-frame root cause was fixed by removing FFmpeg `-fflags nobuffer` from
+the pipe-fed H.264 decoder. Read-only real-phone 30s/30s/60s acceptance now
+passes with decoded/published 837/837, 833/832 and 1691/1691 frames. Three
+gate observations timed out conservatively on required Header motion/sharpness;
+do not claim regional calibration PASS. Phase 6A is ready to integrate from
+its separate clean branch. Do not send input; preserve all worktrees.
 
 ## Streaming Vision Phase 4 checkpoint (2026-07-28)
 

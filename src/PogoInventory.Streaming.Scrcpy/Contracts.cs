@@ -25,5 +25,6 @@ public sealed class ScrcpyOptions {
 public static class ScrcpyReadOnlyContract
 {
     public const bool ControlChannelEnabled = false;
+    public const bool RawStreamEnabled = true;
     public const int InputCommandsSent = 0;
 }

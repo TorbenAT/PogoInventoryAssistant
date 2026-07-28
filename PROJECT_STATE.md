@@ -4,12 +4,12 @@
 
 The local official scrcpy v4.0 and FFmpeg 8.1.2 toolchain is installed only
 under ignored `tools/local/` and preflight passes for the authorized
-`ONEPLUS_A6013`: `1080x2340` portrait resolves to `886x1920`. The requested
-read-only 30s/30s/60s real-phone observe runs produced zero frames, therefore
-real streaming acceptance, gate execution, regional calibration, timing and
-PNG evidence are NOT ACCEPTED. No input was sent. A future run must diagnose
-the remaining application-level no-frame condition before Phase 5 can close;
-Phase 6 is not started.
+`ONEPLUS_A6013`: `1080x2340` portrait resolves to `886x1920`. The zero-frame
+root cause was FFmpeg `-fflags nobuffer` suppressing pipe-fed rawvideo output;
+removing it restored frames. Real observe acceptance passed 30s/30s/60s with
+837/837, 833/832 and 1691/1691 decoded/published frames, clean shutdown and
+zero input. Three gate observations timed out on required Header
+motion/sharpness, so regional calibration is not accepted.
 
 ## Streaming Vision Phase 4 (2026-07-28)
 

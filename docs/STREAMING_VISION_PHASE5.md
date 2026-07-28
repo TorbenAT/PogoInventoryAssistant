@@ -2,43 +2,49 @@
 
 ## Status
 
-Phase 5 real-phone acceptance is **not accepted**. The phone was contacted only
-through read-only ADB/scrcpy video operations; `InputCommandsSent` remained 0.
-The requested 30s, 30s and 60s observe runs completed without decoded frames,
-so gate execution, regional calibration, timing acceptance and screenshot
-evidence were not run.
+Generic read-only real-stream acceptance is **PASS**. Gate calibration is
+**NOT ACCEPTED**: three bounded gate runs observed frames but timed out
+conservatively on `MotionTooHigh`/`SharpnessTooLow` in required Header.
 
-## Device and local toolchain
+Device: `192.168.1.185:5555`, `ONEPLUS_A6013`, Android 11, physical
+`1080x2340` portrait, resolved stream `886x1920`. scrcpy v4.0 and FFmpeg
+8.1.2 remain local ignored tools. Every operation reported
+`InputCommandsSent = 0`.
 
-- Device: `192.168.1.185:5555`, `ONEPLUS_A6013`, Android 11, physical
-  `1080x2340` portrait.
-- Preflight stream resolution: `886x1920` at max-size 1920.
-- ADB: platform-tools `37.0.0-14910828`, ADB `1.0.41`.
-- scrcpy: official v4.0 ZIP, SHA-256
-  `75DBEB5B00E6F64292F26F70900AE55CA397786BDFB0B9BBEB481A0549047457`.
-  Server SHA-256:
-  `84924BD564A1EB6089C872C7521F968058977F91F5FF02514A8C74AFF3210F3A`.
-- FFmpeg: `8.1.2-essentials_build-www.gyan.dev`; ZIP SHA-256
-  `DB580001CAA24AC104C8CB856CD113A87B0A443F7BDF47D8C12B1D740584A2EC`.
+## Zero-frame root cause
 
-The binaries are local ignored files under `tools/local/`; no binary is
-committed.
+The bounded raw Annex-B sample was 1,541,472 bytes and contained SPS, PPS and
+IDR NAL units. FFmpeg independently identified H.264 High at `886x1920` and
+emitted one `886x1920x4` BGRA frame. The application used `-fflags nobuffer`
+with a pipe-fed H.264 decoder; in this mode FFmpeg emitted zero rawvideo bytes.
+Removing that flag while retaining `-flags low_delay` fixed the pipeline.
 
-## Observed result
+The first application proof published 204 frames in 8 seconds. Reports now
+record TCP/encoded bytes, transport chunks, FFmpeg stdin/rawvideo bytes,
+complete BGRA frames, first-byte/first-frame latency, exit codes and input
+count. Phase 5 package-free self-test passes 8/8.
 
-The three requested runs produced zero encoded/decoded/published frames and
-were recorded as not accepted. An isolated raw-protocol diagnostic did read
-H.264 SPS/PPS bytes from the same device and local scrcpy server, so this does
-not prove the application-level observe path. No gate or calibration claim is
-made.
+## Real-phone runs
 
-During diagnosis, the transport was corrected to obtain metadata from the
-first packet before initializing FFmpeg, to preserve FFmpeg/server errors, and
-to query display dimensions before server startup. These changes are offline
-validated below, but the real observe path still needs a future bounded
-investigation before Phase 5 can be accepted.
+All runs used `control=false`, `audio=false`, `raw_stream=true`.
 
-## Explicit non-actions
+| Run | Duration | TCP bytes | Decoded | Published | First frame | Shutdown |
+|---|---:|---:|---:|---:|---:|---|
+| final-1-30s | 30.09s | 28,957,744 | 837 | 837 | 1,690 ms | Clean |
+| final-2-30s | 30.09s | 29,021,232 | 833 | 832 | 1,968 ms | Clean |
+| final-3-60s | 60.08s | 58,974,752 | 1,691 | 1,691 | 1,646 ms | Clean |
 
-No control channel, taps, swipes, navigation, state-changing ADB command,
-randomized timing or anti-detection behavior was used. Phase 6 was not started.
+All runs reported zero interruptions/freezes and clean lease shutdown.
+
+## Gate runs
+
+Three read-only 10-second gate observations completed with 68–80 frames and
+zero outstanding leases. They timed out on required Header motion/sharpness;
+no regional threshold or gate PASS is claimed. No phone placement request was
+made because generic stream acceptance was the only proven milestone and the
+screen did not provide valid calibration evidence.
+
+## Non-actions
+
+No taps, swipes, key events, clipboard, navigation, Calcy, tags, cleanup,
+transfer or delete operations were performed. Phase 6B/7 were not started.
