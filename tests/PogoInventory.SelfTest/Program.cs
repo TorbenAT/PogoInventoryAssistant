@@ -46,6 +46,7 @@ using PogoInventory.SelfTest;
 
 var tests = new (string Name, Func<Task> Run)[]
 {
+    ("Appraisal streaming calibration is named and fail-closed", AppraisalStreamingCalibrationTests.RunAsync),
     ("Decision tag planner is bound and fail-closed", DecisionTagPlannerTests.RunAsync),
     ("Real-state detector regression fixtures", StateDetectorRegressionTests.RunAsync),
     ("Tag read short-circuits the Appraisal-carousel PokemonDetails wait", TagReadAppraisalShortCircuitTests.TagReadShortCircuitsInAppraisalCarouselAsync),

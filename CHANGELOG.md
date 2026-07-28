@@ -2,6 +2,69 @@
 
 ## Unreleased
 
+- Consolidated Streaming Vision Phases 1-6B onto `main`, including accepted
+  Details/Appraisal gates, the isolated Ollama candidate provider and the
+  Phase 6B shadow foundation. Validation is green; real semantic accuracy
+  remains unmeasured and the dirty VLM evidence worktree is preserved.
+
+- Integrated additive Streaming Vision Phase 6B shadow capture and comparison:
+  bounded BGRA lease copying, fail-closed analyzer/reference discrepancy
+  reporting, atomic JSON/Markdown output, read-only live runner and 10/10
+  package-free self-test. Live AppraisalBars shadow capture completed with
+  zero input; semantic accuracy remains unverified pending production
+  EasyOCR/Ollama/reference providers.
+
+- Added the fail-closed `device-calibrate-appraisal-streaming-gates` command.
+  It uses the existing named Details-to-Appraisal route, a six-input setup
+  budget, separate setup/calibration input counts and bounded AppraisalBars
+  evidence. Real-phone Appraisal gate calibration passes 3/3 (10 s, 10 s,
+  20 s) with zero calibration input, stable Header/AppraisalPanel/IV bars,
+  volatile Model/background handling and final state AppraisalBars.
+  Added one package-free orchestration contract test; repository self-test is
+  now 250/250.
+
+- Completed read-only Streaming Vision Phase 5 Details gate calibration on
+  the authorized OnePlus phone: 3/3 PASS (10 s, 10 s, 20 s), zero input,
+  zero outstanding leases and clean shutdown. Added per-region P50/P95/P99
+  gate metrics and calibrated the measured live Header sharpness floor to
+  0.06. Appraisal calibration is now also accepted; Phase 6B/7 were not run.
+
+- Fixed the Phase 5 zero-frame condition: FFmpeg `-fflags nobuffer` suppressed
+  pipe-fed rawvideo output. Read-only 30s/30s/60s runs now pass with
+  837/837, 833/832 and 1691/1691 decoded/published frames. Gate calibration
+  was subsequently calibrated on the real Details screen.
+
+- Phase 5 toolchain and read-only real-phone probes were completed. The
+  `-fflags nobuffer` zero-frame defect was fixed; 30s/30s/60s observe runs
+  passed with decoded/published 837/837, 833/832 and 1691/1691 frames. Gate
+  Details and Appraisal gate calibration is documented in the Phase 5 report.
+- Completed the local Phase 6A runtime benchmark: Python 3.13.14, PyTorch
+  CUDA on RTX 4060 Ti, ResNet18 embedding-equivalent timing, EasyOCR fixed-crop
+  timing and a synthetic-only truth manifest. Real screenshot field accuracy
+  remains unmeasurable; no live semantic integration or phone input was used.
+
+- Added isolated Streaming Vision Phase 6A offline semantic contracts,
+  validated normalized ROIs, fail-closed field consensus, an unsupported
+  baseline analyzer, and a package-free benchmark/self-test pair.
+- Recorded the synthetic-only truth boundary and local GPU/OCR benchmark;
+  real screenshot field accuracy remains unmeasurable.
+
+- Added read-only Streaming Vision Phase 4 preflight with machine-readable
+  reason codes, ADB/device/tool checks, normalized `wm size` dimension
+  resolution, optional explicit dimensions, a OnePlus A6013 candidate ROI
+  profile and a 7-test package-free self-test. ADB/device/display preflight
+  passed; real streaming remains unclaimed because FFmpeg and the scrcpy
+  server JAR are unavailable.
+
+- Integrated the opt-in, read-only Streaming Vision Phases 1-3: pooled BGRA32
+  frames with bounded leases/subscriptions, scrcpy/FFmpeg observation,
+  regional temporal gates, bounded PNG evidence, JSON profiles and the
+  `observe-stream`/`observe-gates` diagnostics. Existing navigation,
+  screenshot and cleanup flows remain unchanged. Phase 2 and Phase 3
+  self-tests pass (3/3 and 15/15). An initial dirty-workspace restore attempt
+  hit the sandbox's inaccessible global NuGet.Config; the clean baseline later
+  verified full-solution restore/build successfully.
+
 - Added a run-local, dry-run-only `DecisionTagPlanner`. KEEP maps to
   `AI-Indexed`; REVIEW, DELETE-candidate, Partial and Unknown map to
   `AI-Review`. Plans require current Details/Appraisal state, ordinal and

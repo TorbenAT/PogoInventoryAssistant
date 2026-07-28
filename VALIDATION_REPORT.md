@@ -1,3 +1,95 @@
+## Streaming Vision Phase 5 Appraisal gate calibration - 2026-07-28
+
+- Current phone state was detected with 4 compatible `PokemonDetails` frames
+  among 5; one `Unknown` frame was fail-closed and no input was authorized
+  from it.
+- Existing named route succeeded:
+  `PokemonDetails -> PokemonMenuOpen -> AppraisalIntro -> AppraisalBars`.
+  Setup sent exactly 3 named inputs, stayed within the 6-input budget, used no
+  Back and reached stable `AppraisalBars` with all three IV bars visible.
+- Appraisal gate profile:
+  `profiles/pokemon-go-appraisal-bars-oneplus6t-portrait.json`. Required:
+  Header, AppraisalPanel, AttackBar, DefenseBar, HpBar. DiagnosticOnly:
+  BottomControl. Volatile: Model, AnimatedBackground.
+- Appraisal gate result: **PASS 3/3** for 10 s, 10 s and 20 s requests.
+  Every run reported `CalibrationInputCommandsSent=0`,
+  `LeasesOutstandingAtShutdown=0`, `ShutdownResult=Clean`, and no errors.
+- Selected thresholds: motion `0.05`, difference `0.04`, similarity `0.94`,
+  sharpness `0.025`; the sharpness value is based on the measured AttackBar
+  distribution and not a forced-pass relaxation. Model/background-only and
+  unchanged-bars/header false transitions were 0.
+- Final phone state is `AppraisalBars`; no automatic exit was sent.
+- Repository self-test after adding the orchestration contract test: **250/250**
+  passed; the expected local-data sanity check is skipped in the clean test
+  clone. Phase 2/3/4/5/6A self-tests remain 3/3, 15/15, 7/7, 8/8 and 8/8.
+
+## Streaming Vision Phase 5 gate calibration - 2026-07-28
+
+- Read-only Details preflight and three calibrated gate runs completed against
+  `192.168.1.185:5555`, `ONEPLUS_A6013`, resolved `886x1920` portrait.
+- Details compatibility was visually confirmed from bounded evidence:
+  Squawkabilly CP/species header, Details panel and bottom controls were
+  present; no map/list/modal screen was used.
+- Gate result: **PASS 3/3** for 10 s, 10 s and 20 s requests. Required regions
+  Header, Panel and BottomControl were stable; Model and AnimatedBackground
+  remained volatile and were ignored for progression.
+- The live Header sharpness distribution was below the previous synthetic
+  floor, so `minimumSharpnessScore` was calibrated from `0.18` to `0.06`.
+  Motion, difference, similarity and required-region guards were unchanged.
+- All three runs reported `InputCommandsSent=0`,
+  `LeasesOutstandingAtShutdown=0`, `ShutdownResult=Clean`, and no errors.
+  Per-region P50/P95/P99 metrics are in
+  `docs/STREAMING_VISION_PHASE5.md`.
+- Appraisal setup and calibration are recorded in the section above. No Phase
+  6B or Phase 7 work was started.
+- Direct Release `--no-restore` build of the changed gate projects passed with
+  0 warnings and 0 errors. Phase 2/3/4/5/6A package-free self-tests passed
+  3/3, 15/15, 7/7, 8/8 and 8/8. The wrapper `build.ps1` and `test.ps1` were
+  also executed, but their restore phase reported the known ACL failure on
+  `C:\Users\torbe\AppData\Roaming\NuGet\NuGet.Config`; therefore those
+  wrapper runs are recorded as limited, not as full green validation.
+
+## Streaming Vision Phase 4 - 2026-07-28
+
+- Clean integration worktree baseline: 28 solution projects; `dotnet restore`
+  passed; `dotnet build PogoInventoryAssistant.sln --configuration Release
+  --no-restore` passed with 0 warnings and 0 errors on .NET SDK 10.0.302
+  (8.0.423 installed).
+- Clean `scripts/test.ps1`: 249/249 passed, with one local-data evidence
+  sanity check skipped because `local-data/` is absent in the clean clone.
+  The earlier 249/250 result is only from the dirty workspace's pre-existing
+  identity test change and is not caused by streaming integration.
+- Phase 2 self-test: 3/3 PASS. Phase 3 self-test: 15/15 PASS.
+- Phase 4 self-test: 7/7 PASS.
+- Preflight: ADB PASS; authorized serial `192.168.1.185:5555`, model
+  `ONEPLUS_A6013`, physical display `1080x2340` portrait, resolved stream
+  `886x1920` at max-size 1920, output directory PASS, InputCommandsSent=0.
+- Historical Phase 4 preflight was blocked before the local toolchain was
+  installed; the completed Phase 5 preflight and observe acceptance are
+  recorded in the Phase 5 section below.
+- ROI profile candidate: `profiles/pokemon-go-oneplus6t-portrait.json`.
+  It is normalized and unverified against stream evidence.
+- Real-phone gate calibration, frame timing, bounded PNG evidence and
+  shutdown lease measurement: NOT RUN because the decoder/server toolchain is
+  unavailable. No transition PASS is claimed.
+
+## Streaming Vision Phases 1-3 integration - 2026-07-28
+
+- ZIP SHA-256 verified against handover: `9a409801e84b74f335bae37417884da1e940059e18057efa2658d6596943bce3`.
+- Phase 2 package-free self-test: PASS, 3/3.
+- Phase 3 package-free self-test: PASS, 15/15; `InputCommandsSent = 0`.
+- An initial dirty-workspace baseline restore was blocked before compilation
+  by the global NuGet.Config; the clean-worktree baseline above supersedes it.
+- Real-phone scrcpy/ADB acceptance: NOT RUN; no device evidence was available.
+- Repository scripts: build/demo/fake/device-free/iPhone/synthetic scripts
+  passed. `test.ps1` reached 249/250; its single failure is the pre-existing
+  dirty-worktree test `Tag mutation binding ignores tags and rejects identity
+  changes` (changed CP header rejected), outside the streaming files.
+- `prepare-android-phone.ps1`: NOT RUN successfully; ADB was unavailable.
+- Streaming wrapper build and self-test scripts: PASS.
+- CLI validation: both observe commands reject missing `--device` with
+  explicit validation; no device stream was started.
+
 ## Task-K 15-case manual ground-truth analysis - 2026-07-26
 
 - Manual labels: 30 run rows covering 15 ordinal pairs; all 30 are Verified
@@ -583,3 +675,99 @@ been run for this checkpoint.
 - Evidence gate: 13/13 frames classified `PokemonDetails` (8 sand-exit and 5
   original frames), confidence 1.0.
 - Real-phone 2x50 pilot: complete; see the acceptance section above.
+## Streaming Vision Phase 5 - 2026-07-28
+
+- Full Release solution build: PASS, 28 projects, 0 warnings, 0 errors.
+- Repository self-test: PASS, 249/249.
+- Phase 4 self-test: PASS, 7/7; input commands sent: 0.
+- Local toolchain preflight: PASS for ADB, FFmpeg, scrcpy server, authorized
+  `ONEPLUS_A6013`, and automatic `886x1920` portrait dimensions.
+- Zero-frame root cause: FFmpeg `-fflags nobuffer` suppressed rawvideo output
+  in the pipe-fed H.264 mode; removing it restored decoded BGRA frames.
+- Real-phone observe acceptance: PASS for 30s/30s/60s; decoded/published
+  frames were 837/837, 833/832 and 1691/1691; all shutdowns clean.
+- Phase 5 self-test: PASS, 8/8.
+- Three gate observations completed read-only with 68-80 frames and zero
+  outstanding leases, but timed out conservatively on required Header
+  motion/sharpness. Evidence shows the phone on the Pokémon GO map rather than
+  Details/Appraisal, so regional gate calibration is NOT ACCEPTED and requires
+  physical placement only; no navigation/input was performed.
+- An isolated read-only raw-protocol diagnostic read H.264 bytes from the same
+  phone/server combination; this is diagnostic evidence only and is not
+  application-level stream acceptance.
+- Input commands, navigation and state-changing phone operations: 0.
+- Local toolchain binaries remain ignored under `tools/local/`.
+# Validation report — Streaming Vision Phase 6A
+
+Date: 2026-07-28
+
+## Local runtime completion update
+
+- Python 3.13.14 local embeddable runtime: PASS.
+- GPU: NVIDIA GeForce RTX 4060 Ti, driver 591.86, 8188 MiB.
+- PyTorch 2.11.0+cu128: PASS; CUDA 12.8 and `cuda:0` tensor smoke test.
+- Embedding-equivalent ResNet18 benchmark: PASS; P50/P95/P99 3.570/3.883/
+  4.016 ms, peak VRAM 112,626,688 bytes.
+- EasyOCR 1.7.2 fixed-crop benchmark: PASS; P50/P95/P99 69.848/73.289/
+  73.289 ms, peak VRAM 344,411,648 bytes.
+- Synthetic truth manifest: PASS and versioned at
+  `data/phase6a-truth-manifest.synthetic.json`.
+- Real screenshot field accuracy: NOT MEASURABLE; real crop truth is
+  Unverifiable. False Known and False Complete are null for that crop.
+
+## Executed results
+
+- Solution restore/build: PASS, 33 projects, 0 warnings, 0 errors.
+- Repository self-test: PASS, 249/249; one expected local-data sanity check skipped.
+- Phase 2 self-test: PASS, 3/3; Phase 3: PASS, 15/15; Phase 4: PASS, 7/7.
+- Phase 6A self-test: PASS, 8/8.
+- Required build/demo/fake/offline scripts: PASS, 15/15 returned exit code 0.
+- Phase 6A benchmark: PASS, offline synthetic case; false Complete 0; input commands 0.
+
+## Limitations
+
+The committed iPhone fixtures are pretest evidence only. Phase 6A local runtime
+and GPU/OCR benchmarks are recorded in the Phase 6A section; real screenshot
+field accuracy remains NOT MEASURABLE because the crop truth is Unverifiable.
+Read-only Android preparation reported ADB unavailable and sent no input.
+
+Local manifests are outside Git at `C:\Data\PokemonGo-Tools\manifests`.
+## Streaming Vision Phase 6B shadow integration - 2026-07-28
+
+- Supplied Phase 6B ZIP SHA-256 verified as
+  `0AAFD7A8BB54B1DD17073E7E6C71B72E520A09B014939092FF50EB324CE37178`.
+- Release solution build: PASS, 0 warnings, 0 errors.
+- Phase 6B self-test: PASS 10/10.
+- Phase 2/3/4/5/6A self-tests: PASS 3/3, 15/15, 7/7, 8/8 and 8/8.
+- Repository self-test: PASS 250/250; the existing local-data sanity check is
+  skipped when local-data is absent in the clone.
+- Live shadow run: PASS bounded completion with 3 stable AppraisalBars frames,
+  0 known candidates, 0 analyzer faults, 0 analyzer timeouts,
+  `AuthorizesPhoneInput=false`, `InputCommandsSent=0`.
+- Limitation: no production EasyOCR/Ollama/reference provider is present, so
+  no semantic field accuracy and no Details/wrong-screen real-phone acceptance
+  is claimed. The runner intentionally preserves Unsupported readings.
+## Consolidated Streaming Vision validation (2026-07-28)
+
+- Consolidation branch build: PASS, 37 solution projects, 0 warnings, 0 errors.
+- Repository self-test: PASS 250/250; the local-data sanity check is skipped
+  when `local-data/` is absent in this clone.
+- Phase self-tests: Phase 2 3/3, Phase 3 15/15, Phase 4 7/7, Phase 5 8/8,
+  Phase 6A 12/12, Phase 6B 10/10.
+- Ollama live benchmark was not counted as a fake/package-free test: it is a
+  real HTTP benchmark requiring a running Ollama service and was stopped after
+  no service response. The package-free Ollama contracts are included in the
+  Phase 6A 12/12 result.
+- Read-only evidence remains `InputCommandsSent=0`; no semantic accuracy claim
+  is made. VLM evidence worktree is preserved separately because it is dirty
+  and not committed/pushed.
+
+### Consolidation and cleanup record
+
+- Consolidation branch: `integration/streaming-vision-consolidation`.
+- Merge commits: `9f29f4c` (Phase 6B), `f961698` (Ollama).
+- Milestone tags: `streaming-vision-phase5-appraisal`,
+  `streaming-vision-phase6a-ollama`, `streaming-vision-phase6b-shadow`.
+- Preserved dirty/active worktrees: VLM evidence bakeoff, Phase 5/6A
+  integration `.codex_tmp`, worker branches, WIP branch and
+  `tag-verification-guard`. They were not deleted.
