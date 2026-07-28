@@ -82,6 +82,16 @@ public sealed record PokemonIdentityConsensus
     public required int IgnoredFrameCount { get; init; }
 }
 
+public sealed record SameItemVisualBindingResult
+{
+    public required bool IsSameItem { get; init; }
+    public required double HeaderSimilarity { get; init; }
+    public required double ModelSimilarity { get; init; }
+    public required double PanelSimilarity { get; init; }
+    public required IReadOnlyList<string> Regions { get; init; }
+    public required string FailureReason { get; init; }
+}
+
 public sealed record PokemonIdentityInstance
 {
     public required string ScanRunId { get; init; }

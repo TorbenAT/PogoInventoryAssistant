@@ -213,6 +213,7 @@ var tests = new (string Name, Func<Task> Run)[]
     ,("Dynamic identity ignores zero one and two mutable tags", PokemonIdentityTests.RunTagLayoutAsync)
     ,("Dynamic identity aligns lower details after tags", PokemonIdentityTests.RunAnchorAlignmentAsync)
     ,("Dynamic identity separates changed stable content", PokemonIdentityTests.RunSeparationAsync)
+    ,("Tag mutation binding ignores tags and rejects identity changes", PokemonIdentityTests.RunTagMutationBindingAsync)
     ,("Dynamic identity consensus preserves duplicate instances", PokemonIdentityTests.RunConsensusAsync)
     ,("Dynamic identity consensus requires three frames", PokemonIdentityTests.RunConsensusContractAsync)
     ,("Verified sequence is bounded, checkpointed and fail-closed", VerifiedInventorySequenceTests.RunAsync)

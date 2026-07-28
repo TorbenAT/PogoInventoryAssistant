@@ -172,6 +172,9 @@ static async Task<int> MainAsync(string[] args)
             "device-set-pokemon-tag" => await SetPokemonTagAsync(
                 args.Skip(1).ToArray(),
                 cancellationSource.Token),
+            "device-apply-review-tag" => await ApplyReviewTagAsync(
+                args.Skip(1).ToArray(),
+                cancellationSource.Token),
             "tag-selector-detect-image" => await DetectTagSelectorImageAsync(
                 args.Skip(1).ToArray(),
                 cancellationSource.Token),
@@ -2857,6 +2860,15 @@ static async Task<int> SetPokemonTagAsync(
     var options = ParseOptions(args);
     var output = Path.GetFullPath(Require(options, "out"));
     var tagName = Require(options, "tag");
+    var planPath = Require(options, "plan");
+    var plan = JsonSerializer.Deserialize<TagPlan>(
+        await File.ReadAllTextAsync(planPath, cancellationToken),
+        ScreenProfileLoader.CreateJsonOptions()) ??
+        throw new InvalidOperationException("Tag plan JSON could not be read.");
+    if (!options.ContainsKey("execute") || !string.Equals(tagName, "AI-Review", StringComparison.Ordinal) ||
+        !string.Equals(plan.DesiredTag, "AI-Review", StringComparison.Ordinal) || !plan.MayExecute)
+        throw new InvalidOperationException(
+            "This command requires --execute and an executable AI-Review TagPlan.");
     var selectedState = ParseBoolean(options, "selected", false);
     var profilePath = Path.GetFullPath(Require(options, "profile"));
     var profile = await TagSelectorProfileLoader.LoadAsync(profilePath, cancellationToken);
@@ -2880,6 +2892,7 @@ static async Task<int> SetPokemonTagAsync(
     var actions = new List<object>();
     var before = await transport.CaptureScreenshotPngAsync(selected.Serial, cancellationToken);
     var beforeState = detector.Detect(before);
+    var beforeIdentity = new PokemonDetailsIdentityAnalyzer().Analyze(before);
     var detailsTagPillsBefore = tagSelector.CountDetailsTagPills(before);
     await File.WriteAllBytesAsync(Path.Combine(output, "before.png"), before, cancellationToken);
     await WriteJsonAsync("state-before.json", new
@@ -2888,12 +2901,18 @@ static async Task<int> SetPokemonTagAsync(
         beforeState.Confidence,
         requestedTag = tagName,
         requestedSelected = selectedState
+        ,stableFingerprint = beforeIdentity.StableFingerprintSha256
+        ,planStableFingerprint = plan.StableFingerprint
     });
     if (beforeState.State != PokemonGoGameState.PokemonDetails)
     {
         throw new InvalidOperationException(
             "PokemonDetails was not verified; no tag operation was sent.");
     }
+    if (string.IsNullOrWhiteSpace(beforeIdentity.StableFingerprintSha256) ||
+        !string.Equals(beforeIdentity.StableFingerprintSha256, plan.StableFingerprint, StringComparison.Ordinal))
+        throw new InvalidOperationException(
+            "Current Pokémon fingerprint does not match the executable TagPlan; no tag operation was sent.");
 
     var menuControl = locator.LocateDetailsMenu(before) ??
         throw new InvalidOperationException("Details menu control was not visually verified.");
@@ -2915,14 +2934,17 @@ static async Task<int> SetPokemonTagAsync(
 
     TagSelectionMatch? match = null;
     var scrolls = 0;
-    while (scrolls <= profile.MaximumScrolls)
+    var maximumTagSelectorScrolls = options.ContainsKey("no-scroll")
+        ? 0
+        : profile.MaximumScrolls;
+    while (scrolls <= profile.MaximumScrolls && scrolls <= maximumTagSelectorScrolls)
     {
         match = tagSelector.FindByName(selectorPng, tagName, profile, profilePath);
         if (match is not null)
         {
             break;
         }
-        if (scrolls == profile.MaximumScrolls)
+        if (scrolls == maximumTagSelectorScrolls)
         {
             break;
         }
@@ -3017,6 +3039,14 @@ static async Task<int> SetPokemonTagAsync(
     var after = await WaitForAsync(
         png => detector.Detect(png).State == PokemonGoGameState.PokemonDetails,
         "PokemonDetails");
+    var afterIdentity = new PokemonDetailsIdentityAnalyzer().Analyze(after);
+    var sameItemBinding = new PokemonDetailsIdentityAnalyzer().CompareForSameItem(before, after);
+    if (!sameItemBinding.IsSameItem)
+    {
+        await File.WriteAllBytesAsync(Path.Combine(output, "after.png"), after, cancellationToken);
+        throw new InvalidOperationException(
+            $"Current Pokémon visual binding changed during tag operation; verification failed: {sameItemBinding.FailureReason}");
+    }
     var detailsTagPillsAfter = tagSelector.CountDetailsTagPills(after);
     var expectedPillCount = rowMutationActions == 0
         ? detailsTagPillsBefore
@@ -3035,6 +3065,9 @@ static async Task<int> SetPokemonTagAsync(
         state = detector.Detect(after).State.ToString(),
         requestedTag = tagName,
         requestedSelected = selectedState,
+        stableFingerprintBefore = beforeIdentity.StableFingerprintSha256,
+        stableFingerprintAfter = afterIdentity.StableFingerprintSha256,
+        sameItemBinding,
         initialSelected,
         selectorSelected = match.Row.IsSelected,
         detailsTagPillsBefore,
@@ -3050,6 +3083,12 @@ static async Task<int> SetPokemonTagAsync(
         selected.Serial,
         requestedTag = tagName,
         requestedSelected = selectedState,
+        planPath,
+        planRunId = plan.RunId,
+        planOrdinal = plan.Ordinal,
+        stableFingerprintBefore = beforeIdentity.StableFingerprintSha256,
+        stableFingerprintAfter = afterIdentity.StableFingerprintSha256,
+        sameItemBinding,
         rowIndexUsed = false,
         fixedRowCoordinateUsed = false,
         rowMutationActions,
@@ -3102,6 +3141,32 @@ static async Task<int> SetPokemonTagAsync(
         Path.Combine(output, name),
         JsonSerializer.Serialize(value, new JsonSerializerOptions { WriteIndented = true }),
         cancellationToken);
+}
+
+static async Task<int> ApplyReviewTagAsync(string[] args, CancellationToken cancellationToken)
+{
+    var options = ParseOptions(args);
+    var planPath = Path.GetFullPath(Require(options, "plan"));
+    var plan = JsonSerializer.Deserialize<TagPlan>(
+        await File.ReadAllTextAsync(planPath, cancellationToken),
+        ScreenProfileLoader.CreateJsonOptions()) ??
+        throw new InvalidOperationException("Tag plan JSON could not be read.");
+    var output = Path.GetFullPath(Require(options, "out"));
+    Directory.CreateDirectory(output);
+    if (!options.ContainsKey("execute"))
+    {
+        await File.WriteAllTextAsync(
+            Path.Combine(output, "dry-run.json"),
+            JsonSerializer.Serialize(new { plan, phoneInputCount = 0, outcome = "DRY_RUN_NO_PHONE_INPUT" },
+                ScreenProfileLoader.CreateJsonOptions(writeIndented: true)),
+            cancellationToken);
+        Console.WriteLine("DRY_RUN_NO_PHONE_INPUT");
+        return 0;
+    }
+    if (!string.Equals(plan.DesiredTag, "AI-Review", StringComparison.Ordinal) || !plan.MayExecute)
+        throw new InvalidOperationException("Only an executable AI-Review plan may be executed.");
+    var forwarded = args.Concat(new[] { "--tag", "AI-Review", "--selected", "true", "--no-scroll", "true", "--execute", "true" }).ToArray();
+    return await SetPokemonTagAsync(forwarded, cancellationToken);
 }
 
 static async Task<int> DetectTagSelectorImageAsync(
@@ -3614,7 +3679,8 @@ static void PrintHelp()
     Console.WriteLine("                            [--apply-index-tag --index-tag AI-Indexed]");
     Console.WriteLine("                            [--apply-classification-tag --classification-tag <AI-Keep|AI-Review>]");
     Console.WriteLine("  device-validate-navigation-safety --adb <adb.exe> --out <directory> [--serial <serial>] [--cycles <1|2|3>]");
-    Console.WriteLine("  device-set-pokemon-tag --tag <name> --selected <true|false> --profile <tag-profile.json> --out <directory>");
+    Console.WriteLine("  device-set-pokemon-tag --tag <name> --selected <true|false> --plan <tag-plan.json> --profile <tag-profile.json> --out <directory>");
+    Console.WriteLine("  device-apply-review-tag --plan <tag-plan.json> --profile <tag-profile.json> --out <directory> [--execute]");
     Console.WriteLine("  tag-selector-detect-image --image <screen.png> --profile <tag-profile.json> --tag <name> --out <result.json>");
     Console.WriteLine("  device-open-appraisal --profile <automation.json> --appraisal-profile <appraisal.json> --out <directory>");
     Console.WriteLine("                        [--adb <adb.exe>] [--serial <serial>]");

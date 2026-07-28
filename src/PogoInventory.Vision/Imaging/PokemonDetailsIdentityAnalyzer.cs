@@ -33,6 +33,46 @@ public sealed class PokemonDetailsIdentityAnalyzer
         }
     }
 
+    public SameItemVisualBindingResult CompareForSameItem(byte[] beforePng, byte[] afterPng)
+    {
+        try
+        {
+            var before = PngDecoder.Decode(beforePng);
+            var after = PngDecoder.Decode(afterPng);
+            if (before.Width != after.Width || before.Height != after.Height)
+                return Failed("Screen geometry changed.", 0, 0, 0);
+
+            var header = Similarity(before, after, new NormalizedRegion { X = 0.22, Y = 0.40, Width = 0.56, Height = 0.10 }, FingerprintMode.Color);
+            var model = Similarity(before, after, new NormalizedRegion { X = 0.12, Y = 0.20, Width = 0.76, Height = 0.20 }, FingerprintMode.Color);
+            var panel = Similarity(before, after, new NormalizedRegion { X = 0.08, Y = 0.58, Width = 0.84, Height = 0.12 }, FingerprintMode.Edge);
+            var same = header >= 0.94 && model >= 0.80 && panel >= 0.90;
+            return new SameItemVisualBindingResult
+            {
+                IsSameItem = same,
+                HeaderSimilarity = header,
+                ModelSimilarity = model,
+                PanelSimilarity = panel,
+                Regions = new[] { "header", "pokemon-model", "details-panel" },
+                FailureReason = same ? string.Empty : "One or more invariant Details regions changed beyond tolerance."
+            };
+        }
+        catch (Exception exception) when (exception is ScreenVisionException or ArgumentException)
+        {
+            return Failed(exception.Message, 0, 0, 0);
+        }
+    }
+
+    private SameItemVisualBindingResult Failed(string reason, double header, double model, double panel) => new()
+    {
+        IsSameItem = false, HeaderSimilarity = header, ModelSimilarity = model, PanelSimilarity = panel,
+        Regions = new[] { "header", "pokemon-model", "details-panel" }, FailureReason = reason
+    };
+
+    private static double Similarity(PixelImage first, PixelImage second, NormalizedRegion region, FingerprintMode mode) =>
+        FingerprintComparer.Similarity(
+            FingerprintExtractor.Extract(first, region, mode, 16, 12),
+            FingerprintExtractor.Extract(second, region, mode, 16, 12));
+
     public PokemonIdentityConsensus Consensus(IReadOnlyList<PokemonIdentityFrame> frames)
     {
         ArgumentNullException.ThrowIfNull(frames);

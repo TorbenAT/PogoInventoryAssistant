@@ -58,6 +58,25 @@ internal static class PokemonIdentityTests
         return Task.CompletedTask;
     }
 
+    public static Task RunTagMutationBindingAsync()
+    {
+        var analyzer = new PokemonDetailsIdentityAnalyzer();
+        var before = PngEncoder.Encode(Frame("Eevee", 0, 0, false));
+        var tagged = PngEncoder.Encode(WithFill(Frame("Eevee", 0, 0, false), 40, 162, 120, 172, (180, 180, 180)));
+        var animated = PngEncoder.Encode(WithFill(Frame("Eevee", 0, 1, false), 72, 130, 84, 134, (45, 85, 175)));
+        var tagBinding = analyzer.CompareForSameItem(before, tagged);
+        Assert(tagBinding.IsSameItem,
+            $"tag mutation preserves same item (h={tagBinding.HeaderSimilarity:F3}, m={tagBinding.ModelSimilarity:F3}, p={tagBinding.PanelSimilarity:F3})");
+        Assert(analyzer.CompareForSameItem(tagged, animated).IsSameItem, "small model animation is tolerated");
+        Assert(!analyzer.CompareForSameItem(before, PngEncoder.Encode(Frame("Pikachu", 0, 0, false))).IsSameItem,
+            "changed species is rejected");
+        Assert(!analyzer.CompareForSameItem(before, PngEncoder.Encode(Frame("Eevee", 1, 0, false))).IsSameItem,
+            "changed CP header is rejected");
+        Assert(!analyzer.CompareForSameItem(before, PngEncoder.Encode(Frame("Eevee", 0, 0, true))).IsSameItem,
+            "changed Details content is rejected");
+        return Task.CompletedTask;
+    }
+
     public static Task RunConsensusAsync()
     {
         var analyzer = new PokemonDetailsIdentityAnalyzer();
