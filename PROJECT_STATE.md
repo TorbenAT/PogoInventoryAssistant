@@ -2,6 +2,12 @@
 
 ## Streaming Vision Phase 6A offline semantic foundation (2026-07-28)
 
+Local Phase 6A runtime completion is now evidenced: Python 3.13.14,
+RTX 4060 Ti/driver 591.86/8188 MiB, PyTorch 2.11.0+cu128 CUDA smoke test,
+ResNet18 embedding-equivalent benchmark and EasyOCR 1.7.2 fixed-crop
+benchmark. The synthetic truth manifest is versioned, while real screenshot
+field accuracy remains NOT MEASURABLE and no live semantic integration exists.
+
 An isolated worktree from baseline `4ecfad3` adds
 `PogoInventory.Streaming.Semantics` and its package-free benchmark/self-test.
 The contracts validate frame dimensions/orientation/ROIs, preserve explicit

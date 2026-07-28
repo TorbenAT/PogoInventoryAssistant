@@ -627,6 +627,20 @@ been run for this checkpoint.
 
 Date: 2026-07-28
 
+## Local runtime completion update
+
+- Python 3.13.14 local embeddable runtime: PASS.
+- GPU: NVIDIA GeForce RTX 4060 Ti, driver 591.86, 8188 MiB.
+- PyTorch 2.11.0+cu128: PASS; CUDA 12.8 and `cuda:0` tensor smoke test.
+- Embedding-equivalent ResNet18 benchmark: PASS; P50/P95/P99 3.570/3.883/
+  4.016 ms, peak VRAM 112,626,688 bytes.
+- EasyOCR 1.7.2 fixed-crop benchmark: PASS; P50/P95/P99 69.848/73.289/
+  73.289 ms, peak VRAM 344,411,648 bytes.
+- Synthetic truth manifest: PASS and versioned at
+  `data/phase6a-truth-manifest.synthetic.json`.
+- Real screenshot field accuracy: NOT MEASURABLE; real crop truth is
+  Unverifiable. False Known and False Complete are null for that crop.
+
 ## Executed results
 
 - Solution restore/build: PASS, 33 projects, 0 warnings, 0 errors.

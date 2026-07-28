@@ -1,57 +1,57 @@
-# Streaming Vision Phase 6A — offline semantic foundation
+# Streaming Vision Phase 6A
 
-Phase 6A is an isolated, read-only offline layer. It accepts replay metadata and
-normalized regions; it does not reference `PogoInventory.Device`, automation,
-live streaming, navigation, tags, or destructive operations.
+## Status
 
-## Contracts and safety
+Phase 6A is a technical offline benchmark delivery. It remains isolated from
+live streaming, Device, Automation, navigation and all phone input.
 
-`PogoInventory.Streaming.Semantics` defines `FieldReading<T>`, evidence-bound
-frame observations, field analyzers, region validation, and a generic
-`FailClosedFieldConsensusGate<T>`. A value is `Known` only when the configured
-confidence threshold and independent agreement count are met. Conflicts,
-occlusion, invalid layouts, missing evidence, and unsupported methods remain
-explicit statuses. There is no global Pokemon-complete score.
+## Runtime evidence
 
-The current baseline analyzer intentionally returns `Unsupported` for model
-fields. This is safer than treating absent OCR/model runtimes as a negative or
-guessing from species, level, or neighboring frames.
+- Python: 3.13.14 embeddable runtime, SHA-256
+  `90B4E5B9898B72D744650524BFF92377C367F44BD5FBD09E3148656C080AD907`.
+- GPU: NVIDIA GeForce RTX 4060 Ti, driver 591.86, 8188 MiB.
+- Framework: PyTorch 2.11.0+cu128; CUDA 12.8; `torch.cuda.is_available()` true;
+  tensor smoke test completed on `cuda:0`.
+- Alternative OCR: EasyOCR 1.7.2, GPU mode, fixed crop only.
+- All runtimes, caches and model weights are outside Git under
+  `C:\Data\PokemonGo-Tools`.
 
-## Evidence inventory
+## Benchmarks
 
-The clean baseline contains committed synthetic screen fixtures under
-`data/screen-fixtures/` and 23 committed iPhone pretest images under
-`data/iphone-images/`. The iPhone images are cross-platform fixtures and are
-not Android coordinate, Calcy, or live-stream truth. The existing Task-K files
-document prior manually reviewed cases, but no Phase 6A truth manifest is
-present in this clean worktree. Therefore Phase 6A has zero verified truth
-cases and makes no accuracy claim against real screenshots.
+### Embedding-equivalent model
 
-## Benchmark
+Torchvision `ResNet18_Weights.DEFAULT` was used as a documented visual
+embedding-equivalent baseline (penultimate representation), not as a semantic
+Known/Complete authority. Batch size was 8 over 50 timed GPU runs:
 
-`PogoInventory.Streaming.Semantics.Benchmarks` runs without a phone and writes a
-bounded JSON report. The synthetic contract check records one correct CP
-consensus and `False Complete: 0`. GPU embedding and alternative OCR are
-reported as unavailable until a local model/runtime is installed and a
-provenance manifest exists; they are never silently substituted.
+- P50: 3.570 ms
+- P95: 3.883 ms
+- P99: 4.016 ms
+- Peak VRAM: 112,626,688 bytes
 
-## Local tools and models
+Report: `C:\Data\PokemonGo-Tools\manifests\phase6a-resnet18-gpu.json`.
 
-The intended ignored directory is `C:\Data\PokemonGo-Tools` (or a path supplied
-by environment variables `POGO_FFMPEG_PATH`, `POGO_SCRCPY_SERVER_PATH`,
-`POGO_PYTHON_PATH`, and `POGO_MODEL_CACHE`). No third-party binaries, Python
-environment, model weights, or machine-specific paths are committed. The
-implementation expects scrcpy server `4.0`, `control=false`, `audio=false`,
-and raw H.264 output, matching the existing preflight options.
+### Alternative OCR
 
-## Limitations and next phase
+EasyOCR ran on a fixed `886x420` header crop from the bounded local stream
+evidence. Five timed GPU runs produced P50 69.848 ms, P95/P99 73.289 ms and
+peak VRAM 344,411,648 bytes. The crop has no verified field truth, so outputs
+are diagnostics only; False Known and False Complete are `null`, not zero.
 
-The current host has an NVIDIA GeForce RTX 4060 Ti with 8188 MiB reported by
-`nvidia-smi`, but no `ffmpeg`, `scrcpy`, or Python executable in PATH. CUDA and
-model latency are consequently unmeasured. Installing those dependencies and
-adding a documented verified truth manifest are prerequisites for a real CPU/GPU
-comparison. Phase 6B may later adapt replay results to `FrameLease`; this
-commit does not alter Phase 5 runtime or authorize any phone input.
+Report: `C:\Data\PokemonGo-Tools\manifests\phase6a-easyocr.json`.
 
-Read-only audit: no Device/Automation reference, no tap/swipe API, and
-`InputCommandsSent = 0`.
+The existing deterministic consensus benchmark remains the fail-closed
+baseline and reports False Complete = 0 on its synthetic truth case.
+
+## Truth boundary
+
+`data/phase6a-truth-manifest.synthetic.json` is the only truth manifest used
+for correctness claims in this phase. It contains `SyntheticKnown` evidence
+only. Real phone screenshots and the EasyOCR crop are `Unverifiable`; no real
+field accuracy, False Known or False Complete claim is made for them.
+
+## Safety
+
+No live semantic integration was performed. No tap, swipe, key event,
+clipboard, navigation, Calcy, tag, cleanup, transfer or delete operation was
+used. `InputCommandsSent = 0`.

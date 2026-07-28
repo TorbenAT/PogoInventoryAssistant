@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+- Completed the local Phase 6A runtime benchmark: Python 3.13.14, PyTorch
+  CUDA on RTX 4060 Ti, ResNet18 embedding-equivalent timing, EasyOCR fixed-crop
+  timing and a synthetic-only truth manifest. Real screenshot field accuracy
+  remains unmeasurable; no live semantic integration or phone input was used.
+
 - Added isolated Streaming Vision Phase 6A offline semantic contracts,
   validated normalized ROIs, fail-closed field consensus, an unsupported
   baseline analyzer, and a package-free benchmark/self-test pair.
