@@ -747,3 +747,27 @@ Local manifests are outside Git at `C:\Data\PokemonGo-Tools\manifests`.
 - Limitation: no production EasyOCR/Ollama/reference provider is present, so
   no semantic field accuracy and no Details/wrong-screen real-phone acceptance
   is claimed. The runner intentionally preserves Unsupported readings.
+## Consolidated Streaming Vision validation (2026-07-28)
+
+- Consolidation branch build: PASS, 37 solution projects, 0 warnings, 0 errors.
+- Repository self-test: PASS 250/250; the local-data sanity check is skipped
+  when `local-data/` is absent in this clone.
+- Phase self-tests: Phase 2 3/3, Phase 3 15/15, Phase 4 7/7, Phase 5 8/8,
+  Phase 6A 12/12, Phase 6B 10/10.
+- Ollama live benchmark was not counted as a fake/package-free test: it is a
+  real HTTP benchmark requiring a running Ollama service and was stopped after
+  no service response. The package-free Ollama contracts are included in the
+  Phase 6A 12/12 result.
+- Read-only evidence remains `InputCommandsSent=0`; no semantic accuracy claim
+  is made. VLM evidence worktree is preserved separately because it is dirty
+  and not committed/pushed.
+
+### Consolidation and cleanup record
+
+- Consolidation branch: `integration/streaming-vision-consolidation`.
+- Merge commits: `9f29f4c` (Phase 6B), `f961698` (Ollama).
+- Milestone tags: `streaming-vision-phase5-appraisal`,
+  `streaming-vision-phase6a-ollama`, `streaming-vision-phase6b-shadow`.
+- Preserved dirty/active worktrees: VLM evidence bakeoff, Phase 5/6A
+  integration `.codex_tmp`, worker branches, WIP branch and
+  `tag-verification-guard`. They were not deleted.

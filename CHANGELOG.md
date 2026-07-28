@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+- Consolidated Streaming Vision Phases 1-6B onto `main`, including accepted
+  Details/Appraisal gates, the isolated Ollama candidate provider and the
+  Phase 6B shadow foundation. Validation is green; real semantic accuracy
+  remains unmeasured and the dirty VLM evidence worktree is preserved.
+
 - Integrated additive Streaming Vision Phase 6B shadow capture and comparison:
   bounded BGRA lease copying, fail-closed analyzer/reference discrepancy
   reporting, atomic JSON/Markdown output, read-only live runner and 10/10

@@ -1,5 +1,19 @@
 # Project state
 
+## Current canonical status (2026-07-28)
+
+Current canonical branch: `main` after the consolidation merge is pushed.
+Streaming Vision Phases 1-5: ACCEPTED. Details gate: ACCEPTED. Appraisal
+gate: ACCEPTED. Phase 6A technical benchmark: ACCEPTED. Ollama provider:
+DIAGNOSTIC/CANDIDATE ONLY. Phase 6B shadow foundation: ACCEPTED. Real
+semantic accuracy: NOT MEASURABLE. Phase 7: NOT STARTED.
+
+The consolidation branch contains the verified Phase 5/Appraisal tip
+`48da170`, Ollama tip `5c7d1d0`, and Phase 6B tip `3ddd6b8`. The VLM evidence
+worktree remains preserved separately because it is dirty, uncommitted and has
+no remote branch. No phone input, tagging, transfer or delete authority was
+added.
+
 ## Streaming Vision Phase 6B shadow integration (2026-07-28)
 
 The additive Phase 6B shadow package is integrated on

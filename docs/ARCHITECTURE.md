@@ -1,5 +1,17 @@
 # Architecture
 
+## Consolidated semantic boundaries (2026-07-28)
+
+The streaming transport and regional temporal gates are read-only and remain
+separate from Device/Automation input. Phase 6A semantic contracts preserve
+Unknown, Unsupported and candidate states without guessing. The Ollama client
+is a diagnostic candidate provider only: it can inspect model capabilities,
+embeddings and vision candidates, but it cannot authorize a Known observation
+or phone action. Phase 6B copies leased BGRA evidence before disposal, runs
+bounded analyzers and compares candidates with an explicit reference provider;
+it reports conflicts, timeouts and coverage gaps fail-closed. EasyOCR/Ollama
+production wiring and verified screenshot reference evidence remain incomplete.
+
 ## Phase 6B bounded semantic shadow boundary (2026-07-28)
 
 `PogoInventory.Streaming.Semantics.Shadow` consumes copied BGRA evidence from
