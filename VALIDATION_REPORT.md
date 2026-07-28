@@ -779,3 +779,20 @@ Main consolidation merge: `192d1c7`.
   `feature/streaming-phase6a-semantic-offline` and
   `feature/streaming-phase6b-shadow`. Every deleted tip is an ancestor of
   `origin/main`.
+## Phase 6A VLM evidence bake-off consolidation - 2026-07-28
+
+- Source commit: `8e9769bc8cbd4b8271d82a957267b78d86131d5c`; merged into the
+  finalization branch and subsequently into `main`.
+- Solution project count: **41** `.csproj` projects plus 2 solution folders.
+- Models executed: `qwen3-vl:2b-instruct`, `minicpm-v4.6:1b`, `gemma3:4b`,
+  `qwen3-vl:4b-instruct`, and existing `qwen3.5:9b` baseline.
+- Stage 3 schema-valid: **139/144**. qwen3-vl:2b: **67/72**, P50/P95/P99
+  **2911/4228/10476 ms**. gemma3:4b: **72/72**, P50/P95/P99
+  **6144/18250/22519 ms**.
+- Accuracy: **NOT MEASURABLE**. `FalseKnown = null` and
+  `FalseComplete = null`; the dataset contains synthetic fixtures and no
+  verified Android/Calcy truth. No model is production-approved.
+- Evidence ZIP: `C:\Data\PokemonGo-Tools\evidence\phase6a-vlm-bakeoff.zip`.
+  SHA-256: `F7CEDE7F3E7164C33F01BC12BFA9F9A863264D0ECCF7C88E44B16C07CB85DB12`.
+- The runner sends the actual JSON schema object to Ollama `/api/chat` and is
+  offline/read-only. `InputCommandsSent = 0`.
