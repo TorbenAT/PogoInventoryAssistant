@@ -21,7 +21,8 @@ public sealed class TemporalGateRun : IAsyncDisposable
         long stableFrames,
         long transitionFrames,
         long freezeEvents,
-        long resolutionChanges)
+        long resolutionChanges,
+        IReadOnlyDictionary<string, RegionalMetricSamples> regionalMetricSamples)
     {
         Session = session;
         Result = result;
@@ -34,6 +35,7 @@ public sealed class TemporalGateRun : IAsyncDisposable
         TransitionFrames = transitionFrames;
         FreezeEvents = freezeEvents;
         ResolutionChanges = resolutionChanges;
+        RegionalMetricSamples = regionalMetricSamples;
     }
 
     public TemporalGateSession Session { get; }
@@ -47,6 +49,7 @@ public sealed class TemporalGateRun : IAsyncDisposable
     public long TransitionFrames { get; }
     public long FreezeEvents { get; }
     public long ResolutionChanges { get; }
+    public IReadOnlyDictionary<string, RegionalMetricSamples> RegionalMetricSamples { get; }
 
     public ValueTask DisposeAsync() => Session.DisposeAsync();
 }
@@ -101,6 +104,7 @@ public sealed class TemporalGateEngine
         long transitionFrames = 0;
         long freezeEvents = 0;
         long resolutionChanges = 0;
+        var regionalMetrics = new Dictionary<string, RegionMetricAccumulator>(StringComparer.Ordinal);
 
         using var timeoutCts = new CancellationTokenSource(timeout);
         using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, timeoutCts.Token);
@@ -129,6 +133,16 @@ public sealed class TemporalGateEngine
                 }
 
                 durations.Add(observation.ObservationDuration.TotalMilliseconds);
+                foreach (var region in observation.Regions.Values)
+                {
+                    if (!regionalMetrics.TryGetValue(region.RegionName, out var accumulator))
+                    {
+                        accumulator = new RegionMetricAccumulator();
+                        regionalMetrics.Add(region.RegionName, accumulator);
+                    }
+
+                    accumulator.Add(region);
+                }
                 if (observation.IsLikelyStable)
                 {
                     stableFrames++;
@@ -231,7 +245,8 @@ public sealed class TemporalGateEngine
             stableFrames,
             transitionFrames,
             freezeEvents,
-            resolutionChanges);
+            resolutionChanges,
+            regionalMetrics.ToDictionary(x => x.Key, x => x.Value.ToSamples(), StringComparer.Ordinal));
     }
 
     private TimeSpan MaximumProfileDuration() => _profile.Kind switch
@@ -239,5 +254,29 @@ public sealed class TemporalGateEngine
         GateProfileKind.StableRegion => _profile.Stable.MaximumObservationDuration,
         GateProfileKind.TransitionDetected or GateProfileKind.TransitionCompleted => _profile.Transition.MaximumObservationDuration,
         _ => _options.MaximumDuration
+    };
+}
+
+internal sealed class RegionMetricAccumulator
+{
+    private readonly List<double> _motion = new();
+    private readonly List<double> _difference = new();
+    private readonly List<double> _similarity = new();
+    private readonly List<double> _sharpness = new();
+
+    public void Add(RegionalFrameObservation observation)
+    {
+        _motion.Add(observation.MotionScore);
+        _difference.Add(observation.DifferenceScore);
+        _similarity.Add(observation.SimilarityScore);
+        _sharpness.Add(observation.SharpnessScore);
+    }
+
+    public RegionalMetricSamples ToSamples() => new()
+    {
+        Motion = _motion.ToArray(),
+        Difference = _difference.ToArray(),
+        Similarity = _similarity.ToArray(),
+        Sharpness = _sharpness.ToArray()
     };
 }

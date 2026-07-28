@@ -272,6 +272,8 @@ internal sealed class GateObservationReport
     public long HistoryEvictions { get; set; }
     public long DroppedObservations { get; set; }
     public long DroppedTimelineEntries { get; set; }
+    public IReadOnlyDictionary<string, RegionMetricPercentiles> RegionMetrics { get; set; } =
+        new Dictionary<string, RegionMetricPercentiles>(StringComparer.Ordinal);
     public long LeasesOutstandingAtShutdown { get; set; }
     public int InputCommandsSent { get; set; }
     public string ShutdownResult { get; set; } = "NotStarted";
@@ -303,7 +305,41 @@ internal sealed class GateObservationReport
         HistoryEvictions = run.Session.HistoryEvictions;
         DroppedObservations = run.DroppedObservations;
         DroppedTimelineEntries = run.DroppedTimelineEntries;
+        RegionMetrics = run.RegionalMetricSamples.ToDictionary(
+            x => x.Key,
+            x => new RegionMetricPercentiles
+            {
+                MotionP50 = Percentiles.Value(x.Value.Motion, 0.50),
+                MotionP95 = Percentiles.Value(x.Value.Motion, 0.95),
+                MotionP99 = Percentiles.Value(x.Value.Motion, 0.99),
+                DifferenceP50 = Percentiles.Value(x.Value.Difference, 0.50),
+                DifferenceP95 = Percentiles.Value(x.Value.Difference, 0.95),
+                DifferenceP99 = Percentiles.Value(x.Value.Difference, 0.99),
+                SimilarityP50 = Percentiles.Value(x.Value.Similarity, 0.50),
+                SimilarityP95 = Percentiles.Value(x.Value.Similarity, 0.95),
+                SimilarityP99 = Percentiles.Value(x.Value.Similarity, 0.99),
+                SharpnessP50 = Percentiles.Value(x.Value.Sharpness, 0.50),
+                SharpnessP95 = Percentiles.Value(x.Value.Sharpness, 0.95),
+                SharpnessP99 = Percentiles.Value(x.Value.Sharpness, 0.99)
+            },
+            StringComparer.Ordinal);
     }
+}
+
+internal sealed class RegionMetricPercentiles
+{
+    public double? MotionP50 { get; init; }
+    public double? MotionP95 { get; init; }
+    public double? MotionP99 { get; init; }
+    public double? DifferenceP50 { get; init; }
+    public double? DifferenceP95 { get; init; }
+    public double? DifferenceP99 { get; init; }
+    public double? SimilarityP50 { get; init; }
+    public double? SimilarityP95 { get; init; }
+    public double? SimilarityP99 { get; init; }
+    public double? SharpnessP50 { get; init; }
+    public double? SharpnessP95 { get; init; }
+    public double? SharpnessP99 { get; init; }
 }
 
 internal sealed record DiagnosticError(string Type, string Message);

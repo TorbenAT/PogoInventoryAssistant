@@ -8,8 +8,11 @@ under ignored `tools/local/` and preflight passes for the authorized
 root cause was FFmpeg `-fflags nobuffer` suppressing pipe-fed rawvideo output;
 removing it restored frames. Real observe acceptance passed 30s/30s/60s with
 837/837, 833/832 and 1691/1691 decoded/published frames, clean shutdown and
-zero input. Three gate observations timed out on required Header
-motion/sharpness, so regional calibration is not accepted.
+zero input. Details gate calibration is now PASS 3/3 (10 s, 10 s, 20 s) on a
+manually placed ordinary Details screen. The live Header sharpness floor was
+calibrated to 0.06; Header, Panel and BottomControl are required and
+Model/AnimatedBackground remain volatile. Appraisal gate calibration is
+`PENDING_MANUAL_PLACEMENT`; no Appraisal navigation or input was performed.
 ## Streaming Vision Phase 6A offline semantic foundation (2026-07-28)
 
 Local Phase 6A runtime completion is now evidenced: Python 3.13.14,

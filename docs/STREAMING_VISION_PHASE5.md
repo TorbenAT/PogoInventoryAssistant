@@ -2,9 +2,10 @@
 
 ## Status
 
-Generic read-only real-stream acceptance is **PASS**. Gate calibration is
-**NOT ACCEPTED**: three bounded gate runs observed frames but timed out
-conservatively on `MotionTooHigh`/`SharpnessTooLow` in required Header.
+Generic read-only real-stream acceptance is **PASS**. Details gate
+calibration is **PASS (3/3)** after calibrating the live Header sharpness
+floor to `0.06`; Appraisal calibration remains
+`PENDING_MANUAL_PLACEMENT`.
 
 Device: `192.168.1.185:5555`, `ONEPLUS_A6013`, Android 11, physical
 `1080x2340` portrait, resolved stream `886x1920`. scrcpy v4.0 and FFmpeg
@@ -38,14 +39,40 @@ All runs reported zero interruptions/freezes and clean lease shutdown.
 
 ## Gate runs
 
-Three read-only 10-second gate observations completed with 68–80 frames and
-zero outstanding leases. They timed out on required Header motion/sharpness;
-no regional threshold or gate PASS is claimed. No phone placement request was
-made during the run. The selected evidence frame
-`local-data/validation/streaming-phase5/gate-1-10s/frames/frame-00000049-BestHeaderFrame.png`
-shows the phone on the Pokémon GO map, not Details/Appraisal. Generic stream
-acceptance is complete; only physical placement on a valid Details or Appraisal
-screen remains before regional calibration can be rerun.
+The user manually placed an ordinary Details screen showing Squawkabilly
+(CP, species header, Details panel and bottom controls). A short preflight
+confirmed 886x1920 frames and compatible screen topology. The first profile
+attempt exposed a live-device sharpness mismatch (Header P50 about 0.065-0.075
+versus the synthetic 0.18 floor); the calibrated profile now uses
+`minimumSharpnessScore = 0.06`. This is a measurement-based threshold change,
+not a change to required regions or volatile-region handling.
+
+| Run | Requested | Frames | Final | P50/P95/P99 observation ms | Input | Leases | Shutdown |
+|---|---:|---:|---|---:|---:|---:|---|
+| details-gate-1 | 10 s | 24 | Passed | 1.418 / 5.967 / 7.607 | 0 | 0 | Clean |
+| details-gate-2 | 10 s | 18 | Passed | 1.532 / 8.252 / 9.683 | 0 | 0 | Clean |
+| details-gate-3 | 20 s | 21 | Passed | 1.588 / 7.724 / 9.545 | 0 | 0 | Clean |
+
+Representative per-region metrics from the 20-second run (P50/P95/P99):
+
+| Region | Motion | Difference | Similarity | Sharpness |
+|---|---:|---:|---:|---:|
+| Header | 0.00014 / 0.00137 / 0.80027 | 0.00184 / 0.00232 / 0.80046 | 0.99992 / 0.99995 / 0.99996 | 0.07256 / 0.07551 / 0.07561 |
+| Panel | 0.00022 / 0.01277 / 0.80255 | 0.00084 / 0.00204 / 0.80041 | 0.99967 / 1.00000 / 1.00000 | 0.14921 / 0.15160 / 0.15176 |
+| BottomControl | 0.00021 / 0.00588 / 0.80118 | 0.00095 / 0.00228 / 0.80046 | 0.99997 / 1.00000 / 1.00000 | 0.17154 / 0.17267 / 0.17273 |
+| Model | 0.02888 / 0.03695 / 0.80739 | 0.00529 / 0.00723 / 0.80145 | 0.98568 / 0.99151 / 0.99255 | 0.10602 / 0.10873 / 0.10978 |
+| AnimatedBackground | 0.02311 / 0.02863 / 0.80573 | 0.00431 / 0.00599 / 0.80120 | 0.99012 / 0.99427 / 0.99517 | 0.11118 / 0.11327 / 0.11363 |
+
+The approximately 0.80 P99 motion/difference values are first-frame
+initialization outliers; the gate requires consecutive stable frames and
+passed with Header/Panel/BottomControl stable while Model and
+AnimatedBackground remained volatile/ignored. No false transition was
+observed after initialization, and no transition evidence was emitted from
+the volatile regions. The three runs also serve as repeated start/stop
+cycles: no zombie process, forward, lease or input was reported.
+
+Appraisal was not opened or navigated to. `AppraisalGateCalibration =
+PENDING_MANUAL_PLACEMENT`; this does not invalidate the green Details gate.
 
 ## Non-actions
 

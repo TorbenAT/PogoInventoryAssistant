@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+- Completed read-only Streaming Vision Phase 5 Details gate calibration on
+  the authorized OnePlus phone: 3/3 PASS (10 s, 10 s, 20 s), zero input,
+  zero outstanding leases and clean shutdown. Added per-region P50/P95/P99
+  gate metrics and calibrated the measured live Header sharpness floor to
+  0.06. Appraisal remains pending manual placement; Phase 6B/7 were not run.
+
 - Fixed the Phase 5 zero-frame condition: FFmpeg `-fflags nobuffer` suppressed
   pipe-fed rawvideo output. Read-only 30s/30s/60s runs now pass with
   837/837, 833/832 and 1691/1691 decoded/published frames. Gate calibration

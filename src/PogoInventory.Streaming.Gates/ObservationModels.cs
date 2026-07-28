@@ -61,6 +61,14 @@ public sealed record RegionalFrameObservation
     public required bool IsLikelyTransitioning { get; init; }
 }
 
+public sealed record RegionalMetricSamples
+{
+    public required IReadOnlyList<double> Motion { get; init; }
+    public required IReadOnlyList<double> Difference { get; init; }
+    public required IReadOnlyList<double> Similarity { get; init; }
+    public required IReadOnlyList<double> Sharpness { get; init; }
+}
+
 public sealed record TemporalFrameObservation
 {
     public required FrameId FrameId { get; init; }

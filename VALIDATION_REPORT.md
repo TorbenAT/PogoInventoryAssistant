@@ -1,3 +1,30 @@
+## Streaming Vision Phase 5 gate calibration - 2026-07-28
+
+- Read-only Details preflight and three calibrated gate runs completed against
+  `192.168.1.185:5555`, `ONEPLUS_A6013`, resolved `886x1920` portrait.
+- Details compatibility was visually confirmed from bounded evidence:
+  Squawkabilly CP/species header, Details panel and bottom controls were
+  present; no map/list/modal screen was used.
+- Gate result: **PASS 3/3** for 10 s, 10 s and 20 s requests. Required regions
+  Header, Panel and BottomControl were stable; Model and AnimatedBackground
+  remained volatile and were ignored for progression.
+- The live Header sharpness distribution was below the previous synthetic
+  floor, so `minimumSharpnessScore` was calibrated from `0.18` to `0.06`.
+  Motion, difference, similarity and required-region guards were unchanged.
+- All three runs reported `InputCommandsSent=0`,
+  `LeasesOutstandingAtShutdown=0`, `ShutdownResult=Clean`, and no errors.
+  Per-region P50/P95/P99 metrics are in
+  `docs/STREAMING_VISION_PHASE5.md`.
+- Appraisal was deliberately not opened:
+  `AppraisalGateCalibration = PENDING_MANUAL_PLACEMENT`. No Phase 6B or
+  Phase 7 work was started.
+- Direct Release `--no-restore` build of the changed gate projects passed with
+  0 warnings and 0 errors. Phase 2/3/4/5/6A package-free self-tests passed
+  3/3, 15/15, 7/7, 8/8 and 8/8. The wrapper `build.ps1` and `test.ps1` were
+  also executed, but their restore phase reported the known ACL failure on
+  `C:\Users\torbe\AppData\Roaming\NuGet\NuGet.Config`; therefore those
+  wrapper runs are recorded as limited, not as full green validation.
+
 ## Streaming Vision Phase 4 - 2026-07-28
 
 - Clean integration worktree baseline: 28 solution projects; `dotnet restore`

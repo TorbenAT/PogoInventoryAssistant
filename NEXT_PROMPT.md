@@ -4,10 +4,11 @@
 
 The zero-frame root cause was fixed by removing FFmpeg `-fflags nobuffer` from
 the pipe-fed H.264 decoder. Read-only real-phone 30s/30s/60s acceptance now
-passes with decoded/published 837/837, 833/832 and 1691/1691 frames. Three
-gate observations timed out conservatively on required Header motion/sharpness;
-do not claim regional calibration PASS. Phase 6A is ready to integrate from
-its separate clean branch. Do not send input; preserve all worktrees.
+passes with decoded/published 837/837, 833/832 and 1691/1691 frames.
+Details gate calibration passes 3/3 on the manually placed ordinary Details
+screen after calibrating live Header sharpness to 0.06. Appraisal remains
+`PENDING_MANUAL_PLACEMENT`; do not open it automatically. Do not send input;
+preserve all worktrees. Stop before Phase 6B/7.
 ## Phase 6A handoff (2026-07-28)
 
 The isolated branch `feature/streaming-phase6a-semantic-offline` implements
