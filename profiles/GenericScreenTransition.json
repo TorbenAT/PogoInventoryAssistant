@@ -1,0 +1,39 @@
+{
+  "name": "GenericScreenTransition",
+  "kind": "TransitionCompleted",
+  "regions": [
+    { "name": "FullFrame", "region": { "x": 0.0, "y": 0.0, "width": 1.0, "height": 1.0 }, "stabilityRole": "DiagnosticOnly", "observeTransition": false },
+    { "name": "Header", "region": { "x": 0.10, "y": 0.02, "width": 0.80, "height": 0.14 }, "stabilityRole": "Required", "observeTransition": true },
+    { "name": "Model", "region": { "x": 0.10, "y": 0.16, "width": 0.80, "height": 0.39 }, "stabilityRole": "Volatile", "observeTransition": false },
+    { "name": "AnimatedBackground", "region": { "x": 0.0, "y": 0.16, "width": 1.0, "height": 0.39 }, "stabilityRole": "Volatile", "observeTransition": false },
+    { "name": "Panel", "region": { "x": 0.05, "y": 0.55, "width": 0.90, "height": 0.32 }, "stabilityRole": "Required", "observeTransition": true },
+    { "name": "BottomControl", "region": { "x": 0.05, "y": 0.87, "width": 0.90, "height": 0.11 }, "stabilityRole": "Required", "observeTransition": true }
+  ],
+  "stable": {
+    "requiredRegions": ["Header", "Panel", "BottomControl"],
+    "minimumStableFrames": 3,
+    "minimumStableDuration": "00:00:00.1500000",
+    "maximumMotionScore": 0.05,
+    "maximumDifferenceScore": 0.04,
+    "minimumSimilarityScore": 0.94,
+    "minimumSharpnessScore": 0.18,
+    "maximumObservationDuration": "00:00:08"
+  },
+  "transition": {
+    "transitionRegions": ["Header", "Panel", "BottomControl"],
+    "minimumChangedFrames": 2,
+    "minimumChangedDuration": "00:00:00.0700000",
+    "minimumMotionScore": 0.08,
+    "minimumDifferenceScore": 0.07,
+    "minimumPreStableFrames": 3,
+    "minimumPostStableFrames": 3,
+    "minimumStableDuration": "00:00:00.1500000",
+    "maximumStableMotionScore": 0.05,
+    "maximumStableDifferenceScore": 0.04,
+    "minimumStableSimilarityScore": 0.94,
+    "minimumSharpnessScore": 0.18,
+    "minimumMeaningfulChange": 0.05,
+    "maximumObservationDuration": "00:00:12"
+  },
+  "maximumEvidenceFrames": 10
+}

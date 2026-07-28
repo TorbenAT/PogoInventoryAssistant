@@ -1,5 +1,80 @@
 # Project state
 
+## Streaming Vision Phase 6B shadow integration (2026-07-28)
+
+The additive Phase 6B shadow package is integrated on
+`feature/streaming-phase6b-shadow`. The supplied package hash was verified,
+the solution builds with 0 warnings/errors, and the package self-test passes
+10/10. The live read-only shadow runner completed 3 stable AppraisalBars
+frames on the authorized OnePlus with zero input. Semantic providers remain
+Unsupported until EasyOCR/Ollama and screenshot-reference accuracy are
+verified; no real field accuracy or wrong-screen acceptance is claimed.
+
+## Streaming Vision Phase 5 (2026-07-28)
+
+The local official scrcpy v4.0 and FFmpeg 8.1.2 toolchain is installed only
+under ignored `tools/local/` and preflight passes for the authorized
+`ONEPLUS_A6013`: `1080x2340` portrait resolves to `886x1920`. The zero-frame
+root cause was FFmpeg `-fflags nobuffer` suppressing pipe-fed rawvideo output;
+removing it restored frames. Real observe acceptance passed 30s/30s/60s with
+837/837, 833/832 and 1691/1691 decoded/published frames, clean shutdown and
+zero input. Details gate calibration is PASS 3/3 (10 s, 10 s, 20 s) on an
+ordinary Details screen. Appraisal gate calibration is also PASS 3/3 after
+the existing named route safely normalized `PokemonDetails` to `AppraisalBars`.
+Setup sent 3 named inputs; calibration sent 0. Header, AppraisalPanel and all
+three IV bars are required; Model/AnimatedBackground remain volatile. Final
+phone state is AppraisalBars. Phase 6B/7 were not started.
+## Streaming Vision Phase 6A offline semantic foundation (2026-07-28)
+
+Local Phase 6A runtime completion is now evidenced: Python 3.13.14,
+RTX 4060 Ti/driver 591.86/8188 MiB, PyTorch 2.11.0+cu128 CUDA smoke test,
+ResNet18 embedding-equivalent benchmark and EasyOCR 1.7.2 fixed-crop
+benchmark. The synthetic truth manifest is versioned, while real screenshot
+field accuracy remains NOT MEASURABLE and no live semantic integration exists.
+
+An isolated worktree from baseline `4ecfad3` adds
+`PogoInventory.Streaming.Semantics` and its package-free benchmark/self-test.
+The contracts validate frame dimensions/orientation/ROIs, preserve explicit
+Known/Conflicting/Occluded/Unreadable/NotVisible/Unsupported/Unknown states,
+bind every Known result to evidence, and use deterministic order-independent
+field consensus. No live streaming, Device, Automation, phone input, tagging,
+Calcy, or decision-engine code was changed.
+
+The clean baseline contains 23 committed iPhone pretest fixtures and synthetic
+screen fixtures. The synthetic benchmark produced one correct CP consensus and
+`False Complete = 0`; Phase 6A self-test is 8/8. Local runtime completion is
+documented in `docs/STREAMING_VISION_PHASE6A.md`: Python 3.13.14, RTX 4060 Ti,
+PyTorch CUDA, ResNet18 timing and EasyOCR fixed-crop timing. Real screenshot
+field accuracy remains NOT MEASURABLE because crop truth is Unverifiable.
+
+## Streaming Vision Phase 4 (2026-07-28)
+
+Fase 4 preflight and automatic stream-dimension resolution are integrated.
+The clean branch baseline is 28 projects with full restore/build green at
+0 warnings and 0 errors; clean `test.ps1` is 249/249 with one absent
+`local-data` sanity check skipped. Fase 2/3 self-tests are 3/3 and 15/15;
+Fase 4 self-test is 7/7.
+
+The authorized OnePlus A6013 (`192.168.1.185:5555`) was verified read-only by
+ADB: `1080x2340` portrait, automatically resolved to `886x1920` at max-size
+1920. Generic real-stream acceptance is PASS after the `-fflags nobuffer` fix;
+gate calibration remains conservative NOT ACCEPTED after three Header
+motion/sharpness timeouts. Input count remains zero.
+
+## Streaming Vision Phases 1-3 integration (2026-07-28)
+
+The cumulative Phase 3 delivery is integrated on the opt-in integration
+branch. It adds `PogoInventory.Streaming`, read-only scrcpy/FFmpeg transport,
+regional temporal gates, `observe-stream`, `observe-gates`, built-in JSON
+profiles, bounded PNG evidence and package-free self-tests. The streaming
+projects have no phone-input reference or public input surface; diagnostics
+report `InputCommandsSent = 0`.
+
+Validation currently available: Phase 2 self-test 3/3 and Phase 3 self-test
+15/15. An initial dirty-workspace restore attempt hit the sandbox's
+inaccessible global NuGet.Config; the clean baseline later verified full
+solution restore/build successfully.
+
 ## Run-local decision tag planning (2026-07-26)
 
 Added a deterministic dry-run-only `DecisionTagPlanner`. It maps KEEP to

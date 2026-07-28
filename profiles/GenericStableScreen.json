@@ -1,0 +1,17 @@
+{
+  "name": "GenericStableScreen",
+  "kind": "StableRegion",
+  "regions": [
+    { "name": "FullFrame", "region": { "x": 0.0, "y": 0.0, "width": 1.0, "height": 1.0 }, "stabilityRole": "Required", "observeTransition": true }
+  ],
+  "stable": {
+    "requiredRegions": ["FullFrame"],
+    "minimumStableFrames": 3,
+    "minimumStableDuration": "00:00:00.1500000",
+    "maximumMotionScore": 0.05,
+    "maximumDifferenceScore": 0.04,
+    "minimumSimilarityScore": 0.94,
+    "minimumSharpnessScore": 0.20,
+    "maximumObservationDuration": "00:00:04"
+  }
+}

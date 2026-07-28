@@ -1,5 +1,56 @@
 # Continuation prompt
 
+## Streaming Vision Phase 6B checkpoint (2026-07-28)
+
+Phase 6B shadow integration is complete on `feature/streaming-phase6b-shadow`.
+Build and all package/repository self-tests are green; live AppraisalBars
+shadow capture is read-only and reports zero input. Before any later phase,
+integrate only verified EasyOCR/Ollama/reference providers, then produce the
+required 20-Pokémon zero-false-Complete verification report. Do not add
+navigation, tagging, transfer or delete behavior.
+
+## Streaming Vision Phase 5 checkpoint (2026-07-28)
+
+The zero-frame root cause was fixed by removing FFmpeg `-fflags nobuffer` from
+the pipe-fed H.264 decoder. Read-only real-phone 30s/30s/60s acceptance now
+passes with decoded/published 837/837, 833/832 and 1691/1691 frames.
+Details gate calibration passes 3/3 on the ordinary Details screen after
+calibrating live Header sharpness to 0.06. Appraisal gate calibration also
+passes 3/3: the existing named route used 3 bounded setup inputs to reach
+AppraisalBars, then all gate runs used 0 input. The final phone state is
+AppraisalBars. Stop before Phase 6B/7.
+## Phase 6A handoff (2026-07-28)
+
+The isolated branch `feature/streaming-phase6a-semantic-offline` implements
+offline semantic contracts and fail-closed consensus in
+`src/PogoInventory.Streaming.Semantics`, with benchmark CLI and 8/8 self-test.
+Local manifests are under `C:\Data\PokemonGo-Tools\manifests`. Python 3.13.14,
+PyTorch CUDA, ResNet18 and EasyOCR benchmarks are completed; real screenshot
+field accuracy remains unmeasurable because crop truth is Unverifiable.
+Phase 5 acceptance is recorded above; gate calibration remains conservative.
+
+## Streaming Vision Phase 4 checkpoint (2026-07-28)
+
+Fase 4 preflight, normalized OnePlus A6013 candidate profile and automatic
+ADB `wm size` dimension resolution are implemented. Clean full solution build
+is green (28 projects, 0 warnings/errors), clean self-test is 250/250, and
+Fase 4 self-test is 7/7. The authorized phone reports 1080x2340 portrait and
+resolves to 886x1920 at max-size 1920. Real stream/gate acceptance remains
+blocked by missing FFmpeg and scrcpy server JAR; install/provide those tools
+before claiming phone calibration or transition/timing acceptance. Do not
+send phone input.
+
+## Streaming Vision Phases 1-3 checkpoint (2026-07-28)
+
+The cumulative read-only streaming delivery is integrated on
+`integration/streaming-vision-phases-1-3`. Phase 2 and Phase 3 package-free
+self-tests pass 3/3 and 15/15. Continue with the full Release build/test and
+the repository-required scripts. Do not connect streaming automatically to
+navigation or cleanup, and do not claim real-phone acceptance without real
+scrcpy/ADB evidence. An initial dirty-workspace restore attempt hit the
+sandbox's inaccessible global NuGet.Config; the clean baseline later verified
+full-solution restore/build successfully.
+
 ## Run-local decision tag planner checkpoint (2026-07-26)
 
 `DecisionTagPlanner` is implemented and tested. It produces only allowlisted

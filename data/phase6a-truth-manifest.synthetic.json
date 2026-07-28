@@ -1,0 +1,17 @@
+{
+  "schema": "phase6a-truth-manifest-1",
+  "status": "SyntheticKnown-only",
+  "cases": [
+    {
+      "caseId": "synthetic-case-1",
+      "imagePath": null,
+      "imageSha256": null,
+      "field": "CP",
+      "truthStatus": "SyntheticKnown",
+      "truthValue": 219,
+      "source": "src/PogoInventory.Streaming.Semantics.Benchmarks/Program.cs",
+      "verificationMethod": "Constructed synthetic FieldEvidence consensus",
+      "reviewerEvidence": "Two matching synthetic CP observations; no real screenshot claim."
+    }
+  ]
+}

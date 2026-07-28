@@ -1,5 +1,62 @@
 # Architecture
 
+## Phase 6B bounded semantic shadow boundary (2026-07-28)
+
+`PogoInventory.Streaming.Semantics.Shadow` consumes copied BGRA evidence from
+the existing streaming leases and runs named semantic adapters in bounded
+parallelism. It compares analyzer candidates with an explicit reference
+provider and preserves conflicts, timeouts, faults and coverage gaps rather
+than resolving them. `PogoInventory.Streaming.Observe.Shadow` is an opt-in
+read-only composition root for scrcpy/FFmpeg; it has no phone-input surface.
+EasyOCR, Ollama and screenshot-reference implementations remain adapter
+points until real verification evidence exists.
+
+## Phase 6A offline semantic boundary
+
+`PogoInventory.Streaming.Semantics` is isolated from Device, Automation, live
+streaming and the decision engine. It accepts replay metadata and normalized
+geometry, binds Known fields to evidence, and applies deterministic
+fail-closed consensus. It can later adapt to a `FrameLease` without changing
+Phase 5 runtime behavior.
+
+## Opt-in Streaming Vision read-only boundary (2026-07-28)
+
+Streaming Vision Phases 1-3 form an isolated observation path:
+scrcpy raw H.264 (`control=false`, `audio=false`, `raw_stream=true`) is
+decoded to pooled BGRA32 frames, published through bounded leases and
+subscriptions, analyzed by regional temporal observers, and evaluated by
+fail-closed gates. `observe-stream` and `observe-gates` emit diagnostics and
+bounded evidence only. These projects do not reference `PogoInventory.Device`
+or any navigation, tap, swipe, clipboard, tagging or destructive operation;
+the existing screenshot and cleanup flows remain unchanged.
+
+The FFmpeg pipe binding intentionally omits `-fflags nobuffer`: real-phone
+evidence showed that flag suppresses rawvideo output for this pipe-fed H.264
+mode. `-flags low_delay` remains enabled. Partial stdout reads are accumulated
+to exact `width × height × 4` BGRA frames, and Phase 6A semantic benchmarks
+remain offline and do not cross this boundary.
+
+## Appraisal gate calibration boundary (2026-07-28)
+
+Screen normalization for streaming calibration remains outside the streaming
+projects. `device-calibrate-appraisal-streaming-gates` performs a bounded
+read-only state consensus, then delegates the `PokemonDetails -> PokemonMenuOpen
+-> AppraisalIntro -> AppraisalBars` route to
+`AndroidVerifiedInventoryNamedOperations.CaptureAppraisalAsync`. The named
+host and `GuardedInventoryRecovery` own all input authorization, fresh-frame
+checks, postconditions, audit records and the six-input setup budget. Unknown,
+conflicting or unsafe states stop with zero input; AppraisalIntro receives at
+most one Continue tap and neither AppraisalIntro nor AppraisalBars authorizes
+Android Back.
+
+Once `AppraisalBars` is confirmed with three compatible frames among five,
+setup stops and `observe-gates` runs read-only with `control=false`,
+`audio=false` and `raw_stream=true`. The AppraisalBars profile requires the
+Header, AppraisalPanel and all three IV-bar regions; BottomControl is
+diagnostic-only, while Model and AnimatedBackground are volatile. Setup input
+and calibration input are reported separately, so the streaming layer remains
+read-only and cannot navigate or send arbitrary shell commands.
+
 ## Cleanup value-proof transition
 
 Cleanup proof uses a persistent Appraisal carousel for ordinary item
