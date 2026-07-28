@@ -796,3 +796,15 @@ Main consolidation merge: `192d1c7`.
   SHA-256: `F7CEDE7F3E7164C33F01BC12BFA9F9A863264D0ECCF7C88E44B16C07CB85DB12`.
 - The runner sends the actual JSON schema object to Ollama `/api/chat` and is
   offline/read-only. `InputCommandsSent = 0`.
+# Phase 6B real semantic results sprint — 2026-07-28
+
+- Results project build: PASS, 0 warnings/errors.
+- Verified replay: PASS for 30 manually verified rows / 150 fields;
+  FalseKnown=0, FalseComplete=0, worker drops=0, phone input=0.
+- SemanticShadowRunner replay: executed; one EasyOCR analyzer timeout was
+  recorded in item 1 and is unresolved.
+- 3-item named device capture: checkpoint Completed, 21 InputSent audit
+  records, no tag application. This is not live semantic acceptance because
+  the provider was not attached to the capture stream.
+- 10-item pilot: NOT RUN; 3-item clean-provider gate not met.
+- Full required script suite: pending final integration validation.

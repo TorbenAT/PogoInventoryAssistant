@@ -1,5 +1,13 @@
 # Project state
 
+## Phase 6B real semantic results sprint (2026-07-28)
+
+The verified replay covers 30 rows / 150 fields with FalseKnown=0,
+FalseComplete=0 and InputCommandsSent=0. The 3-item named-operation phone
+capture completed, but live semantic acceptance remains blocked: the provider
+was not attached to the capture stream and the replay recorded one EasyOCR
+shadow timeout. The 10-item pilot was not run. Phase 7 remains NOT STARTED.
+
 ## Current canonical status (2026-07-28)
 
 Current canonical branch: `main`; consolidation merge commit is `192d1c7`.

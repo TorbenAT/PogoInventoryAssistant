@@ -1,0 +1,18 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\PogoInventory.Appraisal\PogoInventory.Appraisal.csproj" />
+    <ProjectReference Include="..\PogoInventory.HeaderText\PogoInventory.HeaderText.csproj" />
+    <ProjectReference Include="..\PogoInventory.Streaming.Semantics\PogoInventory.Streaming.Semantics.csproj" />
+    <ProjectReference Include="..\PogoInventory.Streaming.Semantics.Shadow\PogoInventory.Streaming.Semantics.Shadow.csproj" />
+    <ProjectReference Include="..\PogoInventory.Vision\PogoInventory.Vision.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Python\easyocr_worker.py" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+</Project>

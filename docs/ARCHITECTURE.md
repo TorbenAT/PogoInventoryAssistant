@@ -630,3 +630,14 @@ with bounded screenshot reads only, and POSTCONDITION is written after five
 frames. The command is limited to read-only navigation and does not establish
 real-phone acceptance until a manual safe-state precondition and bounded phone
 run pass.
+# Phase 6B real semantic result path
+
+The additive `PogoInventory.Streaming.Semantics.Real` package owns the
+persistent EasyOCR JSON-lines worker and fail-closed candidate analyzers. The
+results runner feeds captured BGRA frames through `SemanticShadowRunner`,
+keeps screenshot references offline-only, emits crops and per-item evidence,
+and always reports `AuthorizesPhoneInput=false` / `InputCommandsSent=0`.
+EasyOCR queue capacity is one, timeouts are surfaced, and no retry turns an
+unknown result into a known result. The real-phone capture remains owned by the
+existing named device operation; the semantic package adds no Device or
+Automation input authority.

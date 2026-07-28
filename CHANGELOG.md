@@ -2,6 +2,15 @@
 
 ## Unreleased
 
+- Added the Phase 6B real semantic results sprint: persistent EasyOCR worker,
+  fail-closed header/IV candidate analyzers, screenshot-reference replay,
+  SemanticShadowRunner wiring, crops and CSV/Markdown/HTML reporting. The
+  verified replay covers 30 rows/150 fields with FalseKnown=0,
+  FalseComplete=0 and InputCommandsSent=0. The 3-item phone capture completed
+  through existing named operations, but live semantic acceptance is blocked
+  by provider attachment and an observed EasyOCR shadow timeout; the 10-item
+  pilot was not started.
+
 - Merged the Phase 6A VLM evidence bake-off. Stage 3 produced 139/144
   schema-valid responses; qwen3-vl:2b-instruct is the latency-first bounded
   candidate and gemma3:4b is the schema-reliable diagnostic comparator.
