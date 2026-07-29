@@ -1,5 +1,20 @@
 # Project state
 
+## Stream reader settling handoff (2026-07-29)
+
+`feature/stabilize-stream-reader-10` replaces the immediate post-swipe gate
+with a stream-only, eight-second settling handoff. It applies a fresh frame-id
+and capture-time barrier, evaluates only the calibrated required regions,
+requires three distinct stable AppraisalBars frames, and checks a stable
+region fingerprint after swipes. Transition failures are counted and ignored
+until timeout. The reader reports requested/completed items, run status,
+actual carousel-swipe count, handoff evidence and stop reasons.
+
+Local build and 258/258 self-tests pass. Real-phone acceptance is blocked
+before stream startup because `192.168.1.185:5555` is no longer present in ADB
+device discovery. No setup or carousel input was sent in this attempt; 3- and
+10-item results remain NOT RUN for this revision.
+
 ## Minimal stream-first gated Pokemon reader (2026-07-28)
 
 The `feature/stream-gated-pokemon-reader` implementation adds the CLI command

@@ -27,5 +27,7 @@
     <ProjectReference Include="..\..\src\PogoInventory.HeaderText\PogoInventory.HeaderText.csproj" />
     <ProjectReference Include="..\..\src\PogoInventory.Semantics\PogoInventory.Semantics.csproj" />
     <ProjectReference Include="..\..\src\PogoInventory.Streaming.Semantics\PogoInventory.Streaming.Semantics.csproj" />
+    <ProjectReference Include="..\..\src\PogoInventory.Streaming.Gates\PogoInventory.Streaming.Gates.csproj" />
+    <ProjectReference Include="..\..\src\PogoInventory.Streaming.Scrcpy\PogoInventory.Streaming.Scrcpy.csproj" />
   </ItemGroup>
 </Project>

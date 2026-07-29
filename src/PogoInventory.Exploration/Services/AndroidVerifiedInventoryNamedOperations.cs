@@ -48,6 +48,8 @@ public sealed class AndroidVerifiedInventoryNamedOperations : ICleanupProofNamed
     private readonly List<string> _lastCleanupAppraisalEvidence = new();
     private byte[]? _lastCleanupAppraisalScreenshot;
     public int LastCleanupRecoveryInputCount { get; private set; }
+    public int LastAppraisalCarouselSwipeInputCount { get; private set; }
+    public int LastCaptureAppraisalInputCount { get; private set; }
 
     public AndroidVerifiedInventoryNamedOperations(
         IAndroidAutomationTransport transport,
@@ -593,16 +595,19 @@ public sealed class AndroidVerifiedInventoryNamedOperations : ICleanupProofNamed
 
     public async Task<string> CaptureAppraisalAsync(CancellationToken cancellationToken)
     {
+        LastCaptureAppraisalInputCount = 0;
         _lastCleanupAppraisalEvidence.Clear();
         _lastCleanupAppraisalScreenshot = null;
         var details = await WaitForStateAsync(new[] { PokemonGoGameState.PokemonDetails }, cancellationToken);
         var menu = _locator.LocateDetailsMenu(details.Screenshot);
         if (menu is null) return "Partial";
         await TapNamedAsync(menu.Target, "open-details-menu", cancellationToken);
+        LastCaptureAppraisalInputCount++;
         var menuState = await WaitForStateAsync(new[] { PokemonGoGameState.PokemonMenu }, cancellationToken);
         var appraise = _locator.LocateAppraiseMenuItem(menuState.Screenshot);
         if (appraise is null) return "Partial";
         await TapNamedAsync(appraise.Target, "open-appraisal", cancellationToken);
+        LastCaptureAppraisalInputCount++;
         var introTapActions = 0;
         var tapWasSent = false;
         for (var attempt = 0; attempt < GuardedInventoryRecovery.MaxAppraisalTotalActions + 1; attempt++)
@@ -628,6 +633,7 @@ public sealed class AndroidVerifiedInventoryNamedOperations : ICleanupProofNamed
                 authorization.Target is null)
                 return "Partial";
             await ExecuteRecoveryActionAsync(authorization, cancellationToken);
+            LastCaptureAppraisalInputCount++;
             introTapActions++;
             tapWasSent = true;
             await WriteRecoveryAuditAsync(authorization, "Appraisal", cancellationToken);
@@ -818,6 +824,7 @@ public sealed class AndroidVerifiedInventoryNamedOperations : ICleanupProofNamed
         CancellationToken cancellationToken)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(previousAppraisalFingerprint);
+        LastAppraisalCarouselSwipeInputCount = 0;
         using var _ = _timing.Measure(TimingCategory.NamedOperation, nameof(AdvanceToNextPokemonInAppraisalAsync));
 
         // When the caller (the cleanup-proof per-item loop) just established a
@@ -850,6 +857,7 @@ public sealed class AndroidVerifiedInventoryNamedOperations : ICleanupProofNamed
             requiredState: preSwipeWindowSkipped ? PokemonGoGameState.Appraisal : null);
         await _transport.SwipeAsync(_serial, start.X, start.Y, end.X, end.Y,
             _automationProfile.NextPokemonSwipe.DurationMilliseconds, cancellationToken);
+        LastAppraisalCarouselSwipeInputCount = 1;
         if (_navigationTrace is not null)
             await _navigationTrace.RecordInputSentAsync(
                 "Swipe", $"({start.X},{start.Y})->({end.X},{end.Y})", cancellationToken);

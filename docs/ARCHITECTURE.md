@@ -1,5 +1,18 @@
 # Architecture
 
+## Stream reader settling handoff (2026-07-29)
+
+`device-stream-read-pokemon` records the latest stream frame before a named
+setup action or carousel swipe, then uses only subsequent scrcpy/FFmpeg frames
+for a bounded settling handoff. `FrameBarrier` enforces frame-id, capture-time,
+age and AppraisalBars state freshness. `AppraisalHandoffEvaluator` applies the
+existing required-region thresholds without considering Model or animated
+background; it retains three distinct qualifying frames and compares only
+Header/AppraisalPanel/IV-bar fingerprints for progression. Motion, sharpness,
+difference and similarity failures are non-terminal observations during the
+handoff. Timeout yields bounded evidence and a fail-closed stop; it never
+sends a retry swipe.
+
 ## Consolidated semantic boundaries (2026-07-28)
 
 The streaming transport and regional temporal gates are read-only and remain

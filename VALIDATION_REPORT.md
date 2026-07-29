@@ -836,3 +836,16 @@ Main consolidation merge: `192d1c7`.
   and no 10-item success is claimed.
 - The wrapper restore path remains subject to the known user NuGet.Config ACL
   issue; direct `--no-restore` builds and package-free tests were executed.
+## Stream reader settling handoff - 2026-07-29
+
+- Release solution build with `--no-restore`: PASS, 0 warnings/errors.
+- Package-free self-test: PASS, 258/258.
+- `scripts/test.ps1`: BLOCKED before test execution by the known denied read
+  of `C:\Users\torbe\AppData\Roaming\NuGet\NuGet.Config`.
+- Real-phone preflight: BLOCKED. `device-detect-game-state` found zero
+  authorized ADB devices; requested serial `192.168.1.185:5555` was absent.
+  The attempted 3-item command therefore produced no frames/items and sent
+  no setup, progression or semantic inputs. The 10-item run was not started.
+- The implementation records an eight-second stream-only settling timeout as
+  `APPRAISAL_SETTLING_TIMEOUT` with bounded PNG and JSON evidence. No real
+  timeout assertion is claimed until the device reconnects.

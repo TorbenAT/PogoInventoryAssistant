@@ -2,6 +2,14 @@
 
 ## Unreleased
 
+- Added a bounded stream-only AppraisalBars settling handoff for the Pokémon
+  reader. It rejects pre-action frames, ignores transient motion/sharpness
+  failures until the eight-second deadline, requires three distinct stable
+  frames and verifies stable-region progression after a carousel swipe.
+  Reports now include explicit run status, stop reason, settling metrics and
+  actual named swipe count. Real-device acceptance is pending because the
+  authorized device was offline during this revision.
+
 - Added the minimal stream-first gated Pokemon reader command. It uses one
   scrcpy/FFmpeg stream, three distinct AppraisalBars evidence frames, the
   canonical semantic core, Tesseract fastpath, appraisal-bar analysis and
