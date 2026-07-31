@@ -6,6 +6,8 @@ internal sealed class FrameRingBuffer : IDisposable
     private readonly SharedFrame?[] _frames;
     private int _start;
     private int _count;
+    private int _peakCount;
+    private long _evictions;
     private bool _disposed;
 
     public FrameRingBuffer(int capacity) => _frames = new SharedFrame[capacity];
@@ -23,15 +25,32 @@ internal sealed class FrameRingBuffer : IDisposable
                 evicted = _frames[_start];
                 _frames[_start] = frame;
                 _start = (_start + 1) % _frames.Length;
+                _evictions++;
             }
             else
             {
                 _frames[(_start + _count) % _frames.Length] = frame;
                 _count++;
+                _peakCount = Math.Max(_peakCount, _count);
             }
         }
 
         evicted?.Release();
+    }
+
+    public int Count
+    {
+        get { lock (_gate) { return _count; } }
+    }
+
+    public int PeakCount
+    {
+        get { lock (_gate) { return _peakCount; } }
+    }
+
+    public long Evictions
+    {
+        get { lock (_gate) { return _evictions; } }
     }
 
     public IFrameLease? Select(FrameQuery query, DateTimeOffset now)

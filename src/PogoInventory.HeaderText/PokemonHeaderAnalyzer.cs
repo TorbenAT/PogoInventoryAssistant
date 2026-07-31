@@ -28,8 +28,8 @@ public sealed class PokemonHeaderAnalyzer
     };
 
     private static readonly Regex CpPattern = new(
-        @"(?:CP|cp)?\s*([0-9]{1,5})",
-        RegexOptions.Compiled);
+        @"^\s*(?<prefix>CP|cp|C|c|P|p)?\s*(?<digits>[0-9](?:\s*[0-9]){0,4})\s*$",
+        RegexOptions.Compiled | RegexOptions.IgnoreCase);
 
     private readonly ITextRecognizer _recognizer;
     private readonly ISpeciesReference _speciesReference;
@@ -93,9 +93,9 @@ public sealed class PokemonHeaderAnalyzer
             var text = line.Text ?? string.Empty;
             foreach (Match match in CpPattern.Matches(text))
             {
-                if (!match.Groups[1].Success) continue;
+                if (!match.Groups["digits"].Success) continue;
                 if (!int.TryParse(
-                        match.Groups[1].Value,
+                        Regex.Replace(match.Groups["digits"].Value, @"\s+", string.Empty),
                         NumberStyles.Integer,
                         CultureInfo.InvariantCulture,
                         out var value))
@@ -103,7 +103,14 @@ public sealed class PokemonHeaderAnalyzer
                     continue;
                 }
                 if (value < MinimumCp || value > MaximumCp) continue;
-                return (value, 1.0);
+                var prefix = match.Groups["prefix"].Value;
+                var confidence = prefix.Length switch
+                {
+                    2 => 1.0,
+                    1 => 0.75,
+                    _ => 0.25
+                };
+                return (value, confidence);
             }
         }
         return (null, 0.0);
@@ -146,8 +153,9 @@ public sealed class PokemonHeaderAnalyzer
 
     /// <summary>
     /// Combines >= 2 per-frame results. Species is accepted when at least two
-    /// frames agree on the normalized species; CP is accepted when at least
-    /// two frames agree on the same integer.
+    /// frames agree on the normalized species without a competing reading;
+    /// CP is accepted when at least two frames agree on the same integer
+    /// without a competing reading.
     /// </summary>
     public static PokemonHeaderConsensusResult Consensus(IReadOnlyList<PokemonHeaderResult> frames)
     {
@@ -159,9 +167,12 @@ public sealed class PokemonHeaderAnalyzer
 
         var failures = new List<string>();
 
-        var species = frames
+        var speciesGroups = frames
             .Where(frame => frame.Species is not null)
             .GroupBy(frame => frame.Species, StringComparer.Ordinal)
+            .ToArray();
+        var species = speciesGroups
+            .Where(_ => speciesGroups.Length == 1)
             .Where(group => group.Count() >= 2)
             .OrderByDescending(group => group.Count())
             .Select(group => group.Key)
@@ -171,9 +182,12 @@ public sealed class PokemonHeaderAnalyzer
             failures.Add("SPECIES_CONSENSUS_NOT_REACHED");
         }
 
-        int? cp = frames
+        var cpGroups = frames
             .Where(frame => frame.Cp is not null)
             .GroupBy(frame => frame.Cp!.Value)
+            .ToArray();
+        int? cp = cpGroups
+            .Where(_ => cpGroups.Length == 1)
             .Where(group => group.Count() >= 2)
             .OrderByDescending(group => group.Count())
             .Select(group => (int?)group.Key)

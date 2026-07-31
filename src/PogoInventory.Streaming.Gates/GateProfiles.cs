@@ -20,6 +20,8 @@ public sealed record StableRegionGateOptions
     public double MaximumDifferenceScore { get; init; } = 0.04;
     public double MinimumSimilarityScore { get; init; } = 0.94;
     public double MinimumSharpnessScore { get; init; } = 0.20;
+    public IReadOnlyDictionary<string, double> MinimumSharpnessScoreByRegion { get; init; } =
+        new Dictionary<string, double>(StringComparer.Ordinal);
     public TimeSpan MaximumObservationDuration { get; init; } = TimeSpan.FromSeconds(3);
     public long MinimumEvidenceFrameIdDistance { get; init; } = 2;
     public TimeSpan MinimumEvidenceTimeDistance { get; init; } = TimeSpan.FromMilliseconds(80);
@@ -105,6 +107,17 @@ public sealed record GateProfile
         ValidateUnitScore(Stable.MaximumDifferenceScore, nameof(Stable.MaximumDifferenceScore));
         ValidateUnitScore(Stable.MinimumSimilarityScore, nameof(Stable.MinimumSimilarityScore));
         ValidateUnitScore(Stable.MinimumSharpnessScore, nameof(Stable.MinimumSharpnessScore));
+        foreach (var (regionName, threshold) in Stable.MinimumSharpnessScoreByRegion)
+        {
+            if (!Regions.Any(x => string.Equals(x.Name, regionName, StringComparison.Ordinal)))
+            {
+                throw new InvalidOperationException(
+                    $"Sharpness override region '{regionName}' is not configured.");
+            }
+            ValidateUnitScore(
+                threshold,
+                $"{nameof(Stable.MinimumSharpnessScoreByRegion)}[{regionName}]");
+        }
         ValidateUnitScore(Stable.MaximumEvidenceVisualSimilarity, nameof(Stable.MaximumEvidenceVisualSimilarity));
         ValidatePositive(Stable.MinimumStableFrames, nameof(Stable.MinimumStableFrames));
         ValidatePositive(Stable.MaximumObservationDuration, nameof(Stable.MaximumObservationDuration));

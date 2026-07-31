@@ -1,5 +1,48 @@
 # Project state
 
+## Final continuous 120-item proof run (2026-07-31)
+
+The 19-item conclusion remains rejected: the account contains 1857 Pokémon.
+The final clean stream run `stream-20260731T195333664Z-bc04d28b23614d6f`
+used one scrcpy/H.264/FFmpeg/BGRA stream session on
+`192.168.1.185:37877` and completed 120/120 requested items. Integrity is
+PASS: 120 unique item fingerprints, 119 verified progressions, 600 distinct
+semantic evidence frames, 120 report rows, no broken evidence links,
+119 named progression swipes, zero semantic input, and Clean shutdown with
+zero leases. Coverage is Species 95.00%, CP 85.00%, IV triple 92.50% and
+Complete 74.17%; all declared final-run minimums pass.
+
+Thirty final-run frames were visually reviewed, including items 1-10, 20,
+30, 40, 50, 75, 100, the CP-conflicting item, five Unknown cases and five
+long-settling cases. No false-Known species, CP or IV triple was observed;
+ambiguous readings stayed Unknown or Conflicting. Final evidence is local and
+ignored under `local-data/validation/stream-reader-final-120`.
+
+## High-similarity Appraisal handoff correction (2026-07-30)
+
+The reported 19-item inventory limit was false. The Inventory screen showed
+1857 / 1925, and saved evidence proved that the twentieth swipe changed from
+Pikachu CP 88 to Pikachu CP 129. The five regional 64-bit pHashes still
+averaged 0.9875 similarity, so the settling evaluator classified every stable
+item-20 frame as the previous item.
+
+The handoff now requires an observed post-action transition before any
+changed-item candidate can arm. A stable candidate still at or above the
+visual same-item threshold requires a Known semantic difference from the
+previous item; Unknown values never count. The real-phone `cp10-` checkpoint
+completed 25/25 with 25 unique item fingerprints, 24 verified progressions,
+75 distinct evidence frames, zero broken evidence links and zero semantic
+phone input. Item 20 was proven by changed Attack, Defense and HP IV values.
+The persistent-observer 25-item run exposed one lease at report time; disposing
+the observer before stream shutdown was then proven on a 3/3 phone checkpoint
+with Clean shutdown and zero leases. The final 100+ threshold remains pending.
+Focused builds pass with zero
+warnings/errors and the package-free suite passes 266/266. The full required
+script suite also passes after restore was allowed to read the user-level
+NuGet.Config. The no-argument phone-preparation wrapper cannot find `adb` on
+PATH; its canonical-ADB rerun completed read-only and retained the expected
+Candidate/unverified readiness state.
+
 ## Stream reader settling handoff (2026-07-29)
 
 `feature/stabilize-stream-reader-10` replaces the immediate post-swipe gate

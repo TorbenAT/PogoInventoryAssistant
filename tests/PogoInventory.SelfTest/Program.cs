@@ -51,9 +51,27 @@ var tests = new (string Name, Func<Task> Run)[]
     ("Canonical semantic consensus requires distinct evidence", CanonicalSemanticCoreTests.CanonicalConsensusRequiresDistinctEvidenceAsync),
     ("AppraisalBars header supplies species and CP", CanonicalSemanticCoreTests.AppraisalBarsHeaderSuppliesSpeciesAndCpAsync),
     ("Same frame cannot satisfy semantic consensus", CanonicalSemanticCoreTests.SameFrameCannotSatisfyConsensusAsync),
+    ("Competing third semantic reading fails closed", CanonicalSemanticCoreTests.CompetingThirdReadingFailsClosedAsync),
+    ("CP semantic consensus requires an anchored observation", CanonicalSemanticCoreTests.CpRequiresAnchoredObservationAsync),
+    ("CP semantic edit chain resolves animated single-digit occlusion", CanonicalSemanticCoreTests.CpEditChainResolvesAnimatedOcclusionAsync),
+    ("CP five-frame majority resolves bounded single-digit occlusion", CanonicalSemanticCoreTests.CpFiveFrameMajorityResolvesSingleDigitOcclusionAsync),
+    ("CP short majority never beats longer readings", CanonicalSemanticCoreTests.CpShortMajorityDoesNotBeatLongerReadingsAsync),
+    ("CP preprocessing variants resolve only strong independent evidence", CanonicalSemanticCoreTests.CpPreprocessingVariantsResolveOnlyStrongEvidenceAsync),
+    ("CP unique multi-frame deletion reconstruction is fail-closed", CanonicalSemanticCoreTests.CpUniqueDeletionReconstructionIsFailClosedAsync),
+    ("Semantic progression requires a Known changed field", CanonicalSemanticCoreTests.SemanticProgressionRequiresKnownDifferenceAsync),
     ("Stream handoff arms after three stable frames", AppraisalHandoffEvaluatorTests.StableFramesArmHandoffAsync),
     ("Stream handoff ignores transition and duplicate frames", AppraisalHandoffEvaluatorTests.TransitionAndDuplicateFramesDoNotArmAsync),
     ("Stream handoff verifies changed fingerprint and filter end", AppraisalHandoffEvaluatorTests.FingerprintChangeAndFilterEndAreFailClosedAsync),
+    ("Stream handoff never mixes cross-item evidence", AppraisalHandoffEvaluatorTests.CrossItemFramesNeverMixAsync),
+    ("High-similarity handoff requires transition and semantics", AppraisalHandoffEvaluatorTests.HighSimilarityNeedsTransitionAndSemanticProofAsync),
+    ("Appraisal handoff enforces evidence spacing", AppraisalHandoffEvaluatorTests.EvidenceSpacingIsEnforcedAsync),
+    ("Stream proof rejects incomplete 100-of-120 acceptance", StreamProofReporterTests.IncompleteHundredOf120FailsIntegrityAsync),
+    ("Stream proof semantic fallback requires a Known reason", StreamProofReporterTests.SemanticFallbackNeedsKnownReasonAsync),
+    ("Stream proof rejects inconsistent run IDs", StreamProofReporterTests.RunIdMismatchFailsIntegrityAsync),
+    ("Stream proof semantic identity disambiguates visual collisions", StreamProofReporterTests.SemanticIdentityDisambiguatesVisualCollisionAsync),
+    ("Stream handoff resets on candidate fingerprint change", AppraisalHandoffEvaluatorTests.CandidateFingerprintChangesResetEvidenceAsync),
+    ("Stream handoff accepts compatible fingerprint jitter", AppraisalHandoffEvaluatorTests.CompatibleFingerprintJitterArmsAsync),
+    ("Stream handoff supports regional IV-bar sharpness", AppraisalHandoffEvaluatorTests.RegionalSharpnessOverrideAllowsUniformIvBarAsync),
     ("Appraisal streaming calibration is named and fail-closed", AppraisalStreamingCalibrationTests.RunAsync),
     ("Decision tag planner is bound and fail-closed", DecisionTagPlannerTests.RunAsync),
     ("Real-state detector regression fixtures", StateDetectorRegressionTests.RunAsync),
@@ -98,6 +116,7 @@ var tests = new (string Name, Func<Task> Run)[]
     ("ADB device list parser recognises states", Sync(AdbDeviceListParserRecognisesStates)),
     ("ADB metadata parsers read screen and battery", Sync(AdbMetadataParsersReadScreenAndBattery)),
     ("ADB transport uses only expected read-only commands", AdbTransportUsesExpectedCommandsAsync),
+    ("ADB screenshot reconnects only the selected wireless endpoint after daemon failure", AdbScreenshotReconnectsWirelessEndpointAsync),
     ("ADB known-app stop is allow-listed", AdbKnownAppStopIsAllowListedAsync),
     ("ADB automation transport uses only tap and swipe commands", AdbAutomationTransportUsesExpectedCommandsAsync),
     ("ADB app inspection uses only named read commands", AdbAppInspectionUsesExpectedCommandsAsync),
@@ -268,6 +287,7 @@ var tests = new (string Name, Func<Task> Run)[]
     ,("Header OCR rejects UI labels as species", HeaderOcrTests.RunUiLabelsRejectedAsync)
     ,("Header OCR falls back to nickname for unknown header text", HeaderOcrTests.RunNicknameFallbackAsync)
     ,("Header OCR parses and validates CP", HeaderOcrTests.RunCpParsingAsync)
+    ,("Header OCR uses the validated real-phone CP ROI", HeaderOcrTests.RunDefaultCpRoiAsync)
     ,("Header OCR tolerates case and single-character OCR noise", HeaderOcrTests.RunTolerantSpeciesNormalizationAsync)
     ,("Search query classifier distinguishes exact species from broad filters", HeaderOcrTests.RunSearchQueryClassifierAsync)
     ,("BitmapTransform geometry scales bounds before cropping and stays in range", HeaderOcrTests.RunBitmapTransformGeometryAsync)
@@ -637,6 +657,44 @@ static async Task AdbTransportUsesExpectedCommandsAsync()
     {
         AssertEqual(expected[index], actual[index], $"ADB command {index + 1}");
     }
+}
+
+static async Task AdbScreenshotReconnectsWirelessEndpointAsync()
+{
+    static AdbProcessResult Result(int exitCode, string stdout = "", string stderr = "") =>
+        new()
+        {
+            ExitCode = exitCode,
+            StandardOutput = System.Text.Encoding.UTF8.GetBytes(stdout),
+            StandardError = stderr
+        };
+
+    var runner = new RecordingAdbProcessRunner(new[]
+    {
+        Result(-1, stderr: "cannot connect to daemon"),
+        Result(0, stdout: "connected to 192.168.1.185:37877\n"),
+        new AdbProcessResult
+        {
+            ExitCode = 0,
+            StandardOutput = FakeAndroidDeviceTransport.CreateDefaultScreenshotPng(),
+            StandardError = string.Empty
+        }
+    });
+    var transport = new AdbAndroidDeviceTransport(
+        runner, new DeviceHarnessOptions { CommandTimeout = TimeSpan.FromSeconds(2) });
+
+    await transport.CaptureScreenshotPngAsync("192.168.1.185:37877");
+
+    var actual = runner.Commands.Select(x => string.Join(" ", x)).ToArray();
+    var expected = new[]
+    {
+        "-s 192.168.1.185:37877 exec-out screencap -p",
+        "connect 192.168.1.185:37877",
+        "-s 192.168.1.185:37877 exec-out screencap -p"
+    };
+    AssertEqual(expected.Length, actual.Length, "reconnect command count");
+    for (var index = 0; index < expected.Length; index++)
+        AssertEqual(expected[index], actual[index], $"reconnect command {index + 1}");
 }
 
 static async Task AdbAutomationTransportUsesExpectedCommandsAsync()

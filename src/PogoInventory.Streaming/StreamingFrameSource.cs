@@ -34,6 +34,10 @@ public sealed class StreamingFrameSource : IStreamingFrameSource
 
     public bool IsRunning => Volatile.Read(ref _running) == 1;
     public Exception? LastError { get; private set; }
+    public long FramesPublished => Interlocked.Read(ref _nextFrameId);
+    public long FramesEvicted => _buffer.Evictions;
+    public int CurrentBufferDepth => _buffer.Count;
+    public int PeakBufferDepth => _buffer.PeakCount;
 
     public ValueTask StartAsync(CancellationToken cancellationToken = default)
     {

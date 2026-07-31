@@ -1,4 +1,5 @@
 using System.Globalization;
+using System.Net;
 using PogoInventory.Device.Adb;
 using PogoInventory.Device.Errors;
 using PogoInventory.Device.Logging;
@@ -92,10 +93,40 @@ public sealed class AdbAndroidDeviceTransport : IAndroidAutomationTransport, IAn
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(serial);
 
-        var result = await RunAsync(
-            ForDevice(serial, "exec-out", "screencap", "-p"),
-            "capture screenshot",
-            cancellationToken);
+        AdbProcessResult result;
+        try
+        {
+            result = await RunAsync(
+                ForDevice(serial, "exec-out", "screencap", "-p"),
+                "capture screenshot",
+                cancellationToken);
+        }
+        catch (DeviceHarnessException exception) when (
+            IsRecoverableDaemonFailure(exception) &&
+            IsWirelessEndpoint(serial))
+        {
+            // ADB restarts lose TCP/IP device registrations. Reconnect only
+            // the explicitly selected endpoint, then retry this read-only
+            // screenshot exactly once. No input action is repeated.
+            _log.Write(
+                DeviceLogLevel.Warning,
+                "adb.screenshot.reconnect",
+                "ADB daemon failed during a read-only screenshot; reconnecting the selected wireless endpoint once.",
+                new Dictionary<string, string> { ["serial"] = serial });
+            var reconnect = await _runner.ExecuteAsync(
+                new[] { "connect", serial },
+                _options.CommandTimeout,
+                cancellationToken);
+            if (reconnect.ExitCode != 0)
+            {
+                throw;
+            }
+
+            result = await RunAsync(
+                ForDevice(serial, "exec-out", "screencap", "-p"),
+                "capture screenshot after ADB reconnect",
+                cancellationToken);
+        }
 
         if (!HasPngSignature(result.StandardOutput))
         {
@@ -428,6 +459,26 @@ public sealed class AdbAndroidDeviceTransport : IAndroidAutomationTransport, IAn
 
     private static string[] ForDevice(string serial, params string[] command) =>
         new[] { "-s", serial }.Concat(command).ToArray();
+
+    private static bool IsRecoverableDaemonFailure(
+        DeviceHarnessException exception) =>
+        exception.Code == DeviceErrorCode.CommandFailed &&
+        exception.Message.Contains(
+            "cannot connect to daemon",
+            StringComparison.OrdinalIgnoreCase);
+
+    private static bool IsWirelessEndpoint(string serial)
+    {
+        var separator = serial.LastIndexOf(':');
+        return separator > 0 &&
+            int.TryParse(
+                serial[(separator + 1)..],
+                NumberStyles.None,
+                CultureInfo.InvariantCulture,
+                out var port) &&
+            port is > 0 and <= 65535 &&
+            IPAddress.TryParse(serial[..separator], out _);
+    }
 
     private static string? Get(
         IReadOnlyDictionary<string, string> properties,

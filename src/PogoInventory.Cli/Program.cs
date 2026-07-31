@@ -3812,7 +3812,7 @@ static void PrintHelp()
     Console.WriteLine("                        [--adb <adb.exe>] [--serial <serial>]");
     Console.WriteLine("  device-calibrate-appraisal-streaming-gates --profile <automation.json> --appraisal-profile <appraisal.json> --out <directory>");
     Console.WriteLine("                        [--adb <adb.exe>] [--serial <serial>]");
-    Console.WriteLine("  device-stream-read-pokemon --device <serial> --profile <gate-profile.json> --appraisal-profile <appraisal.json> --items <n> --out <directory>");
+    Console.WriteLine("  device-stream-read-pokemon --device <serial> --profile <gate-profile.json> --appraisal-profile <appraisal.json> --items <n> --out <directory> [--query age0-9999]");
     Console.WriteLine("                        Continuous scrcpy/FFmpeg AppraisalBars reader; writes live.html, items.csv and items.jsonl.");
     Console.WriteLine("  analyze-reidentification --database-a <sqlite> --database-b <sqlite> --out <directory>");
     Console.WriteLine("  inventory-db-init [--db <pogo-inventory.db>]");

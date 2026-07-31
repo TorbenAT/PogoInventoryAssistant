@@ -109,7 +109,12 @@ internal static class GateEvaluation
                     region);
             }
 
-            if (region.SharpnessScore < options.MinimumSharpnessScore)
+            var minimumSharpness = options.MinimumSharpnessScoreByRegion.TryGetValue(
+                requiredName,
+                out var regionalMinimumSharpness)
+                ? regionalMinimumSharpness
+                : options.MinimumSharpnessScore;
+            if (region.SharpnessScore < minimumSharpness)
             {
                 return Failure(
                     GateReasonCode.SharpnessTooLow,

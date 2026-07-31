@@ -7,6 +7,8 @@
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
   </PropertyGroup>
   <ItemGroup>
+    <Compile Include="..\..\src\PogoInventory.Cli\StreamPokemonProofReporter.cs"
+             Link="TestableCli\StreamPokemonProofReporter.cs" />
     <PackageReference Include="Microsoft.Data.Sqlite" Version="8.0.10" />
     <ProjectReference Include="..\..\src\PogoInventory.Automation\PogoInventory.Automation.csproj" />
     <ProjectReference Include="..\..\src\PogoInventory.Bootstrap\PogoInventory.Bootstrap.csproj" />

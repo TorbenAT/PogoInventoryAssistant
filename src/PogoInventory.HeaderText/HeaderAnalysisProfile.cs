@@ -14,7 +14,7 @@ public sealed record HeaderAnalysisProfile
 {
     public NormalizedRegion DetailsCpRegion { get; init; } = new()
     {
-        X = 0.28, Y = 0.08, Width = 0.44, Height = 0.05
+        X = 0.32, Y = 0.08, Width = 0.36, Height = 0.05
     };
 
     public NormalizedRegion DetailsNameRegion { get; init; } = new()
@@ -24,7 +24,7 @@ public sealed record HeaderAnalysisProfile
 
     public NormalizedRegion AppraisalCpRegion { get; init; } = new()
     {
-        X = 0.28, Y = 0.08, Width = 0.44, Height = 0.05
+        X = 0.32, Y = 0.08, Width = 0.36, Height = 0.05
     };
 
     public NormalizedRegion AppraisalNameRegion { get; init; } = new()

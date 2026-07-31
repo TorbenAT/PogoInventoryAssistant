@@ -74,7 +74,7 @@
   "candidateScoreMinimum": 0.82,
   "minimumOrangeBars": 2,
   "minimumTrackBars": 2,
-  "completeBarConfidenceMinimum": 0.72,
+  "completeBarConfidenceMinimum": 0.70,
   "verified": false,
   "verificationReportSha256": null,
   "verifiedAtUtc": null,

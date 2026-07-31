@@ -199,6 +199,33 @@ public sealed class GuardedInventorySearch
 
 public sealed class InventorySearchVisualAnalyzer
 {
+    public static bool IsPotentialPostcondition(
+        InventorySearchAction action,
+        InventorySearchVisualEvidence evidence,
+        string expectedQuery)
+    {
+        ArgumentNullException.ThrowIfNull(evidence);
+        ArgumentException.ThrowIfNullOrWhiteSpace(expectedQuery);
+        if (!evidence.SearchFieldVisible)
+        {
+            return false;
+        }
+
+        return action switch
+        {
+            InventorySearchAction.OpenSearch =>
+                evidence.KeyboardVisible && !evidence.QueryVisible,
+            InventorySearchAction.ClearSearch => !evidence.QueryVisible,
+            InventorySearchAction.EnterQuery =>
+                evidence.KeyboardVisible && evidence.QueryVisible &&
+                GuardedInventorySearch.IsQueryLengthCompatible(evidence, expectedQuery),
+            InventorySearchAction.SubmitQuery =>
+                !evidence.KeyboardVisible && evidence.QueryVisible &&
+                GuardedInventorySearch.IsQueryLengthCompatible(evidence, expectedQuery),
+            _ => false
+        };
+    }
+
     public InventorySearchVisualEvidence Analyze(byte[] screenshotPng)
     {
         ArgumentNullException.ThrowIfNull(screenshotPng);

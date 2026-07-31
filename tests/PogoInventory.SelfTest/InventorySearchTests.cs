@@ -69,6 +69,25 @@ internal static class InventorySearchTests
             InventorySearchOutcome.ActionNotObserved,
             unchanged.ObservePostAction(Evidence(query: false, keyboard: false, result: "blank")));
         AssertTrue(unchanged.AuthorizeNextAction() is null, "failed action cannot loop");
+
+        AssertTrue(
+            InventorySearchVisualAnalyzer.IsPotentialPostcondition(
+                InventorySearchAction.OpenSearch,
+                Evidence(query: false, keyboard: true),
+                "age0-1825"),
+            "Open-search postcondition did not accept a visible empty editor.");
+        AssertTrue(
+            !InventorySearchVisualAnalyzer.IsPotentialPostcondition(
+                InventorySearchAction.OpenSearch,
+                Evidence(query: false, keyboard: false),
+                "age0-1825"),
+            "Open-search postcondition accepted a frame before the keyboard appeared.");
+        AssertTrue(
+            InventorySearchVisualAnalyzer.IsPotentialPostcondition(
+                InventorySearchAction.EnterQuery,
+                Evidence(query: true, keyboard: true) with { QueryInkWidth = 80 },
+                "age0-1825"),
+            "Enter-query postcondition rejected compatible visible query evidence.");
         return Task.CompletedTask;
     }
 

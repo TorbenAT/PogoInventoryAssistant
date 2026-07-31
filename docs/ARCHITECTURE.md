@@ -1,5 +1,45 @@
 # Architecture
 
+## Final stream-proof safeguards (2026-07-31)
+
+The final reader still treats the normal 0.70 IV bar-confidence floor as the
+only route to Complete inventory fields. `StreamPokemonReaderCommand` also
+constructs a separate progression-only semantic result from a stable,
+five-frame IV tuple whose individual bars are at least 0.65 confident. That
+result is consulted only for the high-similarity handoff comparison and is
+explicitly prevented from changing `IsComplete`. This admits the observed
+stable Burmy IV 3/2/8 transition without turning an uncertain field into
+inventory truth.
+
+`AdbAndroidDeviceTransport` retries only a failed read-only screenshot when
+ADB reports that its daemon is unreachable and the selected serial is an
+explicit IPv4/IPv6 endpoint with a port. It runs one `adb connect <serial>`
+and retries the same screenshot once; input operations never retry. For
+`guarded-back`, the unsafe-modal detector can be bypassed only from an already
+authorized Details state with both full Details topology and a canonical close
+control in the fresh frame. All other unsafe-modal decisions remain blocking.
+
+## High-similarity progression fallback (2026-07-30)
+
+For every ordinal after the first, `AppraisalHandoffEvaluator` requires
+post-action transition evidence before collecting stable candidate frames.
+This prevents pre-render frames from arming a handoff. The candidate still
+uses three compatible stable AppraisalBars frames and the calibrated regional
+pHash cluster.
+
+One `MultiRegionTemporalObserver` lives across the complete run, so the first
+post-swipe frame is compared with the last observed pre-swipe frame. A frame
+tagged `MissingPreviousFrame` cannot establish transition. The observer is
+disposed before the stream stops and before shutdown integrity is measured.
+
+When the canonical candidate remains at or above the visual same-item
+threshold, the CLI analyzes it without yet recording it. Progression is
+accepted only if at least one field is Known on both items and has changed
+(species, CP or an IV). Unknown and Conflicting fields are not evidence of a
+change. With no Known difference, the run safe-stops as
+`SEMANTIC_PROGRESSION_NOT_PROVEN`; it does not guess filter end and sends no
+retry swipe.
+
 ## Stream reader settling handoff (2026-07-29)
 
 `device-stream-read-pokemon` records the latest stream frame before a named

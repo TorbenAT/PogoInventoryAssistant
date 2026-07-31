@@ -2,6 +2,29 @@
 
 ## Unreleased
 
+- Completed a fresh, continuous 120-item real-phone stream proof run on the
+  OnePlus 6T Wireless Debugging endpoint. The final run has 120 unique item
+  fingerprints, 119 verified progressions, 600 distinct semantic evidence
+  frames, all report links intact, zero semantic input commands, and clean
+  shutdown with zero leases. Integrity is PASS.
+
+- Kept the 0.70 IV confidence floor for Complete inventory output. A separate
+  five-frame, 0.65-or-higher IV observation may prove only a high-similarity
+  carousel transition; it can never promote a record to Complete.
+
+- Added one bounded recovery for a read-only ADB screenshot when the daemon
+  disappears: reconnect the explicitly selected wireless IP endpoint once,
+  then retry only that screenshot. Added a canonical Details/X corroboration
+  for guarded Back so an ordinary Details screen is not falsely treated as a
+  Power Up confirmation surface.
+
+- Fixed a false Appraisal-carousel end at consecutive visually similar
+  Pokemon. A post-action transition is now required before changed-item
+  evidence can arm. Candidates still above the visual same-item threshold
+  require a Known semantic field difference; Unknown never proves
+  progression. The measured Pikachu CP 88 -> Pikachu CP 129 collision now
+  continues safely, and the real-phone checkpoint completed 25/25 items.
+
 - Added a bounded stream-only AppraisalBars settling handoff for the Pokémon
   reader. It rejects pre-action frames, ignores transient motion/sharpness
   failures until the eight-second deadline, requires three distinct stable

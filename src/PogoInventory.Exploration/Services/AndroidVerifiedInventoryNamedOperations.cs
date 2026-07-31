@@ -162,8 +162,9 @@ public sealed class AndroidVerifiedInventoryNamedOperations : ICleanupProofNamed
                             "SubmitInventorySearchQuery", "submit", cancellationToken);
                     break;
             }
-            var after = await CaptureAsync($"search-{authorization.Sequence}", cancellationToken);
-            var outcome = workflow.ObservePostAction(_searchAnalyzer.Analyze(after));
+            var after = await CaptureInventorySearchPostconditionAsync(
+                authorization, query, cancellationToken);
+            var outcome = workflow.ObservePostAction(after);
             await CompleteTraceAsync(
                 PokemonGoGameState.Inventory.ToString(),
                 outcome.ToString(),
@@ -176,6 +177,33 @@ public sealed class AndroidVerifiedInventoryNamedOperations : ICleanupProofNamed
         return filtered.State == PokemonGoGameState.Inventory
             ? VerifiedSequenceState.Inventory
             : VerifiedSequenceState.Unknown;
+    }
+
+    private async Task<InventorySearchVisualEvidence> CaptureInventorySearchPostconditionAsync(
+        InventorySearchAuthorization authorization,
+        string query,
+        CancellationToken cancellationToken)
+    {
+        InventorySearchVisualEvidence? latest = null;
+        for (var observation = 1; observation <= 5; observation++)
+        {
+            var screenshot = await CaptureAsync(
+                $"search-{authorization.Sequence}-post-{observation}", cancellationToken);
+            latest = _searchAnalyzer.Analyze(screenshot);
+            if (InventorySearchVisualAnalyzer.IsPotentialPostcondition(
+                    authorization.Action, latest, query))
+            {
+                return latest;
+            }
+
+            if (observation < 5)
+            {
+                await Task.Delay(250, cancellationToken);
+            }
+        }
+
+        return latest ?? throw new InvalidOperationException(
+            "Inventory search postcondition capture produced no evidence.");
     }
 
     public async Task<CleanupStateObservation> CaptureStableCleanupStateAsync(
@@ -1354,7 +1382,8 @@ public sealed class AndroidVerifiedInventoryNamedOperations : ICleanupProofNamed
             authorization.StateBefore is not (PokemonGoGameState.PokemonDetails or PokemonGoGameState.PokemonMenu))
             throw new InvalidOperationException("Android Back was not authorized for the observed state.");
         await AuthorizeNonTapInputAsync(
-            "guarded-back", cancellationToken, PokemonGoGameState.Inventory.ToString());
+            "guarded-back", cancellationToken, PokemonGoGameState.Inventory.ToString(),
+            authorization.StateBefore);
         await _transport.PressBackAsync(_serial, cancellationToken);
         if (_navigationTrace is not null)
             await _navigationTrace.RecordInputSentAsync("PressBack", "Back", cancellationToken);
@@ -1573,7 +1602,12 @@ public sealed class AndroidVerifiedInventoryNamedOperations : ICleanupProofNamed
         PokemonGoGameState? requiredState = null)
     {
         var screenshot = await CaptureAsync($"pre-{name}", cancellationToken);
-        await EnsureNoUnsafeConfirmationAsync(name, screenshot, cancellationToken);
+        var verifiedDetailsRecoverySurface =
+            name == "guarded-back" &&
+            requiredState == PokemonGoGameState.PokemonDetails &&
+            IsVerifiedDetailsRecoverySurface(screenshot);
+        if (!verifiedDetailsRecoverySurface)
+            await EnsureNoUnsafeConfirmationAsync(name, screenshot, cancellationToken);
         var detection = _detector.Detect(screenshot, _appraisalProfile);
         var visualFallbackState = detection.State == PokemonGoGameState.Unknown &&
             _locator.LocateDetailsPageTopology(screenshot) is not null
@@ -1614,11 +1648,16 @@ public sealed class AndroidVerifiedInventoryNamedOperations : ICleanupProofNamed
             Target = (object?)null,
             PreconditionScreenshotHash = detection.ScreenshotSha256,
             FreshPreTapScreenshotHash = detection.ScreenshotSha256,
+            VerifiedDetailsRecoverySurface = verifiedDetailsRecoverySurface,
             AuthorizationResult = "AUTHORIZED",
             InputSent = true
         }, cancellationToken);
         return screenshot;
     }
+
+    private bool IsVerifiedDetailsRecoverySurface(byte[] screenshot) =>
+        _locator.LocateDetailsPageTopology(screenshot) is not null &&
+        _locator.LocateCanonicalCloseControl(screenshot) is not null;
 
     private async Task EnsureNoUnsafeConfirmationAsync(
         string action, byte[] screenshot, CancellationToken cancellationToken)

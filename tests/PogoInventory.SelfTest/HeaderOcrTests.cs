@@ -63,6 +63,18 @@ internal static class HeaderOcrTests
         Assert(ok.Cp == 1234, "CP1234 should parse to 1234");
         Assert(ok.CpConfidence > 0, "parsed CP should carry positive confidence");
 
+        var mixedCase = await Analyze("Eevee", "cP476");
+        Assert(mixedCase.Cp == 476 && mixedCase.CpConfidence == 1,
+            "Mixed-case two-glyph CP anchor should remain a full visual anchor.");
+
+        var splitDigits = await Analyze("Eevee", "cp53 1");
+        Assert(splitDigits.Cp == 531 && splitDigits.CpConfidence == 1,
+            "Whitespace inserted by OCR inside an anchored CP number should normalize.");
+
+        var splitOutOfRange = await Analyze("Eevee", "cp61 63");
+        Assert(splitOutOfRange.Cp is null,
+            "Whitespace normalization must not bypass the CP range gate.");
+
         var missing = await Analyze("Eevee", "CP");
         Assert(missing.Cp is null, "'CP' alone (no digits) must be rejected");
         Assert(missing.FailureReasons.Contains("CP_NOT_READ"), "missing CP should report CP_NOT_READ");
@@ -80,7 +92,27 @@ internal static class HeaderOcrTests
             await Analyze("Eevee", "CP1200")
         };
         var consensus = PokemonHeaderAnalyzer.Consensus(frames);
-        Assert(consensus.Cp == 1234, "CP consensus should accept 2-of-3 agreement");
+        Assert(consensus.Cp is null, "CP consensus must fail closed on a competing third reading");
+    }
+
+    public static Task RunDefaultCpRoiAsync()
+    {
+        var profile = new HeaderAnalysisProfile();
+        foreach (var region in new[]
+        {
+            profile.DetailsCpRegion,
+            profile.AppraisalCpRegion
+        })
+        {
+            Assert(Math.Abs(region.X - 0.32) < 0.0001,
+                "The real-phone CP ROI must exclude the arc noise left of the header.");
+            Assert(Math.Abs(region.Width - 0.36) < 0.0001,
+                "The real-phone CP ROI must exclude trailing arc noise.");
+            Assert(Math.Abs(region.Y - 0.08) < 0.0001 &&
+                Math.Abs(region.Height - 0.05) < 0.0001,
+                "The validated CP ROI vertical bounds changed.");
+        }
+        return Task.CompletedTask;
     }
 
     public static async Task RunTolerantSpeciesNormalizationAsync()

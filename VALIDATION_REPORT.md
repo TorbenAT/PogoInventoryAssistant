@@ -849,3 +849,78 @@ Main consolidation merge: `192d1c7`.
 - The implementation records an eight-second stream-only settling timeout as
   `APPRAISAL_SETTLING_TIMEOUT` with bounded PNG and JSON evidence. No real
   timeout assertion is claimed until the device reconnects.
+## High-similarity Appraisal handoff correction - 2026-07-30
+
+- Root-cause evidence: item 19 is Pikachu CP 88; the post-swipe item is a
+  different Pikachu whose four saved timeout frames all resolve offline as
+  Pikachu CP 129. Regional pHash similarity was 0.9875 (four differing bits
+  across five 64-bit regions), above the configured 0.94 same-item threshold.
+- Focused Release builds for Streaming.Gates, Semantics, CLI and SelfTest:
+  PASS, 0 warnings and 0 errors. One initial pair of parallel builds contended
+  for the same intermediate DLL; sequential reruns passed and the contention
+  is not a code failure.
+- Package-free repository self-test: PASS, 266/266.
+- Required repository script suite: build, test, demo, fake device, fake core
+  bootstrap, fake inventory, fake Calcy probe/live-check, iPhone pretest,
+  appraisal pretest, synthetic parser/screen/profile/validation all PASS.
+  The scripts required an unsandboxed rerun because restore must read the
+  user-level NuGet.Config; the full solution then built with 0 warnings and
+  0 errors.
+- The required no-argument `prepare-android-phone.ps1` invocation reported
+  `AdbNotFound` because `adb` is not on PATH, while incorrectly returning
+  process exit 0. A second invocation with the canonical repository ADB path,
+  explicit connected serial and a new ignored output directory completed:
+  1080x2340 screenshot, Appraisal `Candidate`, calibration ready `True`,
+  verified IV extraction `False`, automatic navigation `False`.
+- Real-phone checkpoint: PASS for its requested 25 items. Result:
+  `CompletedRequestedItems`, 25 unique item fingerprints, 24 verified
+  progressions, 75/75 unique semantic evidence frames, 25 full-evidence
+  items, zero broken image links and zero semantic input commands.
+- Item 20 required semantic progression proof and passed on changed Attack,
+  Defense and HP IV values. CP remained Unknown in the final run, preserving
+  fail-closed behavior.
+- `integrity.json` is FAIL only for `CompletedItemsAtLeast100` because this
+  diagnostic checkpoint requested 25. All other integrity checks pass. This
+  is not the final 100+ mission acceptance.
+- An earlier 25-item attempt was terminated by the external 240-second host
+  command timeout after 19 persisted rows. It is diagnostic only and is not
+  represented as a program pass or failure.
+- Persistent-observer hardening: attempt 013 completed 25/25 and passed the
+  measured item-20 collision using real cross-action temporal comparison plus
+  changed Attack/Defense/HP IV proof. Its final report correctly exposed one
+  observer-held lease (`Shutdown=Faulted`, leases=1), so it is not a clean
+  shutdown acceptance.
+- Observer lifecycle correction: attempt 014 completed 3/3 with
+  `Shutdown=Clean`, leases=0, null stream error, zero semantic input and no
+  remaining FFmpeg process. Its only failed integrity check is the intentional
+  100-item minimum on a 3-item shutdown checkpoint.
+# Final 120-item real-phone proof run — 2026-07-31
+
+- Run: `stream-20260731T195333664Z-bc04d28b23614d6f`
+- Device: ONEPLUS_A6013 via `192.168.1.185:37877`
+- Continuous stream: scrcpy/H.264/FFmpeg/BGRA32, 886x1920, 25m 13s
+- Result: 120/120 completed; 120 identities; 119 verified progressions;
+  600 distinct semantic evidence frames; `IntegrityStatus=PASS`.
+- Coverage: Species 95.00%, CP 85.00%, IV triple 92.50%, Complete 74.17%;
+  primary-field conflict maximum 0.83%.
+- Safety: setup inputs 9, progression swipes 119, other named inputs 0,
+  semantic inputs 0; shutdown Clean; leases 0; 0 broken report links.
+- Visual QA: 30 final items reviewed, including required ordinals, the one
+  conflicting CP, five Unknown cases and five long-settling cases. 18 were
+  visually verified with all reported fields matching; 12 had intentionally
+  under-asserted Unknown/Conflicting fields and were categorized
+  Unverifiable. VisuallyWrong=0; false-Known Species=0, CP=0, IV=0.
+- Focused build and self-test after the final safeguards: PASS, 0 warnings /
+  errors, 278/278 tests.
+- Required script suite: PASS — `build`, `test`, `run-demo`,
+  `run-fake-device`, `run-fake-core-profile-bootstrap`,
+  `run-fake-inventory-scan`, `run-fake-calcy-probe`,
+  `run-fake-calcy-live-check`, `run-iphone-image-pretest`,
+  `run-appraisal-pretest`, canonical-ADB `prepare-android-phone`,
+  `parse-synthetic-calcy-output`, `detect-synthetic-screen`,
+  `build-synthetic-calibration-profile`, and
+  `validate-synthetic-calibration`.
+- Post-run phone preparation was read-only and left the phone at
+  `AppraisalBars` for Dreepy CP 417. Its generated profile remains a
+  Candidate/unverified profile, as required; no production observation
+  provider was enabled.

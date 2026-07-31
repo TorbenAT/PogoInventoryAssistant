@@ -1,21 +1,15 @@
 # Continuation prompt
 
-Reconnect the authorized OnePlus at `192.168.1.185:5555`, then run the new
-stream-only settling handoff through `device-stream-read-pokemon --items 3`.
-Only run `--items 10` when the 3-item result is green. Preserve the 3-of-5
-AppraisalBars handoff, fresh post-action frame barrier, stable-region
-fingerprint and fail-closed stop reporting. Do not start Phase 7.
+The continuous 100+ proof mission is complete pending only repository
+handoff validation and Git delivery. The final clean stream run is
+`stream-20260731T195333664Z-bc04d28b23614d6f` under
+`local-data/validation/stream-reader-final-120`: 120/120 completed,
+120 unique identities, 119 verified progressions, 600 evidence frames,
+Integrity PASS, zero semantic input, Clean shutdown and zero leases.
 
-Complete canonical stream capture after the phone recovery gate: implement the
-stream visual-frame provider over the accepted StreamingFrameSource, wire
-cleanup/reprocessor/Phase 6B to the canonical item service, and run the
-ADB-vs-stream A/B. Keep the existing Tesseract fastpath and use
-`qwen3-vl:2b-instruct` only as a bounded fallback candidate and `gemma3:4b` as
-an optional diagnostic comparator. Build verified multi-item Android truth
-evidence with zero false-Known and zero false-Complete observations before
-considering any Phase 7 work.
-
-Do not run the 10-item pilot until the 3-item gate is clean. Do not add
-navigation, tagging, transfer, delete, Calcy integration or phone input to the
-streaming/shadow path. Real semantic accuracy remains NOT MEASURABLE and
-Phase 7 remains NOT STARTED.
+Do not reopen or extend this scan as a replacement for the evidence. Preserve
+the fail-closed semantics: Unknown/Conflicting never prove progression;
+the five-frame moderate-IV path is progression-only and cannot complete an
+inventory record. Complete the required script validation, keep `local-data`
+ignored, then commit/push/merge the documented change. Do not start Phase 7
+or add prohibited Pokémon actions.
