@@ -92,8 +92,14 @@ public sealed class AndroidVerifiedInventoryNamedOperations : ICleanupProofNamed
         // input on the same still-visible interruption.
         if (state.State == PokemonGoGameState.Unknown)
             return VerifiedSequenceState.Unknown;
-        if (state.State is PokemonGoGameState.PokemonDetails or PokemonGoGameState.PokemonMenu or
-            PokemonGoGameState.Appraisal)
+        if (state.State is PokemonGoGameState.PokemonDetails or PokemonGoGameState.PokemonMenu)
+        {
+            var canonicalClose = await CloseCanonicalScreenAsync(cancellationToken);
+            if (!canonicalClose.Succeeded || canonicalClose.StateAfter != PokemonGoGameState.Inventory)
+                return VerifiedSequenceState.Unknown;
+            state = await WaitForStateAsync(new[] { PokemonGoGameState.Inventory }, cancellationToken);
+        }
+        else if (state.State == PokemonGoGameState.Appraisal)
         {
             var recovered = await ReturnToInventoryAsync(cancellationToken);
             if (recovered != VerifiedSequenceState.Inventory)
