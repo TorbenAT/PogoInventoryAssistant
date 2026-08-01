@@ -505,6 +505,7 @@ internal static class HeaderSemanticsCleanupTests
             HasSpecialMove = false,
             IsXxl = false,
             IsXxs = false,
+            Protection = KnownP0False(),
             IdentityConfidence = IdentityConfidence.Exact,
             Tags = Array.Empty<string>(),
             VariantIdentity = new PokemonVariantIdentity
@@ -551,6 +552,29 @@ internal static class HeaderSemanticsCleanupTests
             }
         };
         await persistence.RecordCleanupObservationAsync(record);
+    }
+
+    private static PokemonProtection KnownP0False()
+    {
+        ProtectionField<bool> False(string detail) => new()
+        {
+            Value = false,
+            HasValue = true,
+            State = ProtectionProofState.Known,
+            Confidence = 1,
+            Evidence = [new ProtectionEvidence
+            {
+                Source = ProtectionEvidenceSource.Diagnostic,
+                Detail = detail
+            }]
+        };
+        return new PokemonProtection
+        {
+            Favorite = False("test-favorite"), Shiny = False("test-shiny"),
+            Costume = False("test-costume"), SpecialBackground = False("test-background"),
+            Lucky = False("test-lucky"), Shadow = False("test-shadow"),
+            Purified = False("test-purified")
+        };
     }
 
     public static async Task AnalyzeCleanupEvidenceEndToEndAsync()

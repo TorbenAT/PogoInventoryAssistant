@@ -4966,6 +4966,7 @@ static PokemonObservation P(
         HasSpecialMove = false,
         IsXxl = false,
         IsXxs = false,
+        Protection = FullyKnownFalseProtection(),
         IdentityConfidence = IdentityConfidence.Exact,
         VariantIdentity = Variant(
             species.Equals("Pikachu", StringComparison.OrdinalIgnoreCase) ? 25 :
@@ -4975,6 +4976,29 @@ static PokemonObservation P(
             species.Equals("Bidoof", StringComparison.OrdinalIgnoreCase) ? 399 : 1,
             species)
     };
+
+static PokemonProtection FullyKnownFalseProtection()
+{
+    ProtectionField<bool> False(string field) => new()
+    {
+        Value = false,
+        HasValue = true,
+        State = ProtectionProofState.Known,
+        Confidence = 1,
+        Evidence = [new ProtectionEvidence
+        {
+            Source = ProtectionEvidenceSource.Diagnostic,
+            Detail = $"synthetic-{field}"
+        }]
+    };
+    return new PokemonProtection
+    {
+        Favorite = False("favorite"), Shiny = False("shiny"),
+        Costume = False("costume"), SpecialBackground = False("background"),
+        Lucky = False("lucky"), Shadow = False("shadow"),
+        Purified = False("purified")
+    };
+}
 
 static PokemonVariantIdentity Variant(
     int speciesId,

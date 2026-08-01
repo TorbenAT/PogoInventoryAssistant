@@ -558,7 +558,7 @@ button,select{margin-right:8px;padding:6px}details{max-width:760px}.hidden{displ
 <option value="conflicting">Conflicting</option><option value="slow">Slow items</option>
 <option value="long-settling">Long settling</option></select></label>
 <button type="button" id="sort">Sort by item time</button></section>
-<table id="items"><thead><tr><th>Item</th><th>Evidence</th><th>Species</th><th>CP</th><th>IV</th><th>Timing</th><th>Proof detail</th></tr></thead>
+<table id="items"><thead><tr><th>Item</th><th>Evidence</th><th>Species</th><th>CP</th><th>IV</th><th>Protection</th><th>Timing</th><th>Proof detail</th></tr></thead>
 <tbody>{{rows}}</tbody></table>
 <script>
 const body=document.querySelector('#items tbody'), rows=[...body.querySelectorAll('tr[data-item-row]')];
@@ -599,6 +599,12 @@ document.querySelector('#sort').onclick=()=>[...rows].sort((a,b)=>Number(a.datas
             item.Result.DefenseIv.Confidence,
             item.Result.HpIv.Confidence
         }.Min();
+        var protection = item.Result.Protection.States
+            .Select(pair => $"{pair.Key}: {pair.Value}")
+            .ToArray();
+        var protectionEvidence = item.Result.Protection.Favorite.Evidence
+            .Select(evidence => $"{evidence.Source} frame {evidence.FrameId} {evidence.EvidenceHash}")
+            .ToArray();
         return $"""
 <tr data-item-row="{item.Ordinal}" data-run-id="{H(item.RunId)}" data-fingerprint="{H(item.ItemFingerprint)}" data-flags="{H(string.Join(" ", flags))}" data-ms="{item.ItemMilliseconds.ToString(CultureInfo.InvariantCulture)}">
 <td><b>{item.Ordinal}</b><br>{H(item.CapturedAtUtc.ToString("O"))}</td>
@@ -606,6 +612,7 @@ document.querySelector('#sort').onclick=()=>[...rows].sort((a,b)=>Number(a.datas
 <td class="{H(item.Result.Species.Status)}">{H(Value(item.Result.Species.Value))}<br>{H(item.Result.Species.Status)} {item.Result.Species.Confidence:P1}</td>
 <td class="{H(item.Result.Cp.Status)}">{H(Value(item.Result.Cp.Value))}<br>{H(item.Result.Cp.Status)} {item.Result.Cp.Confidence:P1}</td>
 <td class="{H(IvStatus(item))}">{H(Value(item.Result.AttackIv.Value))}/{H(Value(item.Result.DefenseIv.Value))}/{H(Value(item.Result.HpIv.Value))}<br>{H(IvStatus(item))} {ivConfidence:P1}</td>
+<td>{H(string.Join(" | ", protection))}<br><small>{H(string.Join(" | ", protectionEvidence))}</small></td>
 <td>item {item.ItemMilliseconds:F0} ms<br>settling {item.SettlingMilliseconds:F0} ms<br>swipe-to-stable {H(item.SwipeToStableMilliseconds?.ToString("F0", CultureInfo.InvariantCulture) ?? "n/a")} ms<br>OCR {item.OcrMilliseconds:F0} ms<br>IV {item.IvMilliseconds:F0} ms</td>
 <td><details><summary>Evidence and audit</summary>
 <p><b>Fingerprint:</b> <code>{H(item.ItemFingerprint)}</code></p>

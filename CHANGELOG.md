@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+- Added Phase 6C protection enrichment: canonical evidence-bound proof states
+  for P0/P1 protection fields, a fail-closed cleanup gate, schema-v4 durable
+  `ProtectionJson`, stream HTML visibility and an offline-only
+  `replay-stream-protection` command. The final 120-item evidence replay
+  hash-verified 600 frames with zero input commands: Favorite is 46 true / 74
+  false / 0 conflicting; all unproven P0 markers remain Unknown.
+
 - Added a read-only, hash-verified `replay-stream-species` command and a
   reference-safe species-label resolver. It accepts only an exact `100` (or
   OCR `l00`) suffix or pure punctuation, then requires a unique reference

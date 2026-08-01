@@ -55,7 +55,10 @@ internal static class StreamPokemonReaderCommand
         var commit = ReadGitCommit();
         var profile = await GateProfileLoader.LoadAsync(options.Profile, cancellationToken);
         var appraisalProfile = await AppraisalProfileLoader.LoadAsync(options.AppraisalProfile, cancellationToken);
-        var reference = new StaticSpeciesReference(SpeciesReferenceLoader.LoadFromFile(Path.Combine("data", "reference", "species-reference.json")).Species.Select(x => x.Name));
+        var speciesReferenceData = SpeciesReferenceLoader.LoadFromFile(
+            Path.Combine("data", "reference", "species-reference.json"));
+        var reference = new StaticSpeciesReference(
+            speciesReferenceData.Species.Select(x => x.Name));
         var tessdata = Path.GetFullPath(Path.Combine("tools", "tessdata-best"));
         if (!TesseractTextRecognizer.IsSupported(tessdata, "eng")) throw new InvalidOperationException($"Tesseract tessdata is unavailable: {tessdata}");
         using var tesseractRaw = new TesseractTextRecognizer(
@@ -123,7 +126,7 @@ internal static class StreamPokemonReaderCommand
                 var record = await AnalyzeItemAsync(
                     runId, ordinal, handoff.Frames, visualFingerprint,
                     headerAnalyzer, binarizedHeaderAnalyzer,
-                    appraisalProfile, profile, handoff.Report, itemStarted,
+                    appraisalProfile, profile, speciesReferenceData, handoff.Report, itemStarted,
                     actionStarted, options.Output, cancellationToken);
                 var itemFingerprint =
                     StreamPokemonProofReporter.BuildItemFingerprint(
@@ -239,13 +242,14 @@ internal static class StreamPokemonReaderCommand
         PokemonHeaderAnalyzer binarizedHeaderAnalyzer,
         AppraisalVisualProfile appraisalProfile,
         GateProfile gateProfile,
+        SpeciesReferenceData speciesReferenceData,
         StreamProofHandoff handoff,
         long started,
         DateTimeOffset actionStarted,
         string output,
         CancellationToken cancellationToken)
     {
-        var evidence = new List<PokemonEvidenceFrame>(); var species = new List<SemanticObservation<string>>(); var cpRaw = new List<SemanticObservation<int?>>(); var cpBinarized = new List<SemanticObservation<int?>>(); var iv = new List<SemanticObservation<(int, int, int)>>(); var progressionOnlyIv = new List<SemanticObservation<(int, int, int)>>(); var raw = new List<string>(); var ocrMs = 0d; var ivMs = 0d;
+        var evidence = new List<PokemonEvidenceFrame>(); var visualFrames = new List<ProtectionVisualFrame>(); var species = new List<SemanticObservation<string>>(); var cpRaw = new List<SemanticObservation<int?>>(); var cpBinarized = new List<SemanticObservation<int?>>(); var iv = new List<SemanticObservation<(int, int, int)>>(); var progressionOnlyIv = new List<SemanticObservation<(int, int, int)>>(); var raw = new List<string>(); var ocrMs = 0d; var ivMs = 0d;
         var directory = Path.Combine(output, "items", $"item-{ordinal:000}");
         Directory.CreateDirectory(directory);
         var evidenceFiles = new List<string>();
@@ -259,9 +263,13 @@ internal static class StreamPokemonReaderCommand
             evidenceFiles.Add(relative);
             var hash = Convert.ToHexString(SHA256.HashData(frame.Png)).ToLowerInvariant();
             evidence.Add(new PokemonEvidenceFrame(frame.Id, frame.CapturedAtUtc, hash, "AppraisalBars", "scrcpy-stream"));
+            var pixelImage = PngDecoder.Decode(frame.Png);
+            visualFrames.Add(new ProtectionVisualFrame(
+                frame.Id, hash, pixelImage.Width, pixelImage.Height,
+                pixelImage.RgbaBytes.ToArray()));
             var ocrStart = Stopwatch.GetTimestamp(); var header = await headerAnalyzer.AnalyzeAsync(frame.Png, HeaderScreenType.AppraisalBars, cancellationToken); var binarizedHeader = await binarizedHeaderAnalyzer.AnalyzeAsync(frame.Png, HeaderScreenType.AppraisalBars, cancellationToken); ocrMs += ElapsedMs(ocrStart); raw.AddRange(header.RawLines.Select(x => $"raw:{x.Text}")); raw.AddRange(binarizedHeader.RawLines.Select(x => $"binary:{x.Text}"));
             if (isPrimarySemanticFrame && header.Species is not null) species.Add(new(header.Species, header.SpeciesConfidence, frame.Id, hash)); if (header.Cp is not null) cpRaw.Add(new(header.Cp, header.CpConfidence, frame.Id, hash)); if (binarizedHeader.Cp is not null) cpBinarized.Add(new(binarizedHeader.Cp, binarizedHeader.CpConfidence, frame.Id, hash));
-            var ivStart = Stopwatch.GetTimestamp(); var analysis = new AppraisalAnalyzer().Analyze(PngDecoder.Decode(frame.Png), appraisalProfile, allowComplete: false); ivMs += ElapsedMs(ivStart);
+            var ivStart = Stopwatch.GetTimestamp(); var analysis = new AppraisalAnalyzer().Analyze(pixelImage, appraisalProfile, allowComplete: false); ivMs += ElapsedMs(ivStart);
             if (isPrimarySemanticFrame &&
                 analysis.AttackIv is not null &&
                 analysis.DefenseIv is not null &&
@@ -306,6 +314,11 @@ internal static class StreamPokemonReaderCommand
                 rawResult.AttackIv.Status == SemanticFieldStatus.Known &&
                 rawResult.DefenseIv.Status == SemanticFieldStatus.Known &&
                 rawResult.HpIv.Status == SemanticFieldStatus.Known
+        };
+        result = result with
+        {
+            Protection = ProtectionEnrichment.Analyze(
+                evidenceSet, visualFrames, result.Species, speciesReferenceData)
         };
         var progressionResult = BuildProgressionResult(
             result, progressionOnlyResult, frames.Count);

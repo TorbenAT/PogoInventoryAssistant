@@ -1,5 +1,22 @@
 # Project state
 
+## Phase 6C protection enrichment (2026-08-01)
+
+Phase 6C is implemented offline-first but is **PARTIAL**, not a production
+truth gate for every P0 field. `PokemonProtection` is the canonical,
+evidence-bound contract: `Known(true)`, `Known(false)`, `Unknown` and
+`Conflicting` remain distinct. Any non-Known P0 field blocks aggressive cleanup
+classification. Protection is serialized explicitly through schema version 4
+and is also retained in the canonical observation JSON.
+
+The read-only `replay-stream-protection` command hash-verified all 600 saved
+frames from the canonical 120-item run and sent zero phone inputs. It produced
+Favorite `Known(true)=46`, `Known(false)=74`, `Unknown=0`, `Conflicting=0`.
+Shiny, Costume, SpecialBackground, Lucky, Shadow and Purified remain Unknown
+for all 120 items because no separately proven visual truth rule has been
+accepted. Legendary/Mythical/Ultra Beast are only reference-derived when
+species is Known. No Phase 7 action, tagging, delete or transfer work occurred.
+
 ## Offline reference-safe species polish (2026-08-01)
 
 No phone run was made. The new read-only `replay-stream-species` command

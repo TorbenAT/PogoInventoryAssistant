@@ -1,3 +1,5 @@
+using PogoInventory.Core.Models;
+
 namespace PogoInventory.Semantics;
 
 public enum SemanticFieldStatus { Known, Unknown, Conflicting }
@@ -30,7 +32,8 @@ public sealed record PokemonItemSemanticResult(
     SemanticFieldResult<int?> DefenseIv,
     SemanticFieldResult<int?> HpIv,
     bool IsComplete,
-    IReadOnlyDictionary<string, double> AnalyzerTimingsMilliseconds);
+    IReadOnlyDictionary<string, double> AnalyzerTimingsMilliseconds,
+    PokemonProtection Protection);
 
 public sealed record SemanticObservation<T>(
     T? Value,
@@ -199,7 +202,8 @@ public sealed class PokemonItemSemanticAnalyzer
         PokemonItemEvidenceSet evidence,
         IReadOnlyList<SemanticObservation<string>> species,
         IReadOnlyList<SemanticObservation<int?>> cp,
-        IReadOnlyList<SemanticObservation<(int Attack, int Defense, int Hp)>> iv)
+        IReadOnlyList<SemanticObservation<(int Attack, int Defense, int Hp)>> iv,
+        PokemonProtection? protection = null)
     {
         ArgumentNullException.ThrowIfNull(evidence);
         var speciesResult = Resolve(evidence.HeaderFrames, species, "SPECIES");
@@ -213,7 +217,8 @@ public sealed class PokemonItemSemanticAnalyzer
             speciesResult.Status == SemanticFieldStatus.Known && cpResult.Status == SemanticFieldStatus.Known &&
             attackResult.Status == SemanticFieldStatus.Known && defenseResult.Status == SemanticFieldStatus.Known &&
             hpResult.Status == SemanticFieldStatus.Known,
-            new Dictionary<string, double>(StringComparer.Ordinal));
+            new Dictionary<string, double>(StringComparer.Ordinal),
+            protection ?? PokemonProtection.Unknown);
     }
 
     private static SemanticFieldResult<T> Resolve<T>(

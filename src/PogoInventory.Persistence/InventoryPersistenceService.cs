@@ -9,7 +9,7 @@ namespace PogoInventory.Persistence;
 
 public sealed class InventoryPersistenceService
 {
-    private const int SchemaVersion = 3;
+    private const int SchemaVersion = 4;
     private readonly string _databasePath;
 
     public InventoryPersistenceService(string databasePath)
@@ -28,8 +28,8 @@ public sealed class InventoryPersistenceService
             PRAGMA foreign_keys = ON;
             CREATE TABLE IF NOT EXISTS SchemaInfo (Version INTEGER NOT NULL, AppliedAtUtc TEXT NOT NULL);
             CREATE TABLE IF NOT EXISTS ScanRuns (RunId TEXT PRIMARY KEY, RunType TEXT NOT NULL, SearchQuery TEXT, StartedAtUtc TEXT NOT NULL, EndedAtUtc TEXT, Status TEXT NOT NULL, StopReason TEXT, DeviceSerial TEXT, ConnectionMode TEXT, ObservationProvider TEXT, RequestedItems INTEGER, ActualItems INTEGER NOT NULL DEFAULT 0, SourceDirectory TEXT);
-            CREATE TABLE IF NOT EXISTS PokemonRecords (LocalPokemonId TEXT PRIMARY KEY, LifecycleState TEXT NOT NULL, FirstSeenRunId TEXT NOT NULL, LastSeenRunId TEXT NOT NULL, FirstSeenAtUtc TEXT NOT NULL, LastSeenAtUtc TEXT NOT NULL, SpeciesName TEXT, Cp INTEGER, AttackIv INTEGER, DefenseIv INTEGER, HpIv INTEGER, FormId TEXT, CostumeId TEXT, BackgroundId TEXT, IsShiny INTEGER, ShadowState TEXT, LuckyState TEXT, DynamaxState TEXT, CatchLocation TEXT, IdentityConfidence TEXT NOT NULL, ProtectionConfidence TEXT NOT NULL, CurrentRecommendation TEXT NOT NULL, RecommendationReason TEXT NOT NULL, LastScreenshotPath TEXT, LastScreenshotSha256 TEXT, LastFingerprintSha256 TEXT, ObservationStatus TEXT NOT NULL DEFAULT 'Observed', Nickname TEXT, ExistingTagsJson TEXT, FieldEvidenceJson TEXT, AppraisalEvidenceJson TEXT, VariantJson TEXT);
-            CREATE TABLE IF NOT EXISTS Observations (ObservationId INTEGER PRIMARY KEY AUTOINCREMENT, LocalPokemonId TEXT NOT NULL, RunId TEXT NOT NULL, Sequence INTEGER NOT NULL, CapturedAtUtc TEXT NOT NULL, ProviderName TEXT NOT NULL, ObservationStatus TEXT NOT NULL, Confidence REAL NOT NULL, ProtectionConfidence REAL NOT NULL DEFAULT 0, SpeciesName TEXT, Cp INTEGER, AttackIv INTEGER, DefenseIv INTEGER, HpIv INTEGER, CatchLocation TEXT, ScreenshotPath TEXT, ScreenshotSha256 TEXT, FingerprintSha256 TEXT, ObservationJson TEXT, FieldEvidenceJson TEXT, AppraisalEvidenceJson TEXT, ScreenshotPathsJson TEXT, ScreenshotHashesJson TEXT, UNIQUE(RunId, Sequence));
+            CREATE TABLE IF NOT EXISTS PokemonRecords (LocalPokemonId TEXT PRIMARY KEY, LifecycleState TEXT NOT NULL, FirstSeenRunId TEXT NOT NULL, LastSeenRunId TEXT NOT NULL, FirstSeenAtUtc TEXT NOT NULL, LastSeenAtUtc TEXT NOT NULL, SpeciesName TEXT, Cp INTEGER, AttackIv INTEGER, DefenseIv INTEGER, HpIv INTEGER, FormId TEXT, CostumeId TEXT, BackgroundId TEXT, IsShiny INTEGER, ShadowState TEXT, LuckyState TEXT, DynamaxState TEXT, CatchLocation TEXT, IdentityConfidence TEXT NOT NULL, ProtectionConfidence TEXT NOT NULL, CurrentRecommendation TEXT NOT NULL, RecommendationReason TEXT NOT NULL, LastScreenshotPath TEXT, LastScreenshotSha256 TEXT, LastFingerprintSha256 TEXT, ObservationStatus TEXT NOT NULL DEFAULT 'Observed', Nickname TEXT, ExistingTagsJson TEXT, FieldEvidenceJson TEXT, AppraisalEvidenceJson TEXT, VariantJson TEXT, ProtectionJson TEXT);
+            CREATE TABLE IF NOT EXISTS Observations (ObservationId INTEGER PRIMARY KEY AUTOINCREMENT, LocalPokemonId TEXT NOT NULL, RunId TEXT NOT NULL, Sequence INTEGER NOT NULL, CapturedAtUtc TEXT NOT NULL, ProviderName TEXT NOT NULL, ObservationStatus TEXT NOT NULL, Confidence REAL NOT NULL, ProtectionConfidence REAL NOT NULL DEFAULT 0, SpeciesName TEXT, Cp INTEGER, AttackIv INTEGER, DefenseIv INTEGER, HpIv INTEGER, CatchLocation TEXT, ScreenshotPath TEXT, ScreenshotSha256 TEXT, FingerprintSha256 TEXT, ObservationJson TEXT, FieldEvidenceJson TEXT, AppraisalEvidenceJson TEXT, ScreenshotPathsJson TEXT, ScreenshotHashesJson TEXT, ProtectionJson TEXT, UNIQUE(RunId, Sequence));
             CREATE TABLE IF NOT EXISTS InventoryEvents (EventId INTEGER PRIMARY KEY AUTOINCREMENT, LocalPokemonId TEXT NOT NULL, RunId TEXT NOT NULL, EventType TEXT NOT NULL, OccurredAtUtc TEXT NOT NULL, DetailJson TEXT);
             CREATE TABLE IF NOT EXISTS TagAssignments (LocalPokemonId TEXT NOT NULL, TagName TEXT NOT NULL, RequestedState TEXT NOT NULL, VerifiedState TEXT NOT NULL, RequestedAtUtc TEXT NOT NULL, VerifiedAtUtc TEXT, LastError TEXT, ActionExecuted INTEGER NOT NULL DEFAULT 0, VisuallyVerified INTEGER NOT NULL DEFAULT 0, BeforeScreenshotHash TEXT, AfterScreenshotHash TEXT, AuditReference TEXT, PRIMARY KEY(LocalPokemonId, TagName));
             INSERT INTO SchemaInfo (Version, AppliedAtUtc) SELECT 1, @now WHERE NOT EXISTS (SELECT 1 FROM SchemaInfo);
@@ -75,12 +75,14 @@ public sealed class InventoryPersistenceService
             ("PokemonRecords", "AppraisalEvidenceJson", "TEXT"),
             ("PokemonRecords", "VariantJson", "TEXT"),
             ("PokemonRecords", "ComparatorLocalPokemonId", "TEXT"),
+            ("PokemonRecords", "ProtectionJson", "TEXT"),
             ("Observations", "ProtectionConfidence", "REAL NOT NULL DEFAULT 0"),
             ("Observations", "ObservationJson", "TEXT"),
             ("Observations", "FieldEvidenceJson", "TEXT"),
             ("Observations", "AppraisalEvidenceJson", "TEXT"),
             ("Observations", "ScreenshotPathsJson", "TEXT"),
             ("Observations", "ScreenshotHashesJson", "TEXT"),
+            ("Observations", "ProtectionJson", "TEXT"),
             ("PokemonRecords", "SemanticKey", "TEXT"),
             ("PokemonRecords", "SemanticKeyCompleteness", "TEXT"),
             ("Observations", "SemanticKey", "TEXT"),
@@ -178,6 +180,7 @@ public sealed class InventoryPersistenceService
         await using var transaction = (SqliteTransaction)await connection.BeginTransactionAsync(cancellationToken);
         var jsonOptions = JsonOptions();
         var observationJson = JsonSerializer.Serialize(record.Observation, jsonOptions);
+        var protectionJson = JsonSerializer.Serialize(record.Observation.Protection, jsonOptions);
         var fieldEvidenceJson = JsonSerializer.Serialize(record.FieldEvidenceSources, jsonOptions);
         var appraisalEvidenceJson = JsonSerializer.Serialize(record.AppraisalEvidence, jsonOptions);
         var screenshotPathsJson = JsonSerializer.Serialize(record.ScreenshotPaths, jsonOptions);
@@ -195,11 +198,11 @@ public sealed class InventoryPersistenceService
                      Cp, AttackIv, DefenseIv, HpIv, CatchLocation, ScreenshotPath,
                      ScreenshotSha256, FingerprintSha256, ObservationJson,
                      FieldEvidenceJson, AppraisalEvidenceJson, ScreenshotPathsJson,
-                     ScreenshotHashesJson, SemanticKey, SemanticKeyCompleteness)
+                     ScreenshotHashesJson, ProtectionJson, SemanticKey, SemanticKeyCompleteness)
                 VALUES (@id, @run, @seq, @captured, 'CleanupProof', @status, @identity,
                         @protection, @species, @cp, @attack, @defense, @hp, @location,
                         @path, @sha, @fingerprint, @observation, @fields, @appraisal,
-                        @paths, @hashes, @semanticKey, @semanticKeyCompleteness);
+                        @paths, @hashes, @protectionJson, @semanticKey, @semanticKeyCompleteness);
                 """;
             observation.Parameters.AddWithValue("@id", record.LocalPokemonId);
             observation.Parameters.AddWithValue("@run", record.RunId);
@@ -222,6 +225,7 @@ public sealed class InventoryPersistenceService
             observation.Parameters.AddWithValue("@appraisal", appraisalEvidenceJson);
             observation.Parameters.AddWithValue("@paths", screenshotPathsJson);
             observation.Parameters.AddWithValue("@hashes", screenshotHashesJson);
+            observation.Parameters.AddWithValue("@protectionJson", protectionJson);
             observation.Parameters.AddWithValue("@semanticKey", semanticKey.FullKey);
             observation.Parameters.AddWithValue("@semanticKeyCompleteness", semanticKey.Completeness.ToString());
             await observation.ExecuteNonQueryAsync(cancellationToken);
@@ -239,13 +243,13 @@ public sealed class InventoryPersistenceService
                      ProtectionConfidence, CurrentRecommendation, RecommendationReason,
                      LastScreenshotPath, LastScreenshotSha256, LastFingerprintSha256,
                      ObservationStatus, Nickname, ExistingTagsJson, FieldEvidenceJson,
-                     AppraisalEvidenceJson, VariantJson, ComparatorLocalPokemonId,
+                     AppraisalEvidenceJson, VariantJson, ProtectionJson, ComparatorLocalPokemonId,
                      SemanticKey, SemanticKeyCompleteness)
                 VALUES (@id, 'Observed', @run, @run, @at, @at, @species, @cp, @attack,
                         @defense, @hp, @form, @costume, @background, @shiny, @shadow,
                         @lucky, @dynamax, @location, @identity, @protection, 'PENDING',
                         'Recommendation has not been generated.', @path, @sha, @fingerprint,
-                        @status, @nickname, @tags, @fields, @appraisal, @variant, NULL,
+                        @status, @nickname, @tags, @fields, @appraisal, @variant, @protectionJson, NULL,
                         @semanticKey, @semanticKeyCompleteness);
                 """;
             recordCommand.Parameters.AddWithValue("@id", record.LocalPokemonId);
@@ -275,6 +279,7 @@ public sealed class InventoryPersistenceService
             recordCommand.Parameters.AddWithValue("@fields", fieldEvidenceJson);
             recordCommand.Parameters.AddWithValue("@appraisal", appraisalEvidenceJson);
             recordCommand.Parameters.AddWithValue("@variant", variantJson);
+            recordCommand.Parameters.AddWithValue("@protectionJson", protectionJson);
             recordCommand.Parameters.AddWithValue("@semanticKey", semanticKey.FullKey);
             recordCommand.Parameters.AddWithValue("@semanticKeyCompleteness", semanticKey.Completeness.ToString());
             await recordCommand.ExecuteNonQueryAsync(cancellationToken);
@@ -343,6 +348,7 @@ public sealed class InventoryPersistenceService
         await using var transaction = (SqliteTransaction)await connection.BeginTransactionAsync(cancellationToken);
         var options = JsonOptions();
         var observationJson = JsonSerializer.Serialize(observation, options);
+        var protectionJson = JsonSerializer.Serialize(observation.Protection, options);
         var fieldsJson = JsonSerializer.Serialize(fieldEvidenceSources, options);
         var appraisalJson = JsonSerializer.Serialize(
             appraisal.EvidencePaths.Count == 0
@@ -357,13 +363,14 @@ public sealed class InventoryPersistenceService
             command.CommandText = $"""
                 UPDATE Observations
                 SET {statusClause}Cp = @cp, AttackIv = @attack, DefenseIv = @defense, HpIv = @hp,
-                    ObservationJson = @observation, FieldEvidenceJson = @fields,
+                    ObservationJson = @observation, ProtectionJson = @protectionJson, FieldEvidenceJson = @fields,
                     AppraisalEvidenceJson = @appraisal, SemanticKey = @semanticKey,
                     SemanticKeyCompleteness = @semanticKeyCompleteness
                 WHERE LocalPokemonId = @id AND RunId = @run;
                 """;
             AddEnrichmentParameters(command, runId, localPokemonId, observation,
                 observationJson, fieldsJson, appraisalJson);
+            command.Parameters.AddWithValue("@protectionJson", protectionJson);
             if (observationStatus is not null) command.Parameters.AddWithValue("@status", observationStatus);
             await command.ExecuteNonQueryAsync(cancellationToken);
         }
@@ -373,12 +380,13 @@ public sealed class InventoryPersistenceService
             command.CommandText = $"""
                 UPDATE PokemonRecords
                 SET {statusClause}Cp = @cp, AttackIv = @attack, DefenseIv = @defense, HpIv = @hp,
-                    FieldEvidenceJson = @fields, AppraisalEvidenceJson = @appraisal,
+                    ProtectionJson = @protectionJson, FieldEvidenceJson = @fields, AppraisalEvidenceJson = @appraisal,
                     SemanticKey = @semanticKey, SemanticKeyCompleteness = @semanticKeyCompleteness
                 WHERE LocalPokemonId = @id AND LastSeenRunId = @run;
                 """;
             AddEnrichmentParameters(command, runId, localPokemonId, observation,
                 observationJson, fieldsJson, appraisalJson);
+            command.Parameters.AddWithValue("@protectionJson", protectionJson);
             if (observationStatus is not null) command.Parameters.AddWithValue("@status", observationStatus);
             await command.ExecuteNonQueryAsync(cancellationToken);
         }
@@ -405,6 +413,7 @@ public sealed class InventoryPersistenceService
         await using var transaction = (SqliteTransaction)await connection.BeginTransactionAsync(cancellationToken);
         var options = JsonOptions();
         var observationJson = JsonSerializer.Serialize(observation, options);
+        var protectionJson = JsonSerializer.Serialize(observation.Protection, options);
         var fieldsJson = JsonSerializer.Serialize(fieldEvidenceSources, options);
         await using (var command = connection.CreateCommand())
         {
@@ -412,13 +421,14 @@ public sealed class InventoryPersistenceService
             command.CommandText = """
                 UPDATE Observations
                 SET Cp = @cp, AttackIv = @attack, DefenseIv = @defense, HpIv = @hp,
-                    CatchLocation = @location, ObservationJson = @observation,
+                    CatchLocation = @location, ObservationJson = @observation, ProtectionJson = @protectionJson,
                     FieldEvidenceJson = @fields, SemanticKey = @semanticKey,
                     SemanticKeyCompleteness = @semanticKeyCompleteness
                 WHERE LocalPokemonId = @id AND RunId = @run;
                 """;
             AddSemanticParameters(command, runId, localPokemonId, observation,
                 observationJson, fieldsJson);
+            command.Parameters.AddWithValue("@protectionJson", protectionJson);
             await command.ExecuteNonQueryAsync(cancellationToken);
         }
         await using (var command = connection.CreateCommand())
@@ -427,12 +437,13 @@ public sealed class InventoryPersistenceService
             command.CommandText = """
                 UPDATE PokemonRecords
                 SET Cp = @cp, AttackIv = @attack, DefenseIv = @defense, HpIv = @hp,
-                    CatchLocation = @location, FieldEvidenceJson = @fields,
+                    CatchLocation = @location, ProtectionJson = @protectionJson, FieldEvidenceJson = @fields,
                     SemanticKey = @semanticKey, SemanticKeyCompleteness = @semanticKeyCompleteness
                 WHERE LocalPokemonId = @id AND LastSeenRunId = @run;
                 """;
             AddSemanticParameters(command, runId, localPokemonId, observation,
                 observationJson, fieldsJson);
+            command.Parameters.AddWithValue("@protectionJson", protectionJson);
             await command.ExecuteNonQueryAsync(cancellationToken);
         }
         await InsertCleanupEventAsync(connection, transaction, localPokemonId, runId,
@@ -708,6 +719,7 @@ public sealed class InventoryPersistenceService
         await using var transaction = (SqliteTransaction)await connection.BeginTransactionAsync(cancellationToken);
         var options = JsonOptions();
         var observationJson = JsonSerializer.Serialize(observation, options);
+        var protectionJson = JsonSerializer.Serialize(observation.Protection, options);
         var fieldsJson = JsonSerializer.Serialize(fieldEvidenceSources, options);
         var semanticKey = SemanticIdentityKey.FromObservation(observation);
 
@@ -717,11 +729,12 @@ public sealed class InventoryPersistenceService
             command.CommandText = """
                 UPDATE Observations
                 SET SpeciesName = @species, Cp = @cp, AttackIv = @attack, DefenseIv = @defense, HpIv = @hp,
-                    ObservationStatus = @status, ObservationJson = @observation, FieldEvidenceJson = @fields,
+                    ObservationStatus = @status, ObservationJson = @observation, ProtectionJson = @protectionJson, FieldEvidenceJson = @fields,
                     SemanticKey = @semanticKey, SemanticKeyCompleteness = @semanticKeyCompleteness
                 WHERE LocalPokemonId = @id AND RunId = @run;
                 """;
             AddReprocessParameters(command, runId, localPokemonId, observation, observationJson, fieldsJson, semanticKey, observationStatus);
+            command.Parameters.AddWithValue("@protectionJson", protectionJson);
             await command.ExecuteNonQueryAsync(cancellationToken);
         }
         await using (var command = connection.CreateCommand())
@@ -730,11 +743,12 @@ public sealed class InventoryPersistenceService
             command.CommandText = """
                 UPDATE PokemonRecords
                 SET SpeciesName = @species, Cp = @cp, AttackIv = @attack, DefenseIv = @defense, HpIv = @hp,
-                    Nickname = @nickname, ObservationStatus = @status, FieldEvidenceJson = @fields,
+                    Nickname = @nickname, ObservationStatus = @status, ProtectionJson = @protectionJson, FieldEvidenceJson = @fields,
                     SemanticKey = @semanticKey, SemanticKeyCompleteness = @semanticKeyCompleteness
                 WHERE LocalPokemonId = @id AND LastSeenRunId = @run;
                 """;
             AddReprocessParameters(command, runId, localPokemonId, observation, observationJson, fieldsJson, semanticKey, observationStatus);
+            command.Parameters.AddWithValue("@protectionJson", protectionJson);
             await command.ExecuteNonQueryAsync(cancellationToken);
         }
         await InsertCleanupEventAsync(connection, transaction, localPokemonId, runId,

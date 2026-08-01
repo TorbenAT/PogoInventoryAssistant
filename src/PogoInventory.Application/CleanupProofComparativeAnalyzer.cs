@@ -27,6 +27,7 @@ public static class CleanupProofComparativeAnalyzer
                 var comparator = ranked.FirstOrDefault(candidate => candidate.LocalPokemonId != row.LocalPokemonId);
                 var missing = ProtectionFields(row.Observation);
                 var exactReviewed = row.Observation.HasKnownCriticalValues &&
+                    !row.Observation.HasUnknownCriticalProtection &&
                     row.Observation.IdentityConfidence == IdentityConfidence.Exact &&
                     row.Observation.VariantIdentity?.VariantKey is not null;
                 var protectedKnown = row.Observation.IsFavorite is true || row.Observation.IsShiny is true ||

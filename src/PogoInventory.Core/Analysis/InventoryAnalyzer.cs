@@ -270,6 +270,14 @@ public sealed class InventoryAnalyzer
     {
         var reasons = new List<DecisionReason>();
 
+        if (pokemon.HasUnknownCriticalProtection)
+        {
+            reasons.Add(new(
+                "REVIEW_UNKNOWN_CRITICAL_PROTECTION",
+                "One or more P0 protection fields are Unknown or Conflicting. " +
+                "Unknown protection cannot be treated as absence."));
+        }
+
         if (!pokemon.HasKnownCriticalValues)
         {
             reasons.Add(new(

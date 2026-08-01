@@ -645,6 +645,7 @@ internal static class CleanupProofTests
         HasSpecialMove = false,
         IsXxl = false,
         IsXxs = false,
+        Protection = KnownP0False(),
         IdentityConfidence = IdentityConfidence.Exact,
         VariantIdentity = new PokemonVariantIdentity
         {
@@ -666,6 +667,24 @@ internal static class CleanupProofTests
             VariantIdentityConfidence = IdentityConfidence.Exact
         }
     };
+
+    private static PokemonProtection KnownP0False()
+    {
+        ProtectionField<bool> False(string detail) => new()
+        {
+            Value = false,
+            HasValue = true,
+            State = ProtectionProofState.Known,
+            Confidence = 1,
+            Evidence = [new ProtectionEvidence { Source = ProtectionEvidenceSource.Diagnostic, Detail = detail }]
+        };
+        return new PokemonProtection
+        {
+            Favorite = False("favorite"), Shiny = False("shiny"),
+            Costume = False("costume"), SpecialBackground = False("background"),
+            Lucky = False("lucky"), Shadow = False("shadow"), Purified = False("purified")
+        };
+    }
 
     internal static byte[] FixtureBytes() => File.ReadAllBytes(RepositoryPath("data", "screen-fixtures", "PokemonDetails.png"));
 

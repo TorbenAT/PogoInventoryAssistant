@@ -473,6 +473,19 @@ This is a traversal identity only. Exact identity for tagging will later include
 
 ## Persistence
 
+### Phase 6C protection proofs
+
+`PogoInventory.Core.Models.PokemonProtection` is owned by the canonical
+observation layer. Its P0 fields are evidence-bound proof fields, never plain
+booleans. `InventoryAnalyzer` treats Unknown and Conflicting P0 values as a
+mandatory Review gate. `PogoInventory.Persistence` schema v4 stores the full
+contract in `ProtectionJson` on both Observations and PokemonRecords in
+addition to `ObservationJson`; this preserves source, frame ID/hash and proof
+state across a reload. `PogoInventory.Semantics` accepts only host-provided
+decoded frames whose ID/hash matches canonical item evidence. It currently
+authorizes only the bounded favorite-star detector and species-reference P1
+rarity derivation; all other markers fail closed as Unknown.
+
 ```text
 <output>/
   inventory-scan-checkpoint.json

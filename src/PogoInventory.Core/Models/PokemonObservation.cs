@@ -35,7 +35,15 @@ public sealed record PokemonObservation
 
     public IdentityConfidence IdentityConfidence { get; init; } = IdentityConfidence.Unknown;
     public PokemonVariantIdentity? VariantIdentity { get; init; }
+    /// <summary>
+    /// Evidence-bound protection proof. This is authoritative over the legacy
+    /// nullable projections above, which remain for compatibility only.
+    /// </summary>
+    public PokemonProtection Protection { get; init; } = PokemonProtection.Unknown;
     public IReadOnlyCollection<string> Tags { get; init; } = Array.Empty<string>();
+
+    public bool HasUnknownCriticalProtection =>
+        Protection.HasUnknownCriticalProtection;
 
     public int? TotalIv => AttackIv is null || DefenseIv is null || HpIv is null
         ? null
@@ -103,7 +111,8 @@ public sealed record PokemonObservation
         HasSpecialMove is not null &&
         IsXxl is not null &&
         IsXxs is not null &&
-        VariantIdentity?.VariantKey is not null;
+        VariantIdentity?.VariantKey is not null &&
+        !HasUnknownCriticalProtection;
 
     private static string Normalize(string? value) =>
         string.IsNullOrWhiteSpace(value) ? "unknown" : value.Trim().ToLowerInvariant();

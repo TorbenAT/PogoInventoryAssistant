@@ -6,6 +6,7 @@
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
   </PropertyGroup>
   <ItemGroup>
+    <ProjectReference Include="..\PogoInventory.Core\PogoInventory.Core.csproj" />
     <ProjectReference Include="..\PogoInventory.Streaming\PogoInventory.Streaming.csproj" />
   </ItemGroup>
 </Project>

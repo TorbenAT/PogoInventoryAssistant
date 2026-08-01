@@ -249,6 +249,21 @@ remains the authoritative compiler and test runner.
 
 # Validation report
 
+## Phase 6C protection enrichment — 2026-08-01
+
+- `dotnet build PogoInventoryAssistant.sln --configuration Release --no-restore`:
+  PASS, 0 warnings / 0 errors.
+- Package-free self-test: PASS, 279/279.
+- `replay-stream-protection` against the ignored final evidence: PASS, 120
+  items and 600 PNG SHA-256 inputs verified; `SemanticInputCommandsSent=0`.
+  Favorite was 46 Known(true), 74 Known(false), 0 Unknown, 0 Conflicting.
+  Other P0 fields were intentionally all Unknown; false-Known is 0 by the
+  authoritative manifest scope and no P0 conflict was produced.
+- Wrapper `scripts/build.ps1` and `scripts/test.ps1` were invoked but their
+  restore phase is limited by the known ACL denial for
+  `C:\Users\torbe\AppData\Roaming\NuGet\NuGet.Config`. They are not claimed
+  as full-green wrapper runs. No phone run was performed.
+
 ## Long self-recovering database acceptance — 2026-07-21
 
 - Baseline: HEAD/origin/main `3c78c225718b269647e437b39d512d69f0b5c592`.

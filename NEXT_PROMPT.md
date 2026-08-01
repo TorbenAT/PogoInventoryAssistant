@@ -1,5 +1,14 @@
 # Continuation prompt
 
+Phase 6C protection enrichment is PARTIAL and must not be overstated as a
+complete P0 truth gate. The canonical `PokemonProtection` contract and schema
+v4 persistence are ready. Offline replay on the final immutable evidence is
+green for Favorite only: 600/600 frame hashes verified, 46 Known(true), 74
+Known(false), 0 conflicts, 0 semantic input. All other P0 fields remain
+Unknown and therefore block aggressive cleanup. Before Phase 7, obtain bounded
+positive and negative real-phone truth evidence for any additional P0 marker;
+use only named, verified navigation and no destructive operation.
+
 The Phase 6 baseline is ready for Phase 7 development, but Phase 7 is NOT
 STARTED. Do not add any prohibited PokÃ©mon action. The final clean stream run
 `stream-20260731T195333664Z-bc04d28b23614d6f` remains the canonical capture:

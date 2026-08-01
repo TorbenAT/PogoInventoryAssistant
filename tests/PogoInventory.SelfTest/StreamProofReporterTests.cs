@@ -1,3 +1,4 @@
+using PogoInventory.Core.Models;
 using PogoInventory.Semantics;
 
 namespace PogoInventory.SelfTest;
@@ -110,7 +111,8 @@ internal static class StreamProofReporterTests
             knownInt with { Value = 11 },
             knownInt with { Value = 12 },
             true,
-            new Dictionary<string, double>(StringComparer.Ordinal));
+            new Dictionary<string, double>(StringComparer.Ordinal),
+            PokemonProtection.Unknown);
         var root = $"items/item-{ordinal:000}";
         return new(
             runId,
