@@ -37,6 +37,13 @@
   or other destructive input was sent; SQLite remains `integrity_check=ok` at
   25 records and 81 events. The bucket is persisted Blocked for explicit human
   dismissal/resume.
+- Power Up root-cause correction: a read-only phone snapshot SHA-256
+  `cb044e2665b4694efe6c08cda157c54df1d81a3dee198a164de7841c2f2a9225`
+  is PokemonDetails at confidence 1.000, with canonical close visible and no
+  confirmation modal. The raw detector had falsely matched ordinary Details
+  controls (scores 0.722/0.817/0.784). The central Details/canonical-close
+  interlock replays that exact frame as `None`; build is green and self-test is
+  281/281. No phone input was sent during this investigation.
 
 ## Streaming Vision Phase 5 Appraisal gate calibration - 2026-07-28
 

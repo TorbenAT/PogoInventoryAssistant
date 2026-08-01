@@ -59,6 +59,14 @@ internal static class WrongScreenAuthorizationTests
         Assert(source.Contains("IsVerifiedDetailsRecoverySurface", StringComparison.Ordinal) &&
                source.Contains("LocateCanonicalCloseControl", StringComparison.Ordinal),
             "guarded-back can bypass a false modal classification only with canonical Details corroboration");
+        Assert(source.Contains("DetectUnsafeSurface", StringComparison.Ordinal) &&
+               source.Contains("raw-unsafe-score-suppressed-by-verified-details-topology", StringComparison.Ordinal) &&
+               source.Contains("canonical-details-close-visible", StringComparison.Ordinal),
+            "ordinary Details action rows cannot become a Power Up modal without independent modal evidence");
+        Assert(source.Contains("SourceImageWidth", StringComparison.Ordinal) &&
+               source.Contains("CoordinateTransform", StringComparison.Ordinal) &&
+               source.Contains("pre-input-", StringComparison.Ordinal),
+            "every visually located target records fresh-canvas geometry and pre-input evidence for transform reconstruction");
         return Task.CompletedTask;
     }
 

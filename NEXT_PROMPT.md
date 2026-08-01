@@ -75,10 +75,14 @@ the account total.
 Schema v6 binds a real cleanup run to a work bucket, append-only query oracle
 evidence and per-item ledger records. A batch limit is persisted as
 `TraversalLimited`/`ReconciliationRequired`, never as filter-end. The first
-50-item `2020-frontier-complement-001` run safe-stopped with a verified
-`UnsafeConfirmation:PowerUp` before item 1; it recorded no destructive input
-and the bucket is Blocked. Require a human to dismiss that unsafe dialog before
-resuming; do not use Back or automated Cancel.
+50-item `2020-frontier-complement-001` run safe-stopped before item 1 on a raw
+PowerUp detector score. Read-only evidence then proved ordinary PokemonDetails,
+not a modal: Woobat, canonical close and Details state confidence 1.000 on the
+native 1080x2340 canvas. The central unsafe detector now suppresses only this
+raw result when independent Details topology and the canonical close are both
+visible; every actual/unknown modal remains blocked. Preserve the historical
+Unity CANCEL no-effect gap—the old audit lacks actual pixel evidence—and do
+not generalize Android Back.
 
 Do not use `device-open-inventory` or `device-press-back`: they are retired
 to prevent blind Back actions. Use only a state-verified named workflow.

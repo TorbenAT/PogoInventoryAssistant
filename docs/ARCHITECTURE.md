@@ -187,6 +187,12 @@ human-review-only comparative duplicate suggestions. Unknown protection fields
 are listed and comparative suggestions can never trigger tags or destructive
 actions.
 
+The unsafe-confirmation detector is deliberately structural, but a raw
+Power-Up-like score is not sufficient when the common host independently sees
+PokemonDetails topology and its canonical close control on the same fresh ADB
+screencap. The detector records that suppression as evidence; it never sends a
+dismissal and leaves genuine/unknown modal surfaces fail-closed.
+
 ## Real cleanup proof value chain
 
 `device-run-cleanup-proof` is the permanent bounded read-only value-chain

@@ -222,6 +222,8 @@ static async Task<int> MainAsync(string[] args)
                 cancellationSource.Token),
             "known-interrupt-detect-image" => await DetectKnownBenignInterruptImageAsync(
                 args.Skip(1).ToArray(), cancellationSource.Token),
+            "unsafe-confirmation-detect-image" => await DetectUnsafeConfirmationImageAsync(
+                args.Skip(1).ToArray(), cancellationSource.Token),
             "main-menu-locate-image" => await LocateMainMenuImageAsync(
                 args.Skip(1).ToArray(), cancellationSource.Token),
             "device-recover-known-interrupt" => await RecoverKnownBenignInterruptAsync(
@@ -2557,6 +2559,20 @@ static async Task<int> DetectKnownBenignInterruptImageAsync(string[] args, Cance
     Console.WriteLine($"Known interrupt: {detection.Kind}; confidence: {detection.Confidence:F3}");
     // This is a read-only diagnostic: None is a valid finding, not a process
     // failure. Recovery is never authorized by this command.
+    return 0;
+}
+
+static async Task<int> DetectUnsafeConfirmationImageAsync(string[] args, CancellationToken cancellationToken)
+{
+    var options = ParseOptions(args);
+    var imagePath = Require(options, "image");
+    var output = Path.GetFullPath(Require(options, "out"));
+    Directory.CreateDirectory(Path.GetDirectoryName(output) ?? ".");
+    var detection = new UnsafeConfirmationSurfaceDetector().Detect(
+        await File.ReadAllBytesAsync(imagePath, cancellationToken), Optional(options, "intended-action"));
+    await File.WriteAllTextAsync(output, JsonSerializer.Serialize(detection,
+        new JsonSerializerOptions { WriteIndented = true, Converters = { new JsonStringEnumConverter() } }), cancellationToken);
+    Console.WriteLine($"Unsafe confirmation: {detection.Kind}");
     return 0;
 }
 

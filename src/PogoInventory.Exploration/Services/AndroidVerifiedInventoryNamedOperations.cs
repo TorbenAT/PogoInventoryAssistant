@@ -555,7 +555,7 @@ public sealed class AndroidVerifiedInventoryNamedOperations : ICleanupProofNamed
             var topology = _locator.LocateDetailsPageTopology(screenshot);
             var details = detection.State == PokemonGoGameState.PokemonDetails ||
                 (detection.State == PokemonGoGameState.Unknown && topology is not null);
-            var unsafeSurface = _unsafeSurfaceDetector.Detect(screenshot, "cleanup-proof-observation");
+            var unsafeSurface = DetectUnsafeSurface(screenshot, "cleanup-proof-observation");
             if (unsafeSurface.IsUnsafe)
             {
                 failureReasons.Add($"UnsafeConfirmation:{unsafeSurface.Kind}");
@@ -1595,6 +1595,7 @@ public sealed class AndroidVerifiedInventoryNamedOperations : ICleanupProofNamed
         // This target was located in this fresh screenshot. Do not remap it
         // through metadata: the OnePlus reported an app-content height on one
         // path while screencap was the physical 2340-pixel canvas.
+        var preInputPath = await SaveEvidenceAsync($"pre-input-{name}", screenshot, cancellationToken);
         var targetImage = PngDecoder.Decode(screenshot);
         var (x, y) = point.ToPixels(targetImage.Width, targetImage.Height);
         await _transport.TapAsync(_serial, x, y, cancellationToken);
@@ -1610,6 +1611,14 @@ public sealed class AndroidVerifiedInventoryNamedOperations : ICleanupProofNamed
             VisualFallbackState = visualFallbackState,
             ConflictingStates = Array.Empty<PokemonGoGameState>(),
             Target = point,
+            SourceImageWidth = targetImage.Width,
+            SourceImageHeight = targetImage.Height,
+            DeviceInputWidth = targetImage.Width,
+            DeviceInputHeight = targetImage.Height,
+            Orientation = targetImage.Width < targetImage.Height ? "Portrait" : "Landscape",
+            InsetsOrCrop = "None: normalized locator target maps directly to fresh ADB screencap canvas.",
+            CoordinateTransform = "NormalizedPoint -> fresh screencap pixels -> ADB input tap",
+            PreInputEvidencePath = preInputPath,
             PreconditionScreenshotHash = authorization?.PreconditionScreenshotSha256 ?? detection.ScreenshotSha256,
             FreshPreTapScreenshotHash = authorization?.FreshPreTapScreenshotSha256 ?? detection.ScreenshotSha256,
             AuthorizationResult = "AUTHORIZED",
@@ -1692,7 +1701,7 @@ public sealed class AndroidVerifiedInventoryNamedOperations : ICleanupProofNamed
                 throw new InvalidOperationException("Known benign interrupt recovery did not establish a safe postcondition.");
             screenshot = recovery.LastScreenshot;
         }
-        var unsafeSurface = _unsafeSurfaceDetector.Detect(screenshot, action);
+        var unsafeSurface = DetectUnsafeSurface(screenshot, action);
         if (!unsafeSurface.IsUnsafe) return screenshot;
         if (_navigationTrace is not null)
         {
@@ -1723,6 +1732,28 @@ public sealed class AndroidVerifiedInventoryNamedOperations : ICleanupProofNamed
             AutoCancel = false
         }, cancellationToken);
         throw new UnsafeConfirmationSurfaceException(action, unsafeSurface.Kind);
+    }
+
+    /// <summary>
+    /// A raw unsafe-modal colour/shape score cannot override a fully verified
+    /// Details surface with its canonical close control still visible. This
+    /// prevents ordinary Power Up/Evolve rows from becoming a false modal while
+    /// preserving fail-closed blocking for every modal/unknown surface that
+    /// does not have independent Details corroboration.
+    /// </summary>
+    private UnsafeConfirmationDetection DetectUnsafeSurface(byte[] screenshot, string action)
+    {
+        var raw = _unsafeSurfaceDetector.Detect(screenshot, action);
+        if (!raw.IsUnsafe || !IsVerifiedDetailsRecoverySurface(screenshot)) return raw;
+        return raw with
+        {
+            Kind = UnsafeConfirmationKind.None,
+            Evidence = raw.Evidence.Concat(new[]
+            {
+                "raw-unsafe-score-suppressed-by-verified-details-topology",
+                "canonical-details-close-visible"
+            }).ToArray()
+        };
     }
 
     /// <summary>

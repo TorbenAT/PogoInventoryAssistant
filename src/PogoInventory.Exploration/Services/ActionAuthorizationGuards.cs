@@ -42,11 +42,23 @@ public sealed class UnsafeConfirmationSurfaceDetector
         // conservative; it intentionally blocks uncertain modal surfaces.
         var hasConfirmationTopology = pairedAdjusters >= 0.56 &&
             lowerLightPanel >= 0.62 && confirmationFooter >= 0.70;
-        var kind = hasConfirmationTopology
+        var rawKind = hasConfirmationTopology
             ? ClassifyByIntendedAction(intendedAction, UnsafeConfirmationKind.PowerUp)
             : HasBroadModalSurface(image)
                 ? ClassifyByIntendedAction(intendedAction, UnsafeConfirmationKind.UnknownConfirmation)
                 : UnsafeConfirmationKind.None;
+        // Ordinary Details rows can contain a broad white card, colored round
+        // controls and a pale footer. A real confirmation cannot be inferred
+        // from those colours alone when the independently detected Details
+        // topology and its canonical close are simultaneously visible.
+        var gameState = new PokemonGoGameStateDetector().Detect(screenshotPng);
+        var locator = new VisualControlLocator();
+        var verifiedDetails = gameState.State == PokemonGoGameState.PokemonDetails &&
+            locator.LocateDetailsPageTopology(screenshotPng) is not null &&
+            locator.LocateCanonicalCloseControl(screenshotPng) is not null;
+        var kind = rawKind != UnsafeConfirmationKind.None && verifiedDetails
+            ? UnsafeConfirmationKind.None
+            : rawKind;
 
         var evidence = new List<string>();
         evidence.Add($"paired-adjuster-score:{pairedAdjusters:F3}");
@@ -55,6 +67,11 @@ public sealed class UnsafeConfirmationSurfaceDetector
         if (pairedAdjusters >= 0.56) evidence.Add("paired-adjuster-controls");
         if (lowerLightPanel >= 0.62) evidence.Add("large-light-confirmation-panel");
         if (confirmationFooter >= 0.70) evidence.Add("confirmation-footer-surface");
+        if (rawKind != UnsafeConfirmationKind.None && verifiedDetails)
+        {
+            evidence.Add("raw-unsafe-score-suppressed-by-verified-details-topology");
+            evidence.Add("canonical-details-close-visible");
+        }
         if (kind == UnsafeConfirmationKind.None)
             evidence.Add("no-confirmation-surface");
 

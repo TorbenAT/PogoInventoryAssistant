@@ -69,9 +69,14 @@ game action was sent.
 The first schema-v6 50-item frontier run created the durable
 `2020-frontier-complement-001` bucket and its SearchOracleEvidence records,
 then stopped before its first item at `UNRESOLVED_DETAILS:UnsafeConfirmation:PowerUp`.
-No Power Up or other input was sent. The bucket is `Blocked`, rather than
-silently retried or marked complete; it needs an explicit safe dismissal before
-the real-phone frontier can resume.
+Read-only preservation then proved this was not a Power Up confirmation: the
+same 1080x2340 screenshot is PokemonDetails at confidence 1.000 with the
+canonical close visible and ordinary Woobat Power Up/Evolve rows. The raw
+colour/shape detector was a false positive; no Power Up or other input was
+sent. The detector now has a central verified-Details/canonical-close interlock
+and named-tap audit records now retain canvas/mapping evidence. The old Unity
+CANCEL no-effect root cause remains separately unresolved because its historic
+audit omitted actual target pixels.
 
 Two old CLI shortcuts were discovered to send unguarded Android Back. From
 the gameplay map that opens an app-exit confirmation, not inventory. Both

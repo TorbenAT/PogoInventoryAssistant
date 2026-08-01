@@ -6,6 +6,10 @@
   evidence, per-item bucket attempts/progress and cross-bucket fingerprint
   overlap candidates. Bounded traversals remain reconciliation-required until
   filter-end/count evidence exists.
+- Fixed a real ordinary-Details false positive from the Power Up modal detector
+  by requiring independent Details topology plus canonical-close corroboration.
+  Added fresh-canvas/mapping audit fields for visual named taps; no dismiss or
+  destructive input was added.
 
 - Added a user-approved, single named `StateBoundAndroidBackFallback` only for
   a three-stable exact KnownExitDialog. No-effect or Unknown is terminal and

@@ -130,6 +130,13 @@ audited and must reach a stable, known, non-interrupt postcondition. These are
 implemented recovery candidates, not live-accepted until their individual
 real-phone postcondition has been observed.
 
+Unsafe confirmation detection is also fail-closed against false positives:
+colour/shape scores alone cannot label ordinary PokemonDetails action rows a
+modal when independent Details topology and the canonical Details close are
+both visible. This exception does not authorize Power Up, Cancel or Back; the
+ordinary Details state must still pass the named-action precondition. Any
+unknown or actual modal remains a terminal zero-input stop.
+
 If the post-tap screen is animated, unknown, conflicting, or another
 unrecognised modal, the layer sends zero further input, saves evidence and
 stops. `UnsafeConfirmationSurfaceDetector` still denies Power Up, Evolve,
