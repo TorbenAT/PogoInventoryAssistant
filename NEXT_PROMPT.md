@@ -72,5 +72,13 @@ still REVIEW; no cleanup action is authorized. Continue from a fresh,
 non-overlapping verified query rather than treating this bounded frontier as
 the account total.
 
+Schema v6 binds a real cleanup run to a work bucket, append-only query oracle
+evidence and per-item ledger records. A batch limit is persisted as
+`TraversalLimited`/`ReconciliationRequired`, never as filter-end. The first
+50-item `2020-frontier-complement-001` run safe-stopped with a verified
+`UnsafeConfirmation:PowerUp` before item 1; it recorded no destructive input
+and the bucket is Blocked. Require a human to dismiss that unsafe dialog before
+resuming; do not use Back or automated Cancel.
+
 Do not use `device-open-inventory` or `device-press-back`: they are retired
 to prevent blind Back actions. Use only a state-verified named workflow.

@@ -9,7 +9,7 @@ namespace PogoInventory.Persistence;
 
 public sealed class InventoryPersistenceService
 {
-    private const int SchemaVersion = 5;
+    private const int SchemaVersion = 6;
     private readonly string _databasePath;
 
     public InventoryPersistenceService(string databasePath)
@@ -35,8 +35,10 @@ public sealed class InventoryPersistenceService
             CREATE TABLE IF NOT EXISTS WorkBuckets (LogicalBucketId TEXT PRIMARY KEY, AbsoluteDateStart TEXT NOT NULL, AbsoluteDateEnd TEXT NOT NULL, PokedexStart INTEGER, PokedexEnd INTEGER, DerivedPhoneQuery TEXT NOT NULL, Status TEXT NOT NULL, StartedAtUtc TEXT, CompletedAtUtc TEXT, ItemsObserved INTEGER NOT NULL DEFAULT 0, ItemsIndexed INTEGER NOT NULL DEFAULT 0, ItemsReview INTEGER NOT NULL DEFAULT 0, ItemsDeleteCandidate INTEGER NOT NULL DEFAULT 0, Failures INTEGER NOT NULL DEFAULT 0, Retries INTEGER NOT NULL DEFAULT 0, LastSuccessfulItem TEXT, CompletionEvidenceJson TEXT);
             CREATE TABLE IF NOT EXISTS WorkItems (LogicalBucketId TEXT NOT NULL, LocalPokemonId TEXT NOT NULL, State TEXT NOT NULL, Disposition TEXT NOT NULL, ExactBindingEvidence TEXT, UpdatedAtUtc TEXT NOT NULL, LastError TEXT, PRIMARY KEY(LogicalBucketId, LocalPokemonId), FOREIGN KEY(LogicalBucketId) REFERENCES WorkBuckets(LogicalBucketId));
             CREATE TABLE IF NOT EXISTS WorkAttempts (AttemptId INTEGER PRIMARY KEY AUTOINCREMENT, LogicalBucketId TEXT NOT NULL, LocalPokemonId TEXT NOT NULL, AttemptKind TEXT NOT NULL, Result TEXT NOT NULL, OccurredAtUtc TEXT NOT NULL, DetailJson TEXT, FOREIGN KEY(LogicalBucketId, LocalPokemonId) REFERENCES WorkItems(LogicalBucketId, LocalPokemonId));
+            CREATE TABLE IF NOT EXISTS SearchOracleEvidence (EvidenceId INTEGER PRIMARY KEY AUTOINCREMENT, LogicalBucketId TEXT, RunId TEXT, Query TEXT NOT NULL, Outcome TEXT NOT NULL, ExpectedResultCount INTEGER, ObservedResultCount INTEGER, EmptyVerified INTEGER NOT NULL DEFAULT 0, ObservedAtUtc TEXT NOT NULL, EvidencePath TEXT, DetailJson TEXT, FOREIGN KEY(LogicalBucketId) REFERENCES WorkBuckets(LogicalBucketId));
             CREATE INDEX IF NOT EXISTS IX_WorkBuckets_Frontier ON WorkBuckets(Status, AbsoluteDateStart, AbsoluteDateEnd, LogicalBucketId);
             CREATE INDEX IF NOT EXISTS IX_WorkItems_State ON WorkItems(LogicalBucketId, State, UpdatedAtUtc);
+            CREATE INDEX IF NOT EXISTS IX_SearchOracleEvidence_Bucket ON SearchOracleEvidence(LogicalBucketId, ObservedAtUtc);
             INSERT INTO SchemaInfo (Version, AppliedAtUtc) SELECT 1, @now WHERE NOT EXISTS (SELECT 1 FROM SchemaInfo);
             """;
         command.Parameters.AddWithValue("@now", DateTimeOffset.UtcNow.ToString("O"));
@@ -176,6 +178,72 @@ public sealed class InventoryPersistenceService
             await command.ExecuteNonQueryAsync(cancellationToken);
         }
         await transaction.CommitAsync(cancellationToken);
+    }
+
+    public async Task RecordSearchOracleEvidenceAsync(
+        PersistentSearchOracleEvidence evidence,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(evidence);
+        ArgumentException.ThrowIfNullOrWhiteSpace(evidence.Query);
+        ArgumentException.ThrowIfNullOrWhiteSpace(evidence.Outcome);
+        if (evidence.EmptyVerified && evidence.ObservedResultCount is not 0)
+            throw new InvalidOperationException("An empty oracle proof must have observed result count zero.");
+        await InitializeAsync(cancellationToken);
+        await using var connection = Open();
+        await connection.OpenAsync(cancellationToken);
+        await using var command = connection.CreateCommand();
+        command.CommandText = "INSERT INTO SearchOracleEvidence (LogicalBucketId,RunId,Query,Outcome,ExpectedResultCount,ObservedResultCount,EmptyVerified,ObservedAtUtc,EvidencePath,DetailJson) VALUES (@bucket,@run,@query,@outcome,@expected,@observed,@empty,@at,@path,@detail);";
+        command.Parameters.AddWithValue("@bucket", (object?)evidence.LogicalBucketId ?? DBNull.Value);
+        command.Parameters.AddWithValue("@run", (object?)evidence.RunId ?? DBNull.Value);
+        command.Parameters.AddWithValue("@query", evidence.Query);
+        command.Parameters.AddWithValue("@outcome", evidence.Outcome);
+        command.Parameters.AddWithValue("@expected", (object?)evidence.ExpectedResultCount ?? DBNull.Value);
+        command.Parameters.AddWithValue("@observed", (object?)evidence.ObservedResultCount ?? DBNull.Value);
+        command.Parameters.AddWithValue("@empty", evidence.EmptyVerified ? 1 : 0);
+        command.Parameters.AddWithValue("@at", evidence.ObservedAtUtc.ToString("O"));
+        command.Parameters.AddWithValue("@path", (object?)evidence.EvidencePath ?? DBNull.Value);
+        command.Parameters.AddWithValue("@detail", (object?)evidence.DetailJson ?? DBNull.Value);
+        await command.ExecuteNonQueryAsync(cancellationToken);
+    }
+
+    public async Task<IReadOnlyList<string>> FindOtherPokemonIdsByFingerprintAsync(
+        string fingerprintSha256,
+        string localPokemonId,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(fingerprintSha256);
+        ArgumentException.ThrowIfNullOrWhiteSpace(localPokemonId);
+        await InitializeAsync(cancellationToken);
+        await using var connection = Open();
+        await connection.OpenAsync(cancellationToken);
+        await using var command = connection.CreateCommand();
+        command.CommandText = "SELECT LocalPokemonId FROM PokemonRecords WHERE LastFingerprintSha256=@fingerprint AND LocalPokemonId<>@id ORDER BY LocalPokemonId;";
+        command.Parameters.AddWithValue("@fingerprint", fingerprintSha256);
+        command.Parameters.AddWithValue("@id", localPokemonId);
+        var result = new List<string>();
+        await using var reader = await command.ExecuteReaderAsync(cancellationToken);
+        while (await reader.ReadAsync(cancellationToken)) result.Add(reader.GetString(0));
+        return result;
+    }
+
+    public async Task UpdateWorkBucketProgressAsync(
+        string logicalBucketId, int observed, int review, string? lastSuccessfulItem,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(logicalBucketId);
+        if (observed < 0 || review < 0) throw new ArgumentOutOfRangeException(nameof(observed));
+        await InitializeAsync(cancellationToken);
+        await using var connection = Open();
+        await connection.OpenAsync(cancellationToken);
+        await using var command = connection.CreateCommand();
+        command.CommandText = "UPDATE WorkBuckets SET ItemsObserved=ItemsObserved+@observed, ItemsIndexed=ItemsIndexed+@observed, ItemsReview=ItemsReview+@review, LastSuccessfulItem=COALESCE(@last,LastSuccessfulItem) WHERE LogicalBucketId=@id;";
+        command.Parameters.AddWithValue("@observed", observed);
+        command.Parameters.AddWithValue("@review", review);
+        command.Parameters.AddWithValue("@last", (object?)lastSuccessfulItem ?? DBNull.Value);
+        command.Parameters.AddWithValue("@id", logicalBucketId);
+        if (await command.ExecuteNonQueryAsync(cancellationToken) != 1)
+            throw new InvalidOperationException($"Unknown work bucket '{logicalBucketId}'.");
     }
 
     public async Task ImportAsync(string runId, InventoryScanItem item, string screenshotPath, CancellationToken cancellationToken = default)

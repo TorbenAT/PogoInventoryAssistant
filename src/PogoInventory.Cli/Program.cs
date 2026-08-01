@@ -1934,6 +1934,22 @@ static async Task<int> RunCleanupProofAsync(
         throw new ArgumentException("--continue-on-partial is required for cleanup proof.");
     var database = Require(options, "database");
     var output = Path.GetFullPath(Require(options, "out"));
+    var workBucketId = Optional(options, "work-bucket");
+    if (workBucketId is not null)
+    {
+        var startRaw = Require(options, "bucket-start");
+        var endRaw = Require(options, "bucket-end");
+        if (!DateOnly.TryParse(startRaw, CultureInfo.InvariantCulture, DateTimeStyles.None, out var bucketStart) ||
+            !DateOnly.TryParse(endRaw, CultureInfo.InvariantCulture, DateTimeStyles.None, out var bucketEnd))
+            throw new ArgumentException("--bucket-start and --bucket-end must be ISO dates.");
+        await new InventoryPersistenceService(database).UpsertWorkBucketAsync(new PersistentWorkBucket
+        {
+            LogicalBucketId = workBucketId,
+            AbsoluteDateStart = bucketStart,
+            AbsoluteDateEnd = bucketEnd,
+            DerivedPhoneQuery = species
+        }, cancellationToken);
+    }
     var profilePath = Optional(options, "automation-profile") ??
         Optional(options, "profile") ?? Path.Combine("local-data", "automation-profile.local.json");
     var automationProfile = await AutomationProfileLoader.LoadAsync(profilePath, cancellationToken);
@@ -1978,6 +1994,7 @@ static async Task<int> RunCleanupProofAsync(
         DatabasePath = database,
         OutputDirectory = output,
         DeviceSerial = selected.Serial,
+        WorkBucketId = workBucketId,
         ContinueOnPartial = true,
         MaximumCaptureFrames = ParsePositiveInt(options, "maximum-capture-frames", 8),
         MinimumCompleteFrames = ParsePositiveInt(options, "minimum-complete-frames", 3),
@@ -3883,6 +3900,7 @@ static void PrintHelp()
     Console.WriteLine("  device-run-index-sequence --query <query> --item-limit <n> --out <directory>");
     Console.WriteLine("  device-run-cleanup-proof --species <query> --item-limit <6-50> --database <sqlite> --out <directory> --continue-on-partial");
     Console.WriteLine("                           [--species-reference <species-reference.json>] [--policy <rule-policy.json>]");
+    Console.WriteLine("                           [--work-bucket <id> --bucket-start <yyyy-MM-dd> --bucket-end <yyyy-MM-dd>]");
     Console.WriteLine("                           [--tessdata <directory>] (header OCR engine: Tesseract, default tools/tessdata-best)");
     Console.WriteLine("  analyze-cleanup-evidence --database <cleanup-proof.sqlite> --evidence-root <dir> --out <dir>");
     Console.WriteLine("                           [--species-reference <species-reference.json>] [--policy <rule-policy.json>]");

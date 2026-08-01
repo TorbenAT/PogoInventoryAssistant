@@ -69,3 +69,22 @@ public sealed record PersistentWorkAttempt
     public required DateTimeOffset OccurredAtUtc { get; init; }
     public string? DetailJson { get; init; }
 }
+
+/// <summary>
+/// Immutable, query-level evidence. A bounded traversal is explicitly not a
+/// result-count or filter-end proof; those values remain null/false until the
+/// corresponding phone evidence exists.
+/// </summary>
+public sealed record PersistentSearchOracleEvidence
+{
+    public required string Query { get; init; }
+    public required string Outcome { get; init; }
+    public required DateTimeOffset ObservedAtUtc { get; init; }
+    public string? LogicalBucketId { get; init; }
+    public string? RunId { get; init; }
+    public int? ExpectedResultCount { get; init; }
+    public int? ObservedResultCount { get; init; }
+    public bool EmptyVerified { get; init; }
+    public string? EvidencePath { get; init; }
+    public string? DetailJson { get; init; }
+}

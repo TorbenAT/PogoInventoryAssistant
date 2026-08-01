@@ -30,6 +30,13 @@
   seven scan runs, 25 records and 81 events. Process shutdown emitted
   non-fatal Tesseract object-cache disposal warnings; persistence was
   unaffected.
+- Schema-v6 frontier binding: build passed with 0 warnings/errors and the
+  package-free suite passed 281/281. The first 50-item real-phone bucket
+  `2020-frontier-complement-001` stopped before item 1 on the verified unsafe
+  `PowerUp` confirmation. No Power Up input, generic Back, automatic Cancel,
+  or other destructive input was sent; SQLite remains `integrity_check=ok` at
+  25 records and 81 events. The bucket is persisted Blocked for explicit human
+  dismissal/resume.
 
 ## Streaming Vision Phase 5 Appraisal gate calibration - 2026-07-28
 

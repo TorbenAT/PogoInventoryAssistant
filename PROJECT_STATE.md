@@ -66,6 +66,13 @@ Vulpix were Complete; Snorunt and Eevee Partial. SQLite remains `ok` at seven
 scan runs, 25 records and 81 events. All records remain REVIEW and no cleanup
 game action was sent.
 
+The first schema-v6 50-item frontier run created the durable
+`2020-frontier-complement-001` bucket and its SearchOracleEvidence records,
+then stopped before its first item at `UNRESOLVED_DETAILS:UnsafeConfirmation:PowerUp`.
+No Power Up or other input was sent. The bucket is `Blocked`, rather than
+silently retried or marked complete; it needs an explicit safe dismissal before
+the real-phone frontier can resume.
+
 Two old CLI shortcuts were discovered to send unguarded Android Back. From
 the gameplay map that opens an app-exit confirmation, not inventory. Both
 shortcuts are retired; only state-verified named operations can now send Back.

@@ -21,6 +21,8 @@ public sealed record CleanupProofRequest
     public required string DatabasePath { get; init; }
     public required string OutputDirectory { get; init; }
     public required string DeviceSerial { get; init; }
+    /// <summary>Optional durable full-ingestion bucket owning this bounded run.</summary>
+    public string? WorkBucketId { get; init; }
     public bool ContinueOnPartial { get; init; }
     public int MaximumCaptureFrames { get; init; } = 8;
     public int MinimumCompleteFrames { get; init; } = 3;
@@ -54,6 +56,7 @@ public sealed record CleanupProofRequest
         ArgumentException.ThrowIfNullOrWhiteSpace(DatabasePath);
         ArgumentException.ThrowIfNullOrWhiteSpace(OutputDirectory);
         ArgumentException.ThrowIfNullOrWhiteSpace(DeviceSerial);
+        if (WorkBucketId is not null) ArgumentException.ThrowIfNullOrWhiteSpace(WorkBucketId);
         if (MaximumCaptureFrames is < 1 or > 8)
             throw new ArgumentOutOfRangeException(nameof(MaximumCaptureFrames));
         if (MinimumCompleteFrames < 3 || MinimumCompleteFrames > MaximumCaptureFrames)
@@ -136,6 +139,18 @@ public sealed class CleanupProofRunner
             RequestedItems = request.ItemLimit,
             SourceDirectory = output
         }, cancellationToken);
+        if (request.WorkBucketId is not null)
+        {
+            await persistence.SetWorkBucketStatusAsync(request.WorkBucketId,
+                PersistentWorkBucketStatus.Active, cancellationToken: cancellationToken);
+            await persistence.RecordSearchOracleEvidenceAsync(new PersistentSearchOracleEvidence
+            {
+                LogicalBucketId = request.WorkBucketId, RunId = runId, Query = request.SpeciesQuery,
+                Outcome = "TraversalStarted", ObservedAtUtc = DateTimeOffset.UtcNow,
+                EvidencePath = Path.Combine(output, "start-state-recovery.md"),
+                DetailJson = JsonSerializer.Serialize(new { bounded = true, resultCountProven = false }, JsonOptions)
+            }, cancellationToken);
+        }
 
         var captures = new List<CleanupProofObservationRecord>();
         var stopReason = "ItemLimitReached";
@@ -225,6 +240,37 @@ public sealed class CleanupProofRunner
                 };
                 captures.Add(record);
                 await persistence.RecordCleanupObservationAsync(record, cancellationToken);
+                if (request.WorkBucketId is not null)
+                {
+                    var overlapCandidates = await persistence.FindOtherPokemonIdsByFingerprintAsync(
+                        record.StableFingerprint, record.LocalPokemonId, cancellationToken);
+                    var overlap = overlapCandidates.Count != 0;
+                    await persistence.RecordWorkItemAsync(new PersistentWorkItem
+                    {
+                        LogicalBucketId = request.WorkBucketId,
+                        LocalPokemonId = record.LocalPokemonId,
+                        State = overlap ? PersistentWorkItemState.ReconciliationRequired : PersistentWorkItemState.ObservedPersisted,
+                        Disposition = "REVIEW",
+                        ExactBindingEvidence = JsonSerializer.Serialize(new
+                        {
+                            stableFingerprint = record.StableFingerprint,
+                            screenshotHashes = record.ScreenshotHashes,
+                            overlapCandidates
+                        }, JsonOptions),
+                        UpdatedAtUtc = DateTimeOffset.UtcNow,
+                        LastError = overlap ? "CrossBucketFingerprintOverlapRequiresReconciliation" : null
+                    }, new PersistentWorkAttempt
+                    {
+                        LogicalBucketId = request.WorkBucketId,
+                        LocalPokemonId = record.LocalPokemonId,
+                        AttemptKind = "ObservedPersisted",
+                        Result = overlap ? "ReconciliationRequired" : "Durable",
+                        OccurredAtUtc = DateTimeOffset.UtcNow,
+                        DetailJson = JsonSerializer.Serialize(new { runId, ordinal, query = request.SpeciesQuery }, JsonOptions)
+                    }, cancellationToken);
+                    await persistence.UpdateWorkBucketProgressAsync(request.WorkBucketId, 1, 1,
+                        record.LocalPokemonId, cancellationToken);
+                }
 
                 // Identity and tags are durable before appraisal begins. A
                 // later best-effort appraisal or navigation failure therefore
@@ -632,6 +678,23 @@ public sealed class CleanupProofRunner
             stopReason,
             DateTimeOffset.UtcNow,
             cancellationToken);
+
+        if (request.WorkBucketId is not null)
+        {
+            var traversalLimited = string.Equals(stopReason, "ItemLimitReached", StringComparison.Ordinal);
+            await persistence.RecordSearchOracleEvidenceAsync(new PersistentSearchOracleEvidence
+            {
+                LogicalBucketId = request.WorkBucketId, RunId = runId, Query = request.SpeciesQuery,
+                Outcome = traversalLimited ? "TraversalLimited" : "TraversalStopped",
+                ObservedResultCount = captures.Count, EmptyVerified = false,
+                ObservedAtUtc = DateTimeOffset.UtcNow,
+                EvidencePath = Path.Combine(Path.GetFullPath(request.OutputDirectory), "proof-summary.md"),
+                DetailJson = JsonSerializer.Serialize(new { status, stopReason, bounded = true, filterEndProven = false }, JsonOptions)
+            }, cancellationToken);
+            await persistence.SetWorkBucketStatusAsync(request.WorkBucketId,
+                status == "SafeStopped" ? PersistentWorkBucketStatus.Blocked : PersistentWorkBucketStatus.ReconciliationRequired,
+                cancellationToken: cancellationToken);
+        }
 
         // Deliberately create a new service instance after the write connection
         // has been disposed. All policy results and reports below use rows

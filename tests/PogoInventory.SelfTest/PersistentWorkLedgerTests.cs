@@ -25,6 +25,13 @@ internal static class PersistentWorkLedgerTests
             {
                 LogicalBucketId = "2016-07", LocalPokemonId = "run-a:000001", AttemptKind = "PersistBeforeTag", Result = "Durable", OccurredAtUtc = DateTimeOffset.UtcNow
             });
+            await ledger.RecordSearchOracleEvidenceAsync(new PersistentSearchOracleEvidence
+            {
+                LogicalBucketId = "2016-07", Query = "year2016", Outcome = "TraversalLimited",
+                ObservedAtUtc = DateTimeOffset.UtcNow, ObservedResultCount = 50,
+                EmptyVerified = false, EvidencePath = "local-evidence/search.json"
+            });
+            await ledger.UpdateWorkBucketProgressAsync("2016-07", 1, 1, "run-a:000001");
             await ledger.SetWorkBucketStatusAsync("2016-07", PersistentWorkBucketStatus.Complete, "{\"emptyQueryVerified\":true,\"reconciled\":true}");
 
             var reopened = new InventoryPersistenceService(database);
@@ -34,6 +41,10 @@ internal static class PersistentWorkLedgerTests
             await using var command = connection.CreateCommand();
             command.CommandText = "SELECT COUNT(*) FROM WorkAttempts WHERE LogicalBucketId='2016-07' AND LocalPokemonId='run-a:000001';";
             AssertEqual(1L, Convert.ToInt64(await command.ExecuteScalarAsync()), "append-only pre-tag attempt persisted");
+            command.CommandText = "SELECT COUNT(*) FROM SearchOracleEvidence WHERE LogicalBucketId='2016-07' AND Outcome='TraversalLimited' AND EmptyVerified=0;";
+            AssertEqual(1L, Convert.ToInt64(await command.ExecuteScalarAsync()), "bounded traversal is persisted as non-empty oracle evidence");
+            command.CommandText = "SELECT ItemsObserved FROM WorkBuckets WHERE LogicalBucketId='2016-07';";
+            AssertEqual(1L, Convert.ToInt64(await command.ExecuteScalarAsync()), "durable work-bucket progress persisted");
         }
         finally
         {

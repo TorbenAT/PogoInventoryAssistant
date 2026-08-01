@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+- Added schema-v6 full-ingestion ledger binding: persistent Search Oracle
+  evidence, per-item bucket attempts/progress and cross-bucket fingerprint
+  overlap candidates. Bounded traversals remain reconciliation-required until
+  filter-end/count evidence exists.
+
 - Added a user-approved, single named `StateBoundAndroidBackFallback` only for
   a three-stable exact KnownExitDialog. No-effect or Unknown is terminal and
   destructive confirmation topology remains denied.

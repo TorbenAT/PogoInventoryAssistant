@@ -21,9 +21,9 @@ internal static class TagVerificationTests
             await CreateVersionOneDatabaseAsync(databasePath);
             var persistence = new InventoryPersistenceService(databasePath);
             AssertEqual(1L, await persistence.CountObservationsAsync(), "old observation survives migration");
-            AssertEqual(5L, await ReadSchemaVersionAsync(databasePath), "schema version migrates to current version");
+            AssertEqual(6L, await ReadSchemaVersionAsync(databasePath), "schema version migrates to current version");
             await persistence.InitializeAsync();
-            AssertEqual(5L, await ReadSchemaVersionAsync(databasePath), "migration is idempotent");
+            AssertEqual(6L, await ReadSchemaVersionAsync(databasePath), "migration is idempotent");
 
             var service = new TagWorkflowService(databasePath);
             AssertTrue(!await service.IsVerifiedAsync("run:1", "AI-Indexed"), "old Verified row without evidence is rejected");
