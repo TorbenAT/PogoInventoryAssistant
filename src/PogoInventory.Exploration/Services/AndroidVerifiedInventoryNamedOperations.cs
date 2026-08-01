@@ -1595,6 +1595,20 @@ public sealed class AndroidVerifiedInventoryNamedOperations : ICleanupProofNamed
                 screenshot = recovery.LastScreenshot;
                 continue;
             }
+            // A partially recognised overlay may expose underlying map/details
+            // topology. It is never evidence that ordinary navigation (and in
+            // particular Details -> Back) is safe: stop before state routing.
+            if (interruption.Kind == KnownBenignInterruptKind.None &&
+                _knownBenignInterruptDetector.IsUntrustedModalLikeOverlay(screenshot))
+            {
+                await WriteAuditAsync("untrusted-modal-like-overlay", new
+                {
+                    Result = "ZERO_INPUT_STOP",
+                    ExpectedStates = expected.Select(value => value.ToString()).ToArray(),
+                    ScreenshotSha256 = Convert.ToHexString(SHA256.HashData(screenshot)).ToLowerInvariant()
+                }, cancellationToken);
+                return (PokemonGoGameState.Unknown, screenshot);
+            }
             var detection = _detector.Detect(screenshot, _appraisalProfile);
             var observedState = detection.State;
             if (allowVisualDetailsFallback && observedState == PokemonGoGameState.Unknown &&

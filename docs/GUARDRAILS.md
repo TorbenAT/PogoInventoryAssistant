@@ -67,6 +67,11 @@ For profile-bound Bar classification, each of the three IV tracks must be
 measured and the appraisal candidate confidence must be at least 0.80; lower
 or partial candidates remain untrusted and authorize no carousel input.
 
+An unknown or modal-like overlay stops with zero input before ordinary state
+routing. No underlying Details/map topology may authorize Back. The only Back
+exception is the separately named, exact three-stable-frame KnownExitDialog
+fallback with its required known postcondition.
+
 `ExitAppraisal` is authorized only by stable AppraisalIntro or AppraisalBars
 evidence. It uses the documented normalized left-middle target once and must be
 followed by the expected next substate. Android Back is forbidden on

@@ -57,6 +57,10 @@
   281/281. SQLite: 75 records, 256 events, `integrity_check=ok`. The bounded
   bucket remains reconciliation-required and the final map unwind sent no
   blind Back when Details remained visible.
+- Weekly truth-frame and modal-fence correction: the saved 1080x2340 Weekly
+  frame replays as WeeklyChallenge with target (0.5000,0.8600) / (540,2012).
+  The central untrusted-overlay fence returns zero-input before normal
+  Details/map routing. Build PASS; package-free self-test PASS 281/281.
 
 ## Streaming Vision Phase 5 Appraisal gate calibration - 2026-07-28
 

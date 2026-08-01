@@ -30,6 +30,20 @@ public sealed record KnownBenignInterruptDetection
 
 public sealed class KnownBenignInterruptDetector
 {
+    /// <summary>Recognises an overlay-shaped Weekly card which is not precise
+    /// enough to authorize Continue. Callers must stop with zero input.</summary>
+    public bool IsUntrustedModalLikeOverlay(byte[] screenshotPng)
+    {
+        var image = PngDecoder.Decode(screenshotPng);
+        var sky = RegionMatch(image, .08, .12, .92, .44, IsWeeklySky);
+        var ground = RegionMatch(image, .08, .58, .92, .90, IsWeeklyGround);
+        var cloud = RegionMatch(image, .08, .18, .92, .75, IsNearWhite);
+        var title = RegionMatch(image, .20, .14, .80, .25, IsWeeklyTitlePink);
+        var cta = RegionMatch(image, .24, .72, .76, .95, IsGreenCta);
+        return sky >= .20 && ground >= .15 && cloud >= .08 &&
+            (title >= .010 || cta >= .12);
+    }
+
     public KnownBenignInterruptDetection Detect(byte[] screenshotPng)
     {
         ArgumentNullException.ThrowIfNull(screenshotPng);
@@ -56,13 +70,17 @@ public sealed class KnownBenignInterruptDetector
         // over a dimmed map with exactly one large green CTA at the bottom.
         var weeklySky = RegionMatch(image, .08, .12, .92, .44, IsWeeklySky);
         var weeklyGround = RegionMatch(image, .08, .58, .92, .90, IsWeeklyGround);
-        var weeklyCta = RegionMatch(image, .24, .75, .76, .88, IsGreenCta);
+        var weeklyCta = RegionMatch(image, .24, .72, .76, .95, IsGreenCta);
         var weeklyCloudCard = RegionMatch(image, .08, .18, .92, .75, IsNearWhite);
         var weeklyTitle = RegionMatch(image, .20, .14, .80, .25, IsWeeklyTitlePink);
-        if (weeklySky >= .32 && weeklyGround >= .22 && weeklyCta >= .24 &&
+        if (weeklySky >= .32 && weeklyGround >= .22 && weeklyCta >= .12 &&
             weeklyCloudCard >= .12 && weeklyTitle >= .025)
             return Detected(KnownBenignInterruptKind.WeeklyChallenge,
-                new NormalizedPoint { X = .50, Y = .815 }, hash,
+                // Detection may use the broad lower-card band, but target
+                // extraction is restricted to the CTA's lower safe zone so
+                // green progress/illustration pixels cannot pull it upward.
+                GlyphCentroid(image, .24, .82, .76, .95, IsGreenCta) ??
+                    new NormalizedPoint { X = .50, Y = .86 }, hash,
                 Math.Min(.99, (weeklySky + weeklyGround + weeklyCta) / 3),
                 "weekly-sky-panel", "weekly-ground-panel", "weekly-green-continue-cta",
                 "continue-target-visually-grounded");

@@ -175,6 +175,11 @@ tracks. This accommodates the observed 0.832 real carousel frame while still
 rejecting partial/weak candidates. A rejected recovery window persists each
 frame and anchor as read-only diagnostic evidence and authorizes no input.
 
+Known-benign detection precedes ordinary state routing. A modal-like Weekly
+topology that is not exact enough for its named Continue action is terminal
+zero-input; an underlying Details or map anchor cannot reach the normal Back
+recovery path. KnownExitDialog remains the sole explicit Back exception.
+
 The permanent value proof starts directly with
 `EnsureFilteredInventoryAsync`. It reuses an already verified Inventory state
 or establishes Inventory through its own named, bounded operations; no

@@ -96,6 +96,12 @@ input for an Unknown/conflicting window. The bounded run is
 ReconciliationRequired, not filter-complete; its final map unwind stopped on
 stable Details without a blind Back.
 
+Weekly Challenge recovery now uses the saved 1080x2340 truth frame: its broad
+card detector locates a lower safe CTA target at normalized (0.5000, 0.8600),
+or native (540,2012). An untrusted modal-like Weekly topology stops with zero
+input before ordinary Details/map state routing; only the exact KnownExitDialog
+retains the separately approved state-bound Back fallback.
+
 Two old CLI shortcuts were discovered to send unguarded Android Back. From
 the gameplay map that opens an app-exit confirmation, not inventory. Both
 shortcuts are retired; only state-verified named operations can now send Back.

@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- Added a Weekly CTA safe-zone locator and an untrusted-overlay zero-input
+  fence before ordinary state routing; only the exact KnownExitDialog retains
+  its separately approved named Back fallback.
 - Corrected the recovery AppraisalBars anchor for the real device-adjusted
   profile: >=0.80 is accepted only with all three measured IV tracks. Rejected
   recovery windows are now saved as read-only evidence; no additional input

@@ -13,8 +13,12 @@ internal static class KnownBenignInterruptDetectorTests
         var weekly = detector.Detect(PngEncoder.Encode(WeeklyFixture()));
         Assert(weekly.Kind == KnownBenignInterruptKind.WeeklyChallenge,
             "weekly continuation requires its sky, ground and CTA topology: " + string.Join(",", weekly.Evidence));
+        Assert(weekly.Target is { X: >= .49 and <= .51, Y: >= .84 and <= .91 },
+            "weekly continuation targets the visually measured CTA centroid, not its upper edge");
         Assert(detector.Detect(PngEncoder.Encode(MapLikeButNotWeeklyFixture())).Kind == KnownBenignInterruptKind.None,
             "a gameplay-map-like sky, ground and green control without the weekly cloud card and title remains unknown");
+        Assert(!detector.IsUntrustedModalLikeOverlay(PngEncoder.Encode(MapLikeButNotWeeklyFixture())),
+            "ordinary map-like pixels without the card never become a modal fence");
         Assert(detector.Detect(PngEncoder.Encode(EggFixture())).Kind == KnownBenignInterruptKind.EggHatch,
             "Oh? requires the mint field, title and centred egg silhouette");
         Assert(detector.Detect(PngEncoder.Encode(BlankFixture())).Kind == KnownBenignInterruptKind.None,
@@ -32,6 +36,9 @@ internal static class KnownBenignInterruptDetectorTests
             "the exit fallback retains explicit destructive-confirmation denial");
         Assert(host.Contains("if (state.State == PokemonGoGameState.Unknown)", StringComparison.Ordinal),
             "failed interrupt recovery is terminal and cannot consume a second input in one operation");
+        Assert(host.Contains("IsUntrustedModalLikeOverlay", StringComparison.Ordinal) &&
+               host.Contains("ZERO_INPUT_STOP", StringComparison.Ordinal),
+            "an untrusted overlay stops before underlying Details state can authorize Back");
         Assert(recovery.Contains("postDeadline", StringComparison.Ordinal) &&
                recovery.Contains("KnownBenignInterruptPostcondition", StringComparison.Ordinal),
             "recovery waits only within the bounded state deadline for its known postcondition");

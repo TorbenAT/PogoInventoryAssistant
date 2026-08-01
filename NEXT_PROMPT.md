@@ -101,5 +101,9 @@ than rescanning its first 50 items. The final map unwind stopped safely on
 Details; establish the next verified Inventory state only through the central
 named recovery, never a blind Back.
 
+Weekly truth replay is accepted offline at target (0.5000,0.8600) / 540x2012.
+Any partial Weekly/modal-like topology must stop zero-input before normal state
+routing; do not allow underlying Details or map anchors to authorize Back.
+
 Do not use `device-open-inventory` or `device-press-back`: they are retired
 to prevent blind Back actions. Use only a state-verified named workflow.
