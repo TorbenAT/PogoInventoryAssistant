@@ -154,6 +154,14 @@ read-only and cannot navigate or send arbitrary shell commands.
 
 ## Cleanup value-proof transition
 
+### Persistent oldest-first ledger
+
+Schema v5 adds `WorkBuckets`, `WorkItems` and append-only `WorkAttempts`.
+Buckets use absolute dates and rendered, auditable phone queries, and SQLite
+selects the earliest non-complete bucket after restart. A work item is durable
+before any phone checkpoint; completion requires explicit evidence rather than
+relative age or a phone tag alone.
+
 Cleanup proof uses a persistent Appraisal carousel for ordinary item
 progression. The first Details baseline is persisted before Appraisal opens;
 subsequent stable AppraisalBars fingerprints are persisted before the next

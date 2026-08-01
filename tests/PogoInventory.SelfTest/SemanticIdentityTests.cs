@@ -8,7 +8,7 @@ namespace PogoInventory.SelfTest;
 
 /// <summary>
 /// Covers the semantic identity key, the cross-run matcher and the
-/// GroupKey duplicate-grouping fix, plus the SchemaVersion 2 -> 4 migration
+/// GroupKey duplicate-grouping fix, plus the SchemaVersion 2 -> 5 migration
 /// and persisted-key roundtrip through InventoryPersistenceService.
 /// </summary>
 internal static class SemanticIdentityTests
@@ -160,7 +160,7 @@ internal static class SemanticIdentityTests
 
             var persistence = new InventoryPersistenceService(databasePath);
             await persistence.InitializeAsync();
-            AssertEqual(4L, await ReadSchemaVersionAsync(databasePath), "schema migrates from 2 to 4 cleanly");
+            AssertEqual(5L, await ReadSchemaVersionAsync(databasePath), "schema migrates from 2 to 5 cleanly");
 
             var observation = ComparableObservation("Pidgey", 500, 10, 11, 12);
             var record = new CleanupProofObservationRecord

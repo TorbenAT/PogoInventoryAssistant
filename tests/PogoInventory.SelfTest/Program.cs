@@ -325,6 +325,7 @@ var tests = new (string Name, Func<Task> Run)[]
     ,("Timing summary section contains capture/input columns", OperationTimingCollectorTests.SummarySectionContainsNewColumnsAsync)
     ,("Adb path resolver honors explicit --adb values and bundled/PATH fallback", AdbPathResolverTests.RunAsync)
     ,("Warm-background stability: MainMenu background fallback requires 3-of-3 sample points", WarmBackgroundDetectionStabilityTests.RunAsync)
+    ,("Persistent work ledger resumes at oldest unfinished bucket", PersistentWorkLedgerTests.RunAsync)
 };
 
 var failed = 0;

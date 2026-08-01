@@ -249,6 +249,15 @@ remains the authoritative compiler and test runner.
 
 # Validation report
 
+## Schema-v5 persistent oldest-first ledger — 2026-08-01
+
+- Release no-restore build: PASS, 0 warnings / 0 errors.
+- Package-free self-test: PASS, 280/280, including restart selection of the
+  oldest unfinished bucket after SQLite reopen.
+- Read-only named search controls: 2016--2019 were empty; 2020 had 1025
+  results. `year2020&1` yielded one favorite Bulbasaur and its `!favorite`
+  complement was empty. No tag or destructive action was sent.
+
 ## Phase 6C protection enrichment — 2026-08-01
 
 - `dotnet build PogoInventoryAssistant.sln --configuration Release --no-restore`:

@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- Added schema-v5 persistent work-ledger foundations: absolute-date logical
+  buckets, durable work items and append-only attempts make the oldest
+  unfinished unit restartable from SQLite.
+
 - Added Phase 6C protection enrichment: canonical evidence-bound proof states
   for P0/P1 protection fields, a fail-closed cleanup gate, schema-v4 durable
   `ProtectionJson`, stream HTML visibility and an offline-only

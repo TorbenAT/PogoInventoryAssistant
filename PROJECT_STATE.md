@@ -1,5 +1,13 @@
 # Project state
 
+## Persistent oldest-first frontier (2026-08-01, in progress)
+
+SQLite schema v5 now contains restartable `WorkBuckets`, `WorkItems` and
+append-only `WorkAttempts`. Read-only live probes found no 2016--2019 results,
+then established 2020 as the first non-empty year (1025 results).
+`year2020&1` isolated one favorite Bulbasaur; its `!favorite` complement was
+empty. No tag or destructive action has been sent.
+
 ## Phase 6C protection enrichment (2026-08-01)
 
 Phase 6C is implemented offline-first but is **PARTIAL**, not a production

@@ -9,7 +9,7 @@ namespace PogoInventory.Persistence;
 
 public sealed class InventoryPersistenceService
 {
-    private const int SchemaVersion = 4;
+    private const int SchemaVersion = 5;
     private readonly string _databasePath;
 
     public InventoryPersistenceService(string databasePath)
@@ -32,6 +32,11 @@ public sealed class InventoryPersistenceService
             CREATE TABLE IF NOT EXISTS Observations (ObservationId INTEGER PRIMARY KEY AUTOINCREMENT, LocalPokemonId TEXT NOT NULL, RunId TEXT NOT NULL, Sequence INTEGER NOT NULL, CapturedAtUtc TEXT NOT NULL, ProviderName TEXT NOT NULL, ObservationStatus TEXT NOT NULL, Confidence REAL NOT NULL, ProtectionConfidence REAL NOT NULL DEFAULT 0, SpeciesName TEXT, Cp INTEGER, AttackIv INTEGER, DefenseIv INTEGER, HpIv INTEGER, CatchLocation TEXT, ScreenshotPath TEXT, ScreenshotSha256 TEXT, FingerprintSha256 TEXT, ObservationJson TEXT, FieldEvidenceJson TEXT, AppraisalEvidenceJson TEXT, ScreenshotPathsJson TEXT, ScreenshotHashesJson TEXT, ProtectionJson TEXT, UNIQUE(RunId, Sequence));
             CREATE TABLE IF NOT EXISTS InventoryEvents (EventId INTEGER PRIMARY KEY AUTOINCREMENT, LocalPokemonId TEXT NOT NULL, RunId TEXT NOT NULL, EventType TEXT NOT NULL, OccurredAtUtc TEXT NOT NULL, DetailJson TEXT);
             CREATE TABLE IF NOT EXISTS TagAssignments (LocalPokemonId TEXT NOT NULL, TagName TEXT NOT NULL, RequestedState TEXT NOT NULL, VerifiedState TEXT NOT NULL, RequestedAtUtc TEXT NOT NULL, VerifiedAtUtc TEXT, LastError TEXT, ActionExecuted INTEGER NOT NULL DEFAULT 0, VisuallyVerified INTEGER NOT NULL DEFAULT 0, BeforeScreenshotHash TEXT, AfterScreenshotHash TEXT, AuditReference TEXT, PRIMARY KEY(LocalPokemonId, TagName));
+            CREATE TABLE IF NOT EXISTS WorkBuckets (LogicalBucketId TEXT PRIMARY KEY, AbsoluteDateStart TEXT NOT NULL, AbsoluteDateEnd TEXT NOT NULL, PokedexStart INTEGER, PokedexEnd INTEGER, DerivedPhoneQuery TEXT NOT NULL, Status TEXT NOT NULL, StartedAtUtc TEXT, CompletedAtUtc TEXT, ItemsObserved INTEGER NOT NULL DEFAULT 0, ItemsIndexed INTEGER NOT NULL DEFAULT 0, ItemsReview INTEGER NOT NULL DEFAULT 0, ItemsDeleteCandidate INTEGER NOT NULL DEFAULT 0, Failures INTEGER NOT NULL DEFAULT 0, Retries INTEGER NOT NULL DEFAULT 0, LastSuccessfulItem TEXT, CompletionEvidenceJson TEXT);
+            CREATE TABLE IF NOT EXISTS WorkItems (LogicalBucketId TEXT NOT NULL, LocalPokemonId TEXT NOT NULL, State TEXT NOT NULL, Disposition TEXT NOT NULL, ExactBindingEvidence TEXT, UpdatedAtUtc TEXT NOT NULL, LastError TEXT, PRIMARY KEY(LogicalBucketId, LocalPokemonId), FOREIGN KEY(LogicalBucketId) REFERENCES WorkBuckets(LogicalBucketId));
+            CREATE TABLE IF NOT EXISTS WorkAttempts (AttemptId INTEGER PRIMARY KEY AUTOINCREMENT, LogicalBucketId TEXT NOT NULL, LocalPokemonId TEXT NOT NULL, AttemptKind TEXT NOT NULL, Result TEXT NOT NULL, OccurredAtUtc TEXT NOT NULL, DetailJson TEXT, FOREIGN KEY(LogicalBucketId, LocalPokemonId) REFERENCES WorkItems(LogicalBucketId, LocalPokemonId));
+            CREATE INDEX IF NOT EXISTS IX_WorkBuckets_Frontier ON WorkBuckets(Status, AbsoluteDateStart, AbsoluteDateEnd, LogicalBucketId);
+            CREATE INDEX IF NOT EXISTS IX_WorkItems_State ON WorkItems(LogicalBucketId, State, UpdatedAtUtc);
             INSERT INTO SchemaInfo (Version, AppliedAtUtc) SELECT 1, @now WHERE NOT EXISTS (SELECT 1 FROM SchemaInfo);
             """;
         command.Parameters.AddWithValue("@now", DateTimeOffset.UtcNow.ToString("O"));
@@ -97,6 +102,80 @@ public sealed class InventoryPersistenceService
         versionCommand.Parameters.AddWithValue("@version", SchemaVersion);
         versionCommand.Parameters.AddWithValue("@now", DateTimeOffset.UtcNow.ToString("O"));
         await versionCommand.ExecuteNonQueryAsync(cancellationToken);
+    }
+
+    public async Task UpsertWorkBucketAsync(
+        PersistentWorkBucket bucket,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(bucket);
+        ValidateBucket(bucket);
+        await InitializeAsync(cancellationToken);
+        await using var connection = Open();
+        await connection.OpenAsync(cancellationToken);
+        await using var command = connection.CreateCommand();
+        command.CommandText = """
+            INSERT INTO WorkBuckets (LogicalBucketId, AbsoluteDateStart, AbsoluteDateEnd, PokedexStart, PokedexEnd, DerivedPhoneQuery, Status, StartedAtUtc, CompletedAtUtc, ItemsObserved, ItemsIndexed, ItemsReview, ItemsDeleteCandidate, Failures, Retries, LastSuccessfulItem, CompletionEvidenceJson)
+            VALUES (@id,@start,@end,@dexStart,@dexEnd,@query,@status,@started,@completed,@observed,@indexed,@review,@delete,@failures,@retries,@last,@evidence)
+            ON CONFLICT(LogicalBucketId) DO UPDATE SET AbsoluteDateStart=excluded.AbsoluteDateStart, AbsoluteDateEnd=excluded.AbsoluteDateEnd, PokedexStart=excluded.PokedexStart, PokedexEnd=excluded.PokedexEnd, DerivedPhoneQuery=excluded.DerivedPhoneQuery;
+            """;
+        AddBucket(command, bucket);
+        await command.ExecuteNonQueryAsync(cancellationToken);
+    }
+
+    public async Task<PersistentWorkBucket?> LoadOldestUnfinishedWorkBucketAsync(CancellationToken cancellationToken = default)
+    {
+        await InitializeAsync(cancellationToken);
+        await using var connection = Open();
+        await connection.OpenAsync(cancellationToken);
+        await using var command = connection.CreateCommand();
+        command.CommandText = "SELECT LogicalBucketId, AbsoluteDateStart, AbsoluteDateEnd, PokedexStart, PokedexEnd, DerivedPhoneQuery, Status, StartedAtUtc, CompletedAtUtc, ItemsObserved, ItemsIndexed, ItemsReview, ItemsDeleteCandidate, Failures, Retries, LastSuccessfulItem, CompletionEvidenceJson FROM WorkBuckets WHERE Status <> 'Complete' ORDER BY AbsoluteDateStart, AbsoluteDateEnd, LogicalBucketId LIMIT 1;";
+        await using var reader = await command.ExecuteReaderAsync(cancellationToken);
+        return await reader.ReadAsync(cancellationToken) ? ReadBucket(reader) : null;
+    }
+
+    public async Task SetWorkBucketStatusAsync(
+        string logicalBucketId,
+        PersistentWorkBucketStatus status,
+        string? completionEvidenceJson = null,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(logicalBucketId);
+        if (status == PersistentWorkBucketStatus.Complete && string.IsNullOrWhiteSpace(completionEvidenceJson))
+            throw new InvalidOperationException("A completed work bucket requires empty-query and reconciliation evidence.");
+        await InitializeAsync(cancellationToken);
+        await using var connection = Open();
+        await connection.OpenAsync(cancellationToken);
+        await using var command = connection.CreateCommand();
+        command.CommandText = "UPDATE WorkBuckets SET Status=@status, StartedAtUtc=CASE WHEN @status='Active' AND StartedAtUtc IS NULL THEN @now ELSE StartedAtUtc END, CompletedAtUtc=CASE WHEN @status='Complete' THEN @now ELSE NULL END, CompletionEvidenceJson=CASE WHEN @status='Complete' THEN @evidence ELSE CompletionEvidenceJson END WHERE LogicalBucketId=@id;";
+        command.Parameters.AddWithValue("@status", status.ToString()); command.Parameters.AddWithValue("@now", DateTimeOffset.UtcNow.ToString("O")); command.Parameters.AddWithValue("@evidence", (object?)completionEvidenceJson ?? DBNull.Value); command.Parameters.AddWithValue("@id", logicalBucketId);
+        if (await command.ExecuteNonQueryAsync(cancellationToken) != 1) throw new InvalidOperationException($"Unknown work bucket '{logicalBucketId}'.");
+    }
+
+    public async Task RecordWorkItemAsync(PersistentWorkItem item, PersistentWorkAttempt attempt, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(item);
+        ArgumentNullException.ThrowIfNull(attempt);
+        if (!string.Equals(item.LogicalBucketId, attempt.LogicalBucketId, StringComparison.Ordinal) || !string.Equals(item.LocalPokemonId, attempt.LocalPokemonId, StringComparison.Ordinal)) throw new InvalidOperationException("Work item and attempt must identify the same DB record.");
+        await InitializeAsync(cancellationToken);
+        await using var connection = Open();
+        await connection.OpenAsync(cancellationToken);
+        await using var transaction = (SqliteTransaction)await connection.BeginTransactionAsync(cancellationToken);
+        await using (var command = connection.CreateCommand())
+        {
+            command.Transaction = transaction;
+            command.CommandText = "INSERT INTO WorkItems (LogicalBucketId,LocalPokemonId,State,Disposition,ExactBindingEvidence,UpdatedAtUtc,LastError) VALUES (@bucket,@item,@state,@disposition,@binding,@updated,@error) ON CONFLICT(LogicalBucketId,LocalPokemonId) DO UPDATE SET State=excluded.State,Disposition=excluded.Disposition,ExactBindingEvidence=excluded.ExactBindingEvidence,UpdatedAtUtc=excluded.UpdatedAtUtc,LastError=excluded.LastError;";
+            AddItem(command, item);
+            await command.ExecuteNonQueryAsync(cancellationToken);
+        }
+        await using (var command = connection.CreateCommand())
+        {
+            command.Transaction = transaction;
+            command.CommandText = "INSERT INTO WorkAttempts (LogicalBucketId,LocalPokemonId,AttemptKind,Result,OccurredAtUtc,DetailJson) VALUES (@bucket,@item,@kind,@result,@at,@detail);";
+            command.Parameters.AddWithValue("@bucket", attempt.LogicalBucketId); command.Parameters.AddWithValue("@item", attempt.LocalPokemonId); command.Parameters.AddWithValue("@kind", attempt.AttemptKind); command.Parameters.AddWithValue("@result", attempt.Result); command.Parameters.AddWithValue("@at", attempt.OccurredAtUtc.ToString("O")); command.Parameters.AddWithValue("@detail", (object?)attempt.DetailJson ?? DBNull.Value);
+            await command.ExecuteNonQueryAsync(cancellationToken);
+        }
+        await transaction.CommitAsync(cancellationToken);
     }
 
     public async Task ImportAsync(string runId, InventoryScanItem item, string screenshotPath, CancellationToken cancellationToken = default)
@@ -807,6 +886,30 @@ public sealed class InventoryPersistenceService
             InventoryEventCount = events,
             RecommendationCounts = recommendations
         };
+    }
+
+    private static void ValidateBucket(PersistentWorkBucket bucket)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(bucket.LogicalBucketId);
+        ArgumentException.ThrowIfNullOrWhiteSpace(bucket.DerivedPhoneQuery);
+        if (bucket.AbsoluteDateEnd < bucket.AbsoluteDateStart) throw new InvalidOperationException("Work bucket end date precedes its start date.");
+        if (bucket.PokedexStart is <= 0 || bucket.PokedexEnd is <= 0 || bucket.PokedexStart > bucket.PokedexEnd) throw new InvalidOperationException("Work bucket Pokédex bounds are invalid.");
+    }
+
+    private static void AddBucket(SqliteCommand command, PersistentWorkBucket bucket)
+    {
+        command.Parameters.AddWithValue("@id", bucket.LogicalBucketId); command.Parameters.AddWithValue("@start", bucket.AbsoluteDateStart.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture)); command.Parameters.AddWithValue("@end", bucket.AbsoluteDateEnd.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture)); command.Parameters.AddWithValue("@dexStart", (object?)bucket.PokedexStart ?? DBNull.Value); command.Parameters.AddWithValue("@dexEnd", (object?)bucket.PokedexEnd ?? DBNull.Value); command.Parameters.AddWithValue("@query", bucket.DerivedPhoneQuery); command.Parameters.AddWithValue("@status", bucket.Status.ToString()); command.Parameters.AddWithValue("@started", bucket.StartedAtUtc?.ToString("O") ?? (object)DBNull.Value); command.Parameters.AddWithValue("@completed", bucket.CompletedAtUtc?.ToString("O") ?? (object)DBNull.Value); command.Parameters.AddWithValue("@observed", bucket.ItemsObserved); command.Parameters.AddWithValue("@indexed", bucket.ItemsIndexed); command.Parameters.AddWithValue("@review", bucket.ItemsReview); command.Parameters.AddWithValue("@delete", bucket.ItemsDeleteCandidate); command.Parameters.AddWithValue("@failures", bucket.Failures); command.Parameters.AddWithValue("@retries", bucket.Retries); command.Parameters.AddWithValue("@last", (object?)bucket.LastSuccessfulItem ?? DBNull.Value); command.Parameters.AddWithValue("@evidence", (object?)bucket.CompletionEvidenceJson ?? DBNull.Value);
+    }
+
+    private static PersistentWorkBucket ReadBucket(SqliteDataReader row) => new()
+    {
+        LogicalBucketId = row.GetString(0), AbsoluteDateStart = DateOnly.Parse(row.GetString(1), CultureInfo.InvariantCulture), AbsoluteDateEnd = DateOnly.Parse(row.GetString(2), CultureInfo.InvariantCulture), PokedexStart = row.IsDBNull(3) ? null : row.GetInt32(3), PokedexEnd = row.IsDBNull(4) ? null : row.GetInt32(4), DerivedPhoneQuery = row.GetString(5), Status = Enum.Parse<PersistentWorkBucketStatus>(row.GetString(6), true), StartedAtUtc = row.IsDBNull(7) ? null : DateTimeOffset.Parse(row.GetString(7), CultureInfo.InvariantCulture), CompletedAtUtc = row.IsDBNull(8) ? null : DateTimeOffset.Parse(row.GetString(8), CultureInfo.InvariantCulture), ItemsObserved = row.GetInt32(9), ItemsIndexed = row.GetInt32(10), ItemsReview = row.GetInt32(11), ItemsDeleteCandidate = row.GetInt32(12), Failures = row.GetInt32(13), Retries = row.GetInt32(14), LastSuccessfulItem = row.IsDBNull(15) ? null : row.GetString(15), CompletionEvidenceJson = row.IsDBNull(16) ? null : row.GetString(16)
+    };
+
+    private static void AddItem(SqliteCommand command, PersistentWorkItem item)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(item.LogicalBucketId); ArgumentException.ThrowIfNullOrWhiteSpace(item.LocalPokemonId); ArgumentException.ThrowIfNullOrWhiteSpace(item.Disposition);
+        command.Parameters.AddWithValue("@bucket", item.LogicalBucketId); command.Parameters.AddWithValue("@item", item.LocalPokemonId); command.Parameters.AddWithValue("@state", item.State.ToString()); command.Parameters.AddWithValue("@disposition", item.Disposition); command.Parameters.AddWithValue("@binding", (object?)item.ExactBindingEvidence ?? DBNull.Value); command.Parameters.AddWithValue("@updated", item.UpdatedAtUtc.ToString("O")); command.Parameters.AddWithValue("@error", (object?)item.LastError ?? DBNull.Value);
     }
 
     private static JsonSerializerOptions JsonOptions() => new()
