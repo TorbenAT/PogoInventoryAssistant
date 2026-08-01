@@ -74,8 +74,9 @@ fallback with its required known postcondition.
 
 `ExitAppraisal` is authorized only by stable AppraisalIntro or AppraisalBars
 evidence. It uses the documented normalized left-middle target once and must be
-followed by the expected next substate. Android Back is forbidden on
-AppraisalBars and is authorized only after PokemonDetails is verified.
+followed by the expected next substate. It never authorizes Android Back;
+ordinary PokemonDetails, Inventory, GameplayMap, Search and timeout recovery
+are all zero-input if their named visual control cannot be verified.
 
 Search text is validated as ordinary text at the caller boundary and encoded
 for Android only inside `PogoInventory.Device`. Search requires verified
@@ -133,7 +134,10 @@ families use exactly one input: `AdvanceKnownEggHatch` on the visible egg,
 `CancelKnownExitDialog` on the separate CANCEL glyph band. A single Android
 Back is an exceptional named fallback only when the precise three-stable
 KnownExitDialog topology has just been revalidated; it is not available to
-EggHatch, WeeklyChallenge, Unknown or unsafe dialogs. Every input is
+EggHatch, WeeklyChallenge, Appraisal, PokemonDetails, Inventory, GameplayMap,
+Search, Unknown or unsafe dialogs. The concrete Back capability is owned only
+by the KnownExitDialog recovery path; generic recovery interfaces and CLI
+commands do not expose it. Every input is
 audited and must reach a stable, known, non-interrupt postcondition. These are
 implemented recovery candidates, not live-accepted until their individual
 real-phone postcondition has been observed.

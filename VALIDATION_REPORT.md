@@ -1,5 +1,16 @@
 ## Guarded benign-interrupt recovery and persistent ingestion - 2026-08-01
 
+- Generic Back safety correction: preserved audit evidence at 17:45:28 showed
+  `ReturnToInventoryAsync -> GuardedInventoryRecovery ->
+  ExecuteRecoveryActionAsync` issuing ordinary `KEYCODE_BACK` from a former
+  Details-to-Inventory recovery rule. This was not a KnownExitDialog action.
+  The generic Back action, its CLI commands and the generic transport call
+  site are removed. A repository-wide source assertion permits exactly two
+  production `.PressBackAsync` references: the timing decorator and the one
+  concrete call in exact `KnownExitDialog` recovery. Every other named state,
+  unknown/modal-like overlay, failed visual close and timeout has zero Back
+  authority.
+
 - `dotnet build .\PogoInventoryAssistant.sln --no-restore`: PASS, 0 warnings
   and 0 errors.
 - Package-free self-test: PASS **281/281**, including explicit positive

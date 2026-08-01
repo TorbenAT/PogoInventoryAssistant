@@ -52,6 +52,14 @@ match was fixed by requiring cloud-card and pink-title evidence; a map-like
 negative regression covers it. Never use generic Back, centre taps, or retries
 for unknown/unsafe overlays. Egg and Weekly still need live recovery proof.
 
+The 17:45:28 generic `KEYCODE_BACK` safety defect is closed centrally: its
+route was `ReturnToInventoryAsync -> GuardedInventoryRecovery ->
+ExecuteRecoveryActionAsync`, where a former ordinary Details transition was
+wrongly allowed to invoke transport Back. Generic recovery and CLI no longer
+expose Back. Only exact three-stable-frame KnownExitDialog recovery has the
+separate `StateBoundAndroidBackFallback` capability; every other state,
+untrusted overlay, failed visual control or timeout is zero-input terminal.
+
 `device-run-cleanup-proof` begins directly through
 `EnsureFilteredInventoryAsync`; it must not close to the map before each
 batch. Resume the next bounded persisted batch only after a verified Inventory
@@ -105,5 +113,5 @@ Weekly truth replay is accepted offline at target (0.5000,0.8600) / 540x2012.
 Any partial Weekly/modal-like topology must stop zero-input before normal state
 routing; do not allow underlying Details or map anchors to authorize Back.
 
-Do not use `device-open-inventory` or `device-press-back`: they are retired
-to prevent blind Back actions. Use only a state-verified named workflow.
+No generic device open/close/Back command exists. Use only a state-verified
+named workflow.

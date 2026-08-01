@@ -1208,28 +1208,9 @@ public sealed class AndroidVerifiedInventoryNamedOperations : ICleanupProofNamed
 
     public async Task<string> CloseInventoryAsync(CancellationToken cancellationToken)
     {
-        using var _ = _timing.Measure(TimingCategory.NamedOperation, nameof(CloseInventoryAsync));
-        LastCleanupRecoveryInputCount = 0;
-        var before = await WaitForStateAsync(
-            new[] { PokemonGoGameState.Inventory }, cancellationToken);
-        var detection = _detector.Detect(before.Screenshot, _appraisalProfile);
-        if (!GuardedInventoryClose.CanAct(detection))
-            return PokemonGoGameState.Unknown.ToString();
-
-        await AuthorizeNonTapInputAsync(
-            "close-inventory", cancellationToken, PokemonGoGameState.GameplayMap.ToString(),
-            PokemonGoGameState.Inventory);
-        await _transport.PressBackAsync(_serial, cancellationToken);
-        LastCleanupRecoveryInputCount = 1;
-        if (_navigationTrace is not null)
-            await _navigationTrace.RecordInputSentAsync("PressBack", "Back", cancellationToken);
-        var after = await WaitForStateAsync(
-            new[] { PokemonGoGameState.GameplayMap }, cancellationToken);
-        await CompleteTraceAsync(
-            PokemonGoGameState.GameplayMap.ToString(),
-            after.State == PokemonGoGameState.GameplayMap ? "PASS" : "FAIL",
-            cancellationToken);
-        return after.State.ToString();
+        _ = cancellationToken;
+        // Deliberately retired: ordinary Inventory close cannot use Android Back.
+        return PokemonGoGameState.Unknown.ToString();
     }
 
     /// <summary>
@@ -1482,15 +1463,7 @@ public sealed class AndroidVerifiedInventoryNamedOperations : ICleanupProofNamed
             return;
         }
 
-        if (authorization.Action != RecoveryInputAction.PressBack ||
-            authorization.StateBefore is not (PokemonGoGameState.PokemonDetails or PokemonGoGameState.PokemonMenu))
-            throw new InvalidOperationException("Android Back was not authorized for the observed state.");
-        await AuthorizeNonTapInputAsync(
-            "guarded-back", cancellationToken, PokemonGoGameState.Inventory.ToString(),
-            authorization.StateBefore);
-        await _transport.PressBackAsync(_serial, cancellationToken);
-        if (_navigationTrace is not null)
-            await _navigationTrace.RecordInputSentAsync("PressBack", "Back", cancellationToken);
+        throw new InvalidOperationException("Only the KnownExitDialog-specific recovery may send Android Back.");
     }
 
     private Task WriteRecoveryAuditAsync(
@@ -1743,12 +1716,7 @@ public sealed class AndroidVerifiedInventoryNamedOperations : ICleanupProofNamed
         PokemonGoGameState? requiredState = null)
     {
         var screenshot = await CaptureAsync($"pre-{name}", cancellationToken);
-        var verifiedDetailsRecoverySurface =
-            name == "guarded-back" &&
-            requiredState == PokemonGoGameState.PokemonDetails &&
-            IsVerifiedDetailsRecoverySurface(screenshot);
-        if (!verifiedDetailsRecoverySurface)
-            screenshot = await EnsureNoUnsafeConfirmationAsync(name, screenshot, cancellationToken);
+        screenshot = await EnsureNoUnsafeConfirmationAsync(name, screenshot, cancellationToken);
         var detection = _detector.Detect(screenshot, _appraisalProfile);
         var visualFallbackState = detection.State == PokemonGoGameState.Unknown &&
             _locator.LocateDetailsPageTopology(screenshot) is not null
@@ -1789,7 +1757,7 @@ public sealed class AndroidVerifiedInventoryNamedOperations : ICleanupProofNamed
             Target = (object?)null,
             PreconditionScreenshotHash = detection.ScreenshotSha256,
             FreshPreTapScreenshotHash = detection.ScreenshotSha256,
-            VerifiedDetailsRecoverySurface = verifiedDetailsRecoverySurface,
+            VerifiedDetailsRecoverySurface = IsVerifiedDetailsRecoverySurface(screenshot),
             AuthorizationResult = "AUTHORIZED",
             InputSent = true
         }, cancellationToken);

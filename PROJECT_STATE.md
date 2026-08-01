@@ -2,6 +2,16 @@
 
 ## Guarded benign-interrupt recovery (2026-08-01, live hardening in progress)
 
+The preserved 17:45:28 audit event established a safety defect: the ordinary
+`ReturnToInventoryAsync -> GuardedInventoryRecovery -> ExecuteRecoveryActionAsync`
+route sent `KEYCODE_BACK`. It was incorrectly authorized by the former generic
+Details-to-Inventory transition, not by the KnownExitDialog exception. Generic
+recovery now has no `PressBack` action, the generic CLI open/close/back
+commands are removed, and source-level self-tests permit the sole concrete
+transport Back call only inside exact three-stable-frame KnownExitDialog
+recovery. All other states, failed visual controls, timeout paths and
+modal-like overlays are evidence-plus-zero-input terminal stops.
+
 `KnownBenignInterruptDetector` now has separate, visually grounded classifiers
 for the captured `Oh?` egg frame, Weekly Challenge CTA and the exact app-exit
 dialog's separate CANCEL glyph band. It is integrated centrally in

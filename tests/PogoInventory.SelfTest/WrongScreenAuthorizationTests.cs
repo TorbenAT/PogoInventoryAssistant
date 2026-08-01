@@ -58,7 +58,7 @@ internal static class WrongScreenAuthorizationTests
             "unsafe confirmation must not send an automatic Cancel input");
         Assert(source.Contains("IsVerifiedDetailsRecoverySurface", StringComparison.Ordinal) &&
                source.Contains("LocateCanonicalCloseControl", StringComparison.Ordinal),
-            "guarded-back can bypass a false modal classification only with canonical Details corroboration");
+            "only the false-positive detector interlock may use canonical Details corroboration");
         Assert(source.Contains("DetectUnsafeSurface", StringComparison.Ordinal) &&
                source.Contains("raw-unsafe-score-suppressed-by-verified-details-topology", StringComparison.Ordinal) &&
                source.Contains("canonical-details-close-visible", StringComparison.Ordinal),

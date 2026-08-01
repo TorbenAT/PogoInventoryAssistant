@@ -74,12 +74,10 @@ internal static class CleanupProofTests
                 "baseline persistence precedes appraisal");
             var cliSource = File.ReadAllText(RepositoryPath("src", "PogoInventory.Cli", "Program.cs"));
             AssertTrue(cliSource.Contains("CanonicalCloseUnwindService", StringComparison.Ordinal), "cleanup CLI uses canonical close unwind");
-            var openInventoryCommand = CliMethod(cliSource, "OpenInventoryAsync", "PressBackAsync");
-            var pressBackCommand = CliMethod(cliSource, "PressBackAsync", "CloseInventoryAsync");
-            AssertTrue(!openInventoryCommand.Contains("await transport.OpenPokemonInventoryAsync", StringComparison.Ordinal),
-                "CLI must not expose a blind Android Back as inventory opening");
-            AssertTrue(!pressBackCommand.Contains("await transport.PressBackAsync", StringComparison.Ordinal),
-                "CLI must not expose a blind Android Back command");
+            AssertTrue(!cliSource.Contains("device-open-inventory", StringComparison.Ordinal) &&
+                !cliSource.Contains("device-press-back", StringComparison.Ordinal) &&
+                !cliSource.Contains("device-close-inventory", StringComparison.Ordinal),
+                "CLI exposes no generic open, close or Android Back command");
             var androidSource = File.ReadAllText(RepositoryPath("src", "PogoInventory.Exploration", "Services", "AndroidVerifiedInventoryNamedOperations.cs"));
             AssertTrue(androidSource.Contains("CapturePostExitDetailsFramesAsync", StringComparison.Ordinal), "post-exit fallback exists");
             AssertTrue(File.ReadAllText(RepositoryPath("src", "PogoInventory.Application", "CleanupProofComparativeModels.cs"))

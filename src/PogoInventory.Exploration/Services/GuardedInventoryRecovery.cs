@@ -68,8 +68,7 @@ public sealed record RecoveryFrame
 
 public enum RecoveryInputAction
 {
-    ExitAppraisal,
-    PressBack
+    ExitAppraisal
 }
 
 public sealed record RecoveryActionAuthorization
@@ -310,17 +309,15 @@ public sealed class GuardedInventoryRecovery
             return null;
         }
 
-        var action = _current.Detection.State == PokemonGoGameState.Appraisal
-            ? RecoveryInputAction.ExitAppraisal
-            : RecoveryInputAction.PressBack;
+        if (_current.Detection.State != PokemonGoGameState.Appraisal)
+            return null;
+        var action = RecoveryInputAction.ExitAppraisal;
         var expected = (_current.Detection.State, _current.Kind) switch
         {
             (PokemonGoGameState.Appraisal, RecoveryFrameKind.AppraisalIntro) =>
                 PokemonGoGameState.Appraisal,
             (PokemonGoGameState.Appraisal, RecoveryFrameKind.AppraisalBars) =>
                 PokemonGoGameState.PokemonDetails,
-            (PokemonGoGameState.PokemonMenu, _) => PokemonGoGameState.Inventory,
-            (PokemonGoGameState.PokemonDetails, _) => PokemonGoGameState.Inventory,
             _ => PokemonGoGameState.Unknown
         };
         if (expected == PokemonGoGameState.Unknown)
@@ -335,14 +332,7 @@ public sealed class GuardedInventoryRecovery
                 : null;
         _pendingBefore = _current;
         InputActions++;
-        if (action == RecoveryInputAction.PressBack)
-        {
-            BackActions++;
-        }
-        else
-        {
-            AppraisalTapActions++;
-        }
+        AppraisalTapActions++;
 
         return new RecoveryActionAuthorization
         {
@@ -358,7 +348,7 @@ public sealed class GuardedInventoryRecovery
                 : null,
             Detail = action == RecoveryInputAction.ExitAppraisal
                 ? "One state-validated normalized ExitAppraisal tap."
-                : "One state-validated Android Back."
+                : "One state-validated appraisal exit tap."
         };
     }
 
@@ -554,9 +544,7 @@ public sealed class GuardedInventoryRecovery
         frame.Kind == RecoveryFrameKind.Unknown;
 
     private static bool IsRecoverable(PokemonGoGameState state) =>
-        state is PokemonGoGameState.Appraisal or
-            PokemonGoGameState.PokemonMenu or
-            PokemonGoGameState.PokemonDetails;
+        state == PokemonGoGameState.Appraisal;
 
     private static int MaximumActions(RecoveryFrame origin) =>
         (origin.Detection.State, origin.Kind) switch
@@ -564,8 +552,6 @@ public sealed class GuardedInventoryRecovery
         (PokemonGoGameState.Appraisal, RecoveryFrameKind.AppraisalIntro) =>
             MaxAppraisalTotalActions,
         (PokemonGoGameState.Appraisal, RecoveryFrameKind.AppraisalBars) => 2,
-        (PokemonGoGameState.PokemonMenu, _) => 1,
-        (PokemonGoGameState.PokemonDetails, _) => 1,
         _ => 0
     };
 

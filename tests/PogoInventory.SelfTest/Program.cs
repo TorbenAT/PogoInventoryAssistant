@@ -89,7 +89,7 @@ var tests = new (string Name, Func<Task> Run)[]
     ("Guarded inventory close enforces one map transition", GuardedInventoryCloseTests.RunAsync),
     ("Recovery ROI consensus ignores full-screen animation", GuardedInventoryRecoveryTests.RunRoiConsensusAsync),
     ("Guarded inventory recovery enforces stable bounded transitions", GuardedInventoryRecoveryTests.RunStateMachineAsync),
-    ("Appraisal exit uses one tap per substate and Back only from Details", GuardedInventoryRecoveryTests.RunExitActionsAsync),
+    ("Appraisal exit uses one tap per substate and never generic Back", GuardedInventoryRecoveryTests.RunExitActionsAsync),
     ("Canonical close locator rejects non-canonical X controls", CanonicalCloseLocatorTests.RunAsync),
     ("Details topology canonical-close corroboration (Task J)", CanonicalCloseCorroborationTests.RunAsync),
     ("Perfect is kept", Sync(PerfectIsKept)),

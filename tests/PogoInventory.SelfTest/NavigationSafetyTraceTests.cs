@@ -26,16 +26,16 @@ internal static class NavigationSafetyTraceTests
             for (var index = 0; index < 4; index++)
                 await recorder.ObserveFrameAsync(screenshot, detection, null, null, CancellationToken.None);
             await recorder.AuthorizeAsync(
-                "guarded-back",
-                "Inventory",
-                "PokemonDetails",
+                "StateBoundAndroidBackFallback",
+                "KnownExitDialogDismissed",
+                "KnownExitDialog",
                 "AUTHORIZED",
                 screenshot,
                 detection,
                 null,
                 null,
                 CancellationToken.None);
-            await recorder.RecordInputSentAsync("PressBack", "Back", CancellationToken.None);
+            await recorder.RecordInputSentAsync("PressBack", "StateBoundAndroidBackFallback", CancellationToken.None);
             for (var index = 0; index < 5; index++)
                 await recorder.ObserveFrameAsync(screenshot, detection, null, null, CancellationToken.None);
             recorder.RecordPostcondition("Inventory", "PASS");

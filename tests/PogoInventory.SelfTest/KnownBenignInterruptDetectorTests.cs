@@ -49,7 +49,45 @@ internal static class KnownBenignInterruptDetectorTests
         Assert(host.Contains("PngDecoder.Decode(screenshot)", StringComparison.Ordinal) &&
                host.Contains("point.ToPixels(targetImage.Width, targetImage.Height)", StringComparison.Ordinal),
             "fresh visual targets are converted with their own screenshot geometry, not mismatched metadata");
+        AssertBackCapabilityIsExitDialogOnly(host);
         return Task.CompletedTask;
+    }
+
+    private static void AssertBackCapabilityIsExitDialogOnly(string namedOperationsSource)
+    {
+        var root = RepositoryPath();
+        var productionCalls = Directory.EnumerateFiles(Path.Combine(root, "src"), "*.cs",
+                SearchOption.AllDirectories)
+            .Where(path => File.ReadAllText(path).Contains(".PressBackAsync(", StringComparison.Ordinal))
+            .Select(path => Path.GetRelativePath(root, path).Replace('\\', '/'))
+            .OrderBy(path => path, StringComparer.Ordinal)
+            .ToArray();
+        var expectedCalls = new[]
+        {
+            "src/PogoInventory.Automation/Timing/TimingAndroidAutomationTransport.cs",
+            "src/PogoInventory.Exploration/Services/AndroidVerifiedInventoryNamedOperations.cs"
+        };
+        Assert(productionCalls.SequenceEqual(expectedCalls, StringComparer.Ordinal),
+            "only the transport timing decorator and KnownExitDialog owner may call PressBackAsync: " +
+            string.Join(", ", productionCalls));
+
+        var recoveryStart = namedOperationsSource.IndexOf("RecoverKnownBenignInterruptAsync", StringComparison.Ordinal);
+        var recoveryEnd = namedOperationsSource.IndexOf("KnownBenignActionName", recoveryStart,
+            StringComparison.Ordinal);
+        var recovery = namedOperationsSource[recoveryStart..recoveryEnd];
+        var concreteBackCalls = recovery.Split(".PressBackAsync(", StringSplitOptions.None).Length - 1;
+        Assert(concreteBackCalls == 1 &&
+               recovery.Contains("stable.Kind == KnownBenignInterruptKind.KnownExitDialog", StringComparison.Ordinal) &&
+               recovery.Contains("StateBoundAndroidBackFallback", StringComparison.Ordinal),
+            "the sole concrete Back call belongs to the exact KnownExitDialog state-bound fallback");
+
+        var genericRecovery = File.ReadAllText(RepositoryPath("src", "PogoInventory.Exploration", "Services",
+            "GuardedInventoryRecovery.cs"));
+        var cli = File.ReadAllText(RepositoryPath("src", "PogoInventory.Cli", "Program.cs"));
+        Assert(!genericRecovery.Contains("PressBack", StringComparison.Ordinal) &&
+               !cli.Contains(".PressBackAsync(", StringComparison.Ordinal) &&
+               !namedOperationsSource.Contains("guarded-back", StringComparison.Ordinal),
+            "generic recovery, CLI close/unwind and failed-tap routes expose no Android Back capability");
     }
 
     private static PixelImage ExitFixture()

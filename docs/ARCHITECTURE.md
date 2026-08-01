@@ -178,7 +178,8 @@ frame and anchor as read-only diagnostic evidence and authorizes no input.
 Known-benign detection precedes ordinary state routing. A modal-like Weekly
 topology that is not exact enough for its named Continue action is terminal
 zero-input; an underlying Details or map anchor cannot reach the normal Back
-recovery path. KnownExitDialog remains the sole explicit Back exception.
+recovery path. KnownExitDialog remains the sole explicit Back exception; the
+generic recovery state machine has no Back action or transport capability.
 
 The permanent value proof starts directly with
 `EnsureFilteredInventoryAsync`. It reuses an already verified Inventory state
@@ -323,8 +324,9 @@ service decisions, audited named actions and post-action polling. The service
 owns Unknown-stop, unexpected-state-stop and action limits. An unchanged
 post-action substate yields terminal `ACTION_NOT_OBSERVED`; no blind retry is
 authorized. AppraisalIntro and AppraisalBars each authorize one normalized
-`ExitAppraisal` tap at the documented left-middle target. Only verified
-PokemonDetails authorizes Android Back to Inventory.
+`ExitAppraisal` tap at the documented left-middle target. Verified
+PokemonDetails is terminal zero-input for generic recovery; it does not
+authorize Android Back to Inventory.
 
 `device-continue-appraisal-intro` returns success without input when stable
 bars already exist. Otherwise it requires stable intro ROI evidence, taps the

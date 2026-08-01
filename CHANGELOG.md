@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+- Removed the generic recovery `PressBack` action and all generic CLI
+  open/close/Back commands after the preserved 17:45:28 audit evidence showed
+  `ReturnToInventoryAsync` could issue a normal `KEYCODE_BACK`. The sole
+  concrete Back call is now the exact three-stable-frame KnownExitDialog
+  capability; a repository-wide self-test locks the production call graph.
 - Added a Weekly CTA safe-zone locator and an untrusted-overlay zero-input
   fence before ordinary state routing; only the exact KnownExitDialog retains
   its separately approved named Back fallback.

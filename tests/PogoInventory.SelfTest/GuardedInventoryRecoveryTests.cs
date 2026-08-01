@@ -170,19 +170,9 @@ internal static class GuardedInventoryRecoveryTests
                 PokemonGoGameState.PokemonDetails, "details"))) == RecoveryOutcome.PROGRESSED,
             "bars tap progresses to Details");
 
-        var final = service.AuthorizeNextAction();
-        Assert(final is
-            {
-                Sequence: 3,
-                Action: RecoveryInputAction.PressBack,
-                ExpectedState: PokemonGoGameState.Inventory
-            }, "only Details authorizes Back to Inventory");
-        Assert(service.ObservePostAction(Three(() => OtherFrame(
-                PokemonGoGameState.Inventory, "inventory"))) == RecoveryOutcome.SUCCEEDED,
-            "Inventory completes recovery");
-        Assert(service.AuthorizeNextAction() is null && service.InputActions == 3 &&
-            service.AppraisalTapActions == 2 && service.BackActions == 1,
-            "the three-action limit cannot be exceeded");
+        Assert(service.AuthorizeNextAction() is null && service.InputActions == 2 &&
+            service.AppraisalTapActions == 2 && service.BackActions == 0,
+            "ordinary Details is terminal zero-input; generic Back is impossible");
     }
 
     private static void BarsNeverAuthorizeBackAndNoBlindRetryIsAllowed()
@@ -232,8 +222,8 @@ internal static class GuardedInventoryRecoveryTests
             method.Contains("recovery.ObservePostAction(", StringComparison.Ordinal),
             "recovery command delegates state-machine rules to GuardedInventoryRecovery");
         Assert(method.Contains("RecoveryInputAction.ExitAppraisal", StringComparison.Ordinal) &&
-            method.Contains("RecoveryInputAction.PressBack", StringComparison.Ordinal),
-            "recovery command executes only the service-authorized named action");
+            !method.Contains("PressBackAsync", StringComparison.Ordinal),
+            "generic recovery can execute only the appraisal exit tap, never Android Back");
         Assert(!method.Contains("while (state.State", StringComparison.Ordinal) &&
             !method.Contains("CanStartBack", StringComparison.Ordinal) &&
             !method.Contains("AuthorizeBack", StringComparison.Ordinal) &&
