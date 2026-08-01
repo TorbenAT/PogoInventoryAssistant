@@ -1,5 +1,21 @@
 # Project state
 
+## Offline reference-safe species polish (2026-08-01)
+
+No phone run was made. The new read-only `replay-stream-species` command
+hash-verified and re-read all 600 saved PNG evidence frames from final run
+`stream-20260731T195333664Z-bc04d28b23614d6f`. It changed no source artifact.
+The reference-safe suffix rule accepts only `100`/OCR `l00` ratings or pure
+punctuation and still requires a unique reference match; free text, other
+ratings and ambiguous terminal completions remain Unknown. The replay raised
+Species Known from 114/120 to 119/120 (Snover, Karrablast, two Shelmet and
+Joltik), with 0 false-Known contradictions and species conflicts unchanged at
+0. Phase 7 remains NOT STARTED; this is a clean baseline preparation only.
+
+Stream reports now call the bounded-ring-buffer count `FramesEvicted`, not
+`FramesDropped`; it is retention eviction and must not be interpreted as
+decoder or transport loss.
+
 ## Final continuous 120-item proof run (2026-07-31)
 
 The 19-item conclusion remains rejected: the account contains 1857 Pokémon.

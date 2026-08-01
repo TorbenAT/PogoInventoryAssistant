@@ -128,6 +128,55 @@ internal static class HeaderOcrTests
             "Nidoran without its gender glyph should still normalize");
     }
 
+    public static async Task RunReferenceSafeSuffixSpeciesNormalizationAsync()
+    {
+        var reference = new StaticSpeciesReference(new[]
+        {
+            "Snover", "Karrablast", "Shelmet", "Joltik"
+        });
+
+        async Task AssertSpecies(
+            string text,
+            string expected,
+            bool expectDecoratedAudit = false)
+        {
+            var result = await Analyze(text, "CP500", reference);
+            Assert(result.Species == expected,
+                $"'{text}' should resolve only through its reference-safe suffix.");
+            if (expectDecoratedAudit)
+            {
+                Assert(result.Nickname == text,
+                    "the original decorated header label must remain auditable");
+                Assert(result.FailureReasons.Contains(
+                        "HEADER_TEXT_REFERENCE_SAFE_SUFFIX_MATCH"),
+                    "decorated reference match must be marked explicitly");
+            }
+        }
+
+        await AssertSpecies("Snover 100", "Snover", expectDecoratedAudit: true);
+        await AssertSpecies("Karrablal00", "Karrablast", expectDecoratedAudit: true);
+        await AssertSpecies("Shelmet .", "Shelmet");
+
+        foreach (var negative in new[]
+        {
+            "Snover 99", "Snover 101", "Snover transfer",
+            "Karrablal00 extra", "Shelmet 100 review"
+        })
+        {
+            var result = await Analyze(negative, "CP500", reference);
+            Assert(result.Species is null,
+                $"'{negative}' must remain Unknown rather than discard arbitrary text.");
+        }
+
+        var ambiguousReference = new StaticSpeciesReference(new[]
+        {
+            "Karrablast", "Karrablasu"
+        });
+        var ambiguous = await Analyze("Karrablas100", "CP500", ambiguousReference);
+        Assert(ambiguous.Species is null,
+            "an ambiguous one-edit reference suffix match must remain Unknown.");
+    }
+
     public static Task RunBitmapTransformGeometryAsync()
     {
         const int imageWidth = 1080;
@@ -302,11 +351,14 @@ internal static class HeaderOcrTests
         return Task.CompletedTask;
     }
 
-    private static async Task<PokemonHeaderResult> Analyze(string nameText, string cpText)
+    private static async Task<PokemonHeaderResult> Analyze(
+        string nameText,
+        string cpText,
+        ISpeciesReference? reference = null)
     {
         var analyzer = new PokemonHeaderAnalyzer(
             FakeTextRecognizer.WithCpAndName(cpText, nameText),
-            SpeciesReference);
+            reference ?? SpeciesReference);
         return await analyzer.AnalyzeAsync(new byte[] { 1 }, HeaderScreenType.PokemonDetails);
     }
 

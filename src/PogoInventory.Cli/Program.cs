@@ -169,6 +169,9 @@ static async Task<int> MainAsync(string[] args)
             "device-stream-read-pokemon" => await StreamPokemonReaderCommand.RunAsync(
                 args.Skip(1).ToArray(),
                 cancellationSource.Token),
+            "replay-stream-species" => await StreamSpeciesReplayCommand.RunAsync(
+                args.Skip(1).ToArray(),
+                cancellationSource.Token),
             "device-unwind-to-map" => await RunCanonicalUnwindAsync(
                 args.Skip(1).ToArray(),
                 cancellationSource.Token),
@@ -3814,6 +3817,8 @@ static void PrintHelp()
     Console.WriteLine("                        [--adb <adb.exe>] [--serial <serial>]");
     Console.WriteLine("  device-stream-read-pokemon --device <serial> --profile <gate-profile.json> --appraisal-profile <appraisal.json> --items <n> --out <directory> [--query age0-9999]");
     Console.WriteLine("                        Continuous scrcpy/FFmpeg AppraisalBars reader; writes live.html, items.csv and items.jsonl.");
+    Console.WriteLine("  replay-stream-species --source <stream-output> --out <directory> [--minimum-known <n>]");
+    Console.WriteLine("                        Read-only, hash-verified replay of saved stream evidence through the species parser.");
     Console.WriteLine("  analyze-reidentification --database-a <sqlite> --database-b <sqlite> --out <directory>");
     Console.WriteLine("  inventory-db-init [--db <pogo-inventory.db>]");
     Console.WriteLine("  inventory-db-summary [--db <pogo-inventory.db>]");

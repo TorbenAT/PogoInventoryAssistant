@@ -1,5 +1,25 @@
 # Architecture
 
+## Offline reference-safe species replay (2026-08-01)
+
+`replay-stream-species` is an offline-only CLI path. It reads the existing
+stream `items.jsonl`, resolves every relative evidence path underneath the
+declared source root, SHA-256 verifies every PNG against the recorded hash,
+then re-runs the header parser. It has no Device or Automation dependency and
+never changes the source run. A replayed Known value requires two independent
+hash-verified frames and is compared with the prior Known value; a differing
+Known result is reported as false-Known rather than overwritten.
+
+`ReferenceSafeSpeciesResolver` first uses ordinary reference normalization.
+For an otherwise unreadable label it may remove only pure punctuation or an
+exact `100` rating (including OCR `l00`), and may complete at most two missing
+terminal characters only when exactly one reference species has that prefix.
+All other suffixes, ratings and ambiguous completions remain Unknown.
+
+`StreamProofMetrics.FramesEvicted` is bounded-buffer retention telemetry. The
+report deliberately no longer calls it `FramesDropped`, which could imply a
+decoder or network loss.
+
 ## Final stream-proof safeguards (2026-07-31)
 
 The final reader still treats the normal 0.70 IV bar-confidence floor as the

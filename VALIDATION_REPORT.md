@@ -924,3 +924,23 @@ Main consolidation merge: `192d1c7`.
   `AppraisalBars` for Dreepy CP 417. Its generated profile remains a
   Candidate/unverified profile, as required; no production observation
   provider was enabled.
+## Offline reference-safe species polish - 2026-08-01
+
+- Replay phase phone access: **NONE**. The replay consumed only the saved
+  final-run PNGs.
+- Build: Debug solution build passed with 0 warnings and 0 errors.
+- Package-free self-test: **279/279 PASS**, including the new positive
+  `Snover 100`, `Karrablal00` and `Shelmet .` cases; five arbitrary/other
+  rating negatives; and an ambiguous-prefix negative case.
+- Offline replay: `replay-stream-species --minimum-known 118` passed. It
+  SHA-256 verified and OCR-replayed all 600 evidence frames from 120 items.
+  Species Known was 114 -> 119; uplifted ordinals were 55 Snover, 71
+  Karrablast, 82 Shelmet, 90 Shelmet and 103 Joltik. False-Known
+  contradictions were 0 and conflicts stayed 0 -> 0.
+- Replay artifacts are local and ignored at
+  `local-data/validation/stream-reader-final-120-species-replay`.
+- Required script suite: **PASS**. The canonical-ADB rerun of
+  `prepare-android-phone.ps1` was read-only, selected
+  `192.168.1.185:37877` / ONEPLUS A6013 and completed its snapshot. It found
+  `NotAppraisal` with candidate/unverified readiness, so no navigation or
+  extraction authority was enabled.

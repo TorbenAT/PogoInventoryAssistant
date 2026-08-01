@@ -240,7 +240,9 @@ internal static class StreamPokemonProofReporter
             GateRejections = AggregateGateRejections(handoffs),
             FramesRejectedStale = handoffs.Sum(x => x.FramesRejectedStale),
             FramesRejectedWrongState = handoffs.Sum(x => x.FramesRejectedWrongState),
-            FramesDropped = context.Metrics.FramesEvicted,
+            // The bounded source intentionally evicts old frames. This is not
+            // a decoder loss, so report the transport-neutral metric by name.
+            FramesEvicted = context.Metrics.FramesEvicted,
             Stream = context.Metrics,
             Records = records,
             Handoffs = handoffs
@@ -547,7 +549,7 @@ button,select{margin-right:8px;padding:6px}details{max-width:760px}.hidden{displ
 <div><b>Integrity</b><br>{{H(integrityStatus)}}</div>
 <div><b>Inputs</b><br>setup {{context.SetupInputs}}; swipes {{context.ProgressionSwipes}}; other {{context.OtherNamedInputs}}; semantic {{context.SemanticInputs}}</div>
 <div><b>Performance (P50/P95/P99 ms)</b><br>item {{H(TimingSummary(records.Select(x => x.ItemMilliseconds)))}}<br>settling {{H(TimingSummary(records.Select(x => x.SettlingMilliseconds)))}}<br>OCR {{H(TimingSummary(records.Select(x => x.OcrMilliseconds)))}}<br>IV {{H(TimingSummary(records.Select(x => x.IvMilliseconds)))}}</div>
-<div><b>Stream</b><br>{{context.Metrics.StreamWidth}}×{{context.Metrics.StreamHeight}}; frames {{context.Metrics.FramesPublished}}; dropped {{context.Metrics.FramesEvicted}}; shutdown {{H(context.Metrics.Shutdown)}}; leases {{context.Metrics.LeasesAtShutdown}}</div>
+<div><b>Stream</b><br>{{context.Metrics.StreamWidth}}×{{context.Metrics.StreamHeight}}; frames {{context.Metrics.FramesPublished}}; buffer evicted {{context.Metrics.FramesEvicted}}; shutdown {{H(context.Metrics.Shutdown)}}; leases {{context.Metrics.LeasesAtShutdown}}</div>
 </div></section>
 <section class="controls"><label>Filter
 <select id="filter"><option value="all">All</option><option value="complete">Complete</option>

@@ -2,6 +2,18 @@
 
 ## Unreleased
 
+- Added a read-only, hash-verified `replay-stream-species` command and a
+  reference-safe species-label resolver. It accepts only an exact `100` (or
+  OCR `l00`) suffix or pure punctuation, then requires a unique reference
+  match; arbitrary text, other ratings and ambiguous completions stay Unknown.
+  Offline replay of the final 120-item evidence read all 600 PNGs, raised
+  Species Known from 114 to 119, kept conflicts at 0 and found 0 contradictory
+  Known values.
+
+- Renamed the stream report field from `FramesDropped` to `FramesEvicted`.
+  The count is intentional bounded-buffer eviction, not decoder or transport
+  frame loss.
+
 - Completed a fresh, continuous 120-item real-phone stream proof run on the
   OnePlus 6T Wireless Debugging endpoint. The final run has 120 unique item
   fingerprints, 119 verified progressions, 600 distinct semantic evidence

@@ -289,6 +289,7 @@ var tests = new (string Name, Func<Task> Run)[]
     ,("Header OCR parses and validates CP", HeaderOcrTests.RunCpParsingAsync)
     ,("Header OCR uses the validated real-phone CP ROI", HeaderOcrTests.RunDefaultCpRoiAsync)
     ,("Header OCR tolerates case and single-character OCR noise", HeaderOcrTests.RunTolerantSpeciesNormalizationAsync)
+    ,("Header OCR resolves only reference-safe suffix species labels", HeaderOcrTests.RunReferenceSafeSuffixSpeciesNormalizationAsync)
     ,("Search query classifier distinguishes exact species from broad filters", HeaderOcrTests.RunSearchQueryClassifierAsync)
     ,("BitmapTransform geometry scales bounds before cropping and stays in range", HeaderOcrTests.RunBitmapTransformGeometryAsync)
     ,("Header OCR upscale selection covers small/large crop thresholds", HeaderOcrTests.RunUpscaleSelectionAsync)

@@ -42,16 +42,50 @@ public sealed class StaticSpeciesReference : ISpeciesReference
             return exact;
         }
 
-        foreach (var candidate in _byNormalized)
+        // An OCR edit is trustworthy only when it identifies exactly one
+        // reference entry. Enumeration order must never decide identity.
+        var candidates = _byNormalized
+            .Where(candidate =>
+                Math.Abs(candidate.Key.Length - folded.Length) <= 1 &&
+                IsWithinEditDistanceOne(candidate.Key, folded))
+            .Take(2)
+            .ToArray();
+        if (candidates.Length == 1)
         {
-            if (Math.Abs(candidate.Key.Length - folded.Length) > 1) continue;
-            if (IsWithinEditDistanceOne(candidate.Key, folded))
-            {
-                return candidate.Value;
-            }
+            return candidates[0].Value;
         }
 
         return null;
+    }
+
+    /// <summary>
+    /// Resolves a terminally truncated reference label only when exactly one
+    /// species has the supplied folded prefix and the omitted suffix is small.
+    /// This is intentionally separate from normal OCR edit tolerance.
+    /// </summary>
+    public string? NormalizeTerminalPrefix(
+        string text,
+        int maximumMissingTerminalCharacters)
+    {
+        if (string.IsNullOrWhiteSpace(text) ||
+            maximumMissingTerminalCharacters is < 1 or > 2)
+        {
+            return null;
+        }
+
+        var folded = Fold(text);
+        if (folded.Length < 6)
+        {
+            return null;
+        }
+
+        var candidates = _byNormalized
+            .Where(candidate =>
+                candidate.Key.StartsWith(folded, StringComparison.Ordinal) &&
+                candidate.Key.Length - folded.Length is >= 1 and <= 2)
+            .Take(2)
+            .ToArray();
+        return candidates.Length == 1 ? candidates[0].Value : null;
     }
 
     /// <summary>

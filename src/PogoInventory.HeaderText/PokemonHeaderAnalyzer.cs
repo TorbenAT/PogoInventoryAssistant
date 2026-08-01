@@ -136,7 +136,8 @@ public sealed class PokemonHeaderAnalyzer
             return (null, candidate, 0.0);
         }
 
-        var normalized = _speciesReference.NormalizeSpecies(candidate);
+        var normalized = ReferenceSafeSpeciesResolver.Resolve(
+            candidate, _speciesReference);
         if (normalized is null)
         {
             failures.Add("HEADER_TEXT_NOT_SPECIES");
@@ -148,7 +149,16 @@ public sealed class PokemonHeaderAnalyzer
             StaticSpeciesReference.Fold(normalized),
             StringComparison.Ordinal);
 
-        return (normalized, null, isExactFold ? 1.0 : 0.75);
+        var isDecoratedReferenceMatch = !isExactFold;
+        if (isDecoratedReferenceMatch)
+        {
+            failures.Add("HEADER_TEXT_REFERENCE_SAFE_SUFFIX_MATCH");
+        }
+
+        return (
+            normalized,
+            isDecoratedReferenceMatch ? candidate : null,
+            isExactFold ? 1.0 : 0.75);
     }
 
     /// <summary>
