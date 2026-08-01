@@ -235,6 +235,8 @@ Inventory/search geometry and no card-content pixels in all three first-row
 cells across three fresh frames. `CleanupProofRunner` records that as
 `SearchOracleEvidence.EmptyVerified` with count zero and complete evidence for
 only the exact logical bucket; it is not inferred from a traversal limit.
+The shared game-state detector treats the same exact evidence as Inventory,
+preventing a blank result grid from falling through to MainMenu navigation.
 
 ## Action authorization and unsafe confirmation interlock
 

@@ -19,6 +19,8 @@ then safe-stopped. The locator now requires first-row card-content geometry.
 Three stable Inventory/search frames with all three first-row cells empty
 persist `EmptyVerified` evidence and complete only that exact bucket with zero
 further input; a bounded traversal is still never treated as filter-end.
+The empty-search geometry is an explicit Inventory detector result, so it
+cannot fall through to MainMenu and trigger a menu-to-inventory tap.
 
 `KnownBenignInterruptDetector` now has separate, visually grounded classifiers
 for the captured `Oh?` egg frame, Weekly Challenge CTA and the exact app-exit

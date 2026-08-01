@@ -57,6 +57,12 @@ public sealed class PokemonGoGameStateDetector
                 new[] { "InventoryCardDetected" }.Concat(inventory.Evidence).ToArray(), hash);
         }
 
+        if (_locator.IsVerifiedEmptyInventorySearchResult(screenshotPng))
+        {
+            return Result(PokemonGoGameState.Inventory, 0.95,
+                new[] { "InventorySearchEmptyVerified", "InventorySearchBarDetected", "FirstRowCardCellsEmpty" }, hash);
+        }
+
         var mainMenu = _locator.LocatePokemonInventory(screenshotPng);
         if (mainMenu is not null)
         {

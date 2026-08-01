@@ -65,6 +65,8 @@ outcome. The locator must prove stable Inventory/search geometry plus no
 content in all three first-row card cells across three frames. Only then may
 the runner persist `EmptyVerified`, observed count zero and complete that exact
 bucket; it must never tap the nominal first-card position on an empty grid.
+The same exact geometry is an Inventory state for normal routing, never
+MainMenu.
 
 `device-run-cleanup-proof` begins directly through
 `EnsureFilteredInventoryAsync`; it must not close to the map before each

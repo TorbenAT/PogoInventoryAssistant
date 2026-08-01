@@ -16,7 +16,8 @@
   stopped before capture. The replacement requires three fresh, stable
   Inventory/search frames and empty geometry in all first-row cells, then
   records `EmptyVerified`/zero results and completes only that exact bucket.
-  Synthetic positive-card and negative-empty-grid regressions pass.
+  Synthetic positive-card and negative-empty-grid regressions pass; the game
+  state detector also maps that exact empty geometry to Inventory, not MainMenu.
 
 - `dotnet build .\PogoInventoryAssistant.sln --no-restore`: PASS, 0 warnings
   and 0 errors.

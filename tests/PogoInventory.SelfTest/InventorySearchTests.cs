@@ -3,6 +3,7 @@ using PogoInventory.Device.Adb;
 using PogoInventory.Device.Models;
 using PogoInventory.Device.Transport;
 using PogoInventory.Exploration.Services;
+using PogoInventory.Exploration.Models;
 using PogoInventory.Vision.Imaging;
 
 internal static class InventorySearchTests
@@ -96,6 +97,9 @@ internal static class InventorySearchTests
         AssertTrue(locator.LocateInventoryCard(PngEncoder.Encode(InventoryFixture(hasCard: false))) is null &&
             locator.IsVerifiedEmptyInventorySearchResult(PngEncoder.Encode(InventoryFixture(hasCard: false))),
             "three-cell empty inventory geometry becomes an oracle empty proof before any first-card tap");
+        AssertTrue(PokemonGoGameState.Inventory ==
+            new PokemonGoGameStateDetector().Detect(PngEncoder.Encode(InventoryFixture(hasCard: false))).State,
+            "a verified empty Inventory search cannot fall through to MainMenu routing");
         return Task.CompletedTask;
     }
 
