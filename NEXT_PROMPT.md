@@ -91,5 +91,15 @@ ordinal/current carousel state, and uses only the existing one-tap guarded
 AppraisalIntro continuation before fresh Bars evidence. Do not reopen the
 filter or reobserve ordinals 1–5 on this run.
 
+That persisted run is now 50/50 complete (75 total records; 256 events;
+`integrity_check=ok`) and its bucket remains ReconciliationRequired because a
+limit is not filter-end proof. A real Bars surface with all three profile
+tracks measured at 0.832 is accepted only at the new profile-bound >=0.80
+anchor; rejected windows are saved as read-only evidence. Select the same
+oldest unfinished bucket for a non-overlapping, oracle-backed partition rather
+than rescanning its first 50 items. The final map unwind stopped safely on
+Details; establish the next verified Inventory state only through the central
+named recovery, never a blind Back.
+
 Do not use `device-open-inventory` or `device-press-back`: they are retired
 to prevent blind Back actions. Use only a state-verified named workflow.

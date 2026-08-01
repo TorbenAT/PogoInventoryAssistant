@@ -169,6 +169,12 @@ single named horizontal swipe. Appraisal is exited once at the end, then the
 existing canonical unwind and SQLite report generation run. Details-only tags
 remain Unknown in this pass.
 
+The Bars anchor uses the device-adjusted appraisal profile, not a generic UI
+guess: it requires a profile candidate at >=0.80 and all three measured IV
+tracks. This accommodates the observed 0.832 real carousel frame while still
+rejecting partial/weak candidates. A rejected recovery window persists each
+frame and anchor as read-only diagnostic evidence and authorizes no input.
+
 The permanent value proof starts directly with
 `EnsureFilteredInventoryAsync`. It reuses an already verified Inventory state
 or establishes Inventory through its own named, bounded operations; no

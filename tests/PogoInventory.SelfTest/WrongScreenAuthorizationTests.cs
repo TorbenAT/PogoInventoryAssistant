@@ -71,6 +71,15 @@ internal static class WrongScreenAuthorizationTests
                source.Contains("carousel-appraisal-intro-post", StringComparison.Ordinal) &&
                source.Contains("no second carousel swipe", StringComparison.Ordinal),
             "a stable carousel AppraisalIntro continues through one bounded existing intro action, never a retry swipe");
+        var recoverySource = File.ReadAllText(RepositoryPath(
+            "src", "PogoInventory.Exploration", "Services",
+            "GuardedInventoryRecovery.cs"));
+        Assert(recoverySource.Contains("MinimumAppraisalBarsAnchorConfidence = 0.80", StringComparison.Ordinal) &&
+               recoverySource.Contains("bar.TrackDetected && bar.EstimatedIv is not null", StringComparison.Ordinal),
+            "a profile-bound AppraisalBars recovery anchor requires three measured IV tracks and never relies on an arbitrary 0.90 threshold");
+        Assert(source.Contains("SaveUnusableRecoveryWindowAsync", StringComparison.Ordinal) &&
+               source.Contains("no Android action is authorized here", StringComparison.Ordinal),
+            "rejected appraisal state windows are persisted as read-only diagnostics without a recovery input");
         return Task.CompletedTask;
     }
 

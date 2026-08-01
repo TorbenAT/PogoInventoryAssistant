@@ -48,6 +48,15 @@
   stable AppraisalIntro after one already-authorized carousel swipe, not on a
   modal or filter end. The DB-backed `--resume-run` path and bounded carousel
   intro continuation build cleanly and pass the 281/281 package-free suite.
+- Appraisal-bars anchor correction: the persisted 50-item frontier run resumed
+  from a host-timeout checkpoint and completed 50/50 captures. A repeated
+  real-phone frame window was `Appraisal` at 0.832 with three measured tracks;
+  the recovery anchor now requires >=0.80 plus all three tracks, rather than
+  downgrading this verified state to Other at 0.90. Rejected windows are saved
+  as read-only diagnostics. Build: PASS, 0 warnings/errors; self-test: PASS
+  281/281. SQLite: 75 records, 256 events, `integrity_check=ok`. The bounded
+  bucket remains reconciliation-required and the final map unwind sent no
+  blind Back when Details remained visible.
 
 ## Streaming Vision Phase 5 Appraisal gate calibration - 2026-07-28
 

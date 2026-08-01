@@ -782,6 +782,8 @@ public sealed class AndroidVerifiedInventoryNamedOperations : ICleanupProofNamed
         if (!GuardedInventoryRecovery.TryGetStableFrame(frames, out var stable) ||
             stable is null || stable.Kind != RecoveryFrameKind.AppraisalBars)
         {
+            await SaveUnusableRecoveryWindowAsync(
+                "carousel-appraisal-identity-unusable", frames, cancellationToken);
             return new CleanupProofIdentityCapture
             {
                 Consensus = UnavailableIdentity("AppraisalBarsNotStable"),
@@ -841,6 +843,8 @@ public sealed class AndroidVerifiedInventoryNamedOperations : ICleanupProofNamed
         if (!GuardedInventoryRecovery.TryGetStableFrame(frames, out var stable) ||
             stable is null || stable.Kind != RecoveryFrameKind.AppraisalBars)
         {
+            await SaveUnusableRecoveryWindowAsync(
+                "carousel-appraisal-observation-unusable", frames, cancellationToken);
             return new CleanupProofAppraisalCapture
             {
                 Status = "Unavailable",
@@ -1339,7 +1343,62 @@ public sealed class AndroidVerifiedInventoryNamedOperations : ICleanupProofNamed
                 return frames;
             await SettleAsync("PostActionSettle", _automationProfile.PostActionSettleMilliseconds, cancellationToken);
         }
+
+        // A failed consensus is a safety decision, not an invitation to retry
+        // input. Preserve the exact observation window and its anchors so a
+        // later diagnosis can distinguish a moving UI from a bad classifier.
+        // This path deliberately performs no Android action.
+        var diagnostics = new List<object>(frames.Count);
+        foreach (var frame in frames)
+        {
+            var path = await SaveEvidenceAsync($"{label}-unstable", frame.Screenshot, cancellationToken);
+            diagnostics.Add(new
+            {
+                frame.Kind,
+                detectedState = frame.Detection.State.ToString(),
+                frame.Detection.Confidence,
+                frame.EvidenceSignature,
+                frame.HasIntroAnchor,
+                frame.HasBarsAnchor,
+                frame.HasConflictingAnchor,
+                frame.LocatorConfidence,
+                locatorTarget = frame.LocatorTarget,
+                evidencePath = path,
+                screenshotSha256 = frame.Detection.ScreenshotSha256
+            });
+        }
+        await WriteAuditAsync($"{label}-unstable", diagnostics, cancellationToken);
         return frames;
+    }
+
+    private async Task SaveUnusableRecoveryWindowAsync(
+        string label,
+        IReadOnlyList<RecoveryFrame> frames,
+        CancellationToken cancellationToken)
+    {
+        // Persist evidence for a rejected state window, including the case in
+        // which it was internally stable but was not the required AppraisalBars
+        // state. This is read-only diagnosis; no Android action is authorized here.
+        var diagnostics = new List<object>(frames.Count);
+        foreach (var frame in frames)
+        {
+            var path = await SaveEvidenceAsync(label, frame.Screenshot, cancellationToken);
+            diagnostics.Add(new
+            {
+                frame.Kind,
+                detectedState = frame.Detection.State.ToString(),
+                frame.Detection.Confidence,
+                frame.EvidenceSignature,
+                frame.HasIntroAnchor,
+                frame.HasBarsAnchor,
+                frame.HasConflictingAnchor,
+                frame.LocatorConfidence,
+                locatorTarget = frame.LocatorTarget,
+                evidencePath = path,
+                screenshotSha256 = frame.Detection.ScreenshotSha256
+            });
+        }
+        await WriteAuditAsync(label, diagnostics, cancellationToken);
     }
 
     private async Task<IReadOnlyList<PokemonIdentityFrame>> CaptureIndependentDetailsFramesAsync(

@@ -63,6 +63,9 @@ Coordinates come from a validated local automation profile and are converted fro
 AppraisalIntro ROI observations among the latest five frames. It uses the
 `LocateAppraisalIntroContinue` target, is capped at one tap and must be followed
 by three compatible AppraisalBars ROI observations. Stable bars require no tap.
+For profile-bound Bar classification, each of the three IV tracks must be
+measured and the appraisal candidate confidence must be at least 0.80; lower
+or partial candidates remain untrusted and authorize no carousel input.
 
 `ExitAppraisal` is authorized only by stable AppraisalIntro or AppraisalBars
 evidence. It uses the documented normalized left-middle target once and must be

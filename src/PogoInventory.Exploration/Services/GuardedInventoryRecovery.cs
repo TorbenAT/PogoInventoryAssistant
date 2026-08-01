@@ -95,6 +95,13 @@ public sealed class GuardedInventoryRecovery
     // margin below that observation while retaining ROI consensus.
     public const double MinimumIntroLocatorConfidence = 0.58;
 
+    // A profile candidate already requires its own track/color geometry. The
+    // real OnePlus appraisal carousel has repeatedly measured at 0.832: that
+    // is strong enough only when all three IV tracks are present, and prevents
+    // the recovery layer from downgrading a detected Appraisal screen to
+    // Other merely because it imposed an unrelated 0.90 threshold.
+    public const double MinimumAppraisalBarsAnchorConfidence = 0.80;
+
     // Locked from the 1080x2340 OnePlus captures under local-data/validation:
     // animation changes the whole screen substantially, while these sampled
     // dialog, overlay-anchor and bar-region distributions remain within 0.035.
@@ -142,7 +149,9 @@ public sealed class GuardedInventoryRecovery
         AppraisalAnalysisResult? appraisal = appraisalProfile is null
             ? null
             : _analyzer.Analyze(image, appraisalProfile);
-        var hasBars = appraisal is { IsAppraisal: true, Confidence: >= 0.90 };
+        var hasBars = appraisal is { IsAppraisal: true, Confidence: >= MinimumAppraisalBarsAnchorConfidence } &&
+            appraisal.Bars.Count == 3 && appraisal.Bars.All(bar =>
+                bar.TrackDetected && bar.EstimatedIv is not null);
         var hasIntro = !hasBars &&
             intro is { Confidence: >= MinimumIntroLocatorConfidence };
         var conflicting =

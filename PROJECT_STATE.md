@@ -85,6 +85,17 @@ Resume is now DB-backed: it starts from existing durable ordinals and advances
 the stable intro through the already guarded one-tap Appraisal continuation,
 not by reopening the filter or replaying prior items.
 
+The same persisted `cleanup-20260801-151711-44ac2ae4522` frontier run has now
+completed all 50 bounded captures after a host-timeout/resume split. SQLite
+contains 75 records and 256 events with `integrity_check=ok`; all 50 new
+records are bound to the bucket and remain REVIEW. A real appraisal carousel
+can score 0.832 on the device-adjusted profile while all three measured tracks
+are present. Recovery now accepts that profile-bound Bars anchor at >=0.80,
+preserves rejected state windows as read-only evidence, and still sends no
+input for an Unknown/conflicting window. The bounded run is
+ReconciliationRequired, not filter-complete; its final map unwind stopped on
+stable Details without a blind Back.
+
 Two old CLI shortcuts were discovered to send unguarded Android Back. From
 the gameplay map that opens an app-exit confirmation, not inventory. Both
 shortcuts are retired; only state-verified named operations can now send Back.

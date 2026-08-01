@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+- Corrected the recovery AppraisalBars anchor for the real device-adjusted
+  profile: >=0.80 is accepted only with all three measured IV tracks. Rejected
+  recovery windows are now saved as read-only evidence; no additional input
+  route was introduced.
+- Completed the persisted 50-item frontier run across a host-timeout resume;
+  it remains reconciliation-required rather than being treated as a filter end.
 - Added schema-v6 full-ingestion ledger binding: persistent Search Oracle
   evidence, per-item bucket attempts/progress and cross-bucket fingerprint
   overlap candidates. Bounded traversals remain reconciliation-required until
