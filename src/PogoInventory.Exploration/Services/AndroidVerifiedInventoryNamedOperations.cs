@@ -501,7 +501,12 @@ public sealed class AndroidVerifiedInventoryNamedOperations : ICleanupProofNamed
         using var _ = _timing.Measure(TimingCategory.NamedOperation, nameof(OpenFirstPokemonAsync));
         var inventory = await WaitForStateAsync(new[] { PokemonGoGameState.Inventory }, cancellationToken);
         var located = _locator.LocateInventoryCard(inventory.Screenshot);
-        if (located is null) return VerifiedSequenceState.Unknown;
+        if (located is null)
+        {
+            if (await IsStableVerifiedEmptyInventorySearchAsync(inventory.Screenshot, cancellationToken))
+                return VerifiedSequenceState.NoEffectOrEndOfFilter;
+            return VerifiedSequenceState.Unknown;
+        }
         await TapNamedAsync(
             located.Target,
             "open-first-pokemon",
@@ -515,6 +520,43 @@ public sealed class AndroidVerifiedInventoryNamedOperations : ICleanupProofNamed
         return details.State == PokemonGoGameState.PokemonDetails
             ? VerifiedSequenceState.PokemonDetails
             : VerifiedSequenceState.Unknown;
+    }
+
+    private async Task<bool> IsStableVerifiedEmptyInventorySearchAsync(
+        byte[] initialScreenshot, CancellationToken cancellationToken)
+    {
+        var frames = new List<byte[]> { initialScreenshot };
+        for (var index = 1; index < 3; index++)
+        {
+            await SettleAsync("VerifiedEmptyInventorySearch", _automationProfile.StatePollMilliseconds, cancellationToken);
+            frames.Add(await CaptureAsync($"empty-search-{index + 1}", cancellationToken));
+        }
+
+        var verified = frames.All(frame =>
+            _detector.Detect(frame, _appraisalProfile).State == PokemonGoGameState.Inventory &&
+            _knownBenignInterruptDetector.Detect(frame).Kind == KnownBenignInterruptKind.None &&
+            !_knownBenignInterruptDetector.IsUntrustedModalLikeOverlay(frame) &&
+            !DetectUnsafeSurface(frame, "empty-inventory-search").IsUnsafe &&
+            _locator.IsVerifiedEmptyInventorySearchResult(frame));
+        if (!verified)
+        {
+            await WriteAuditAsync("verified-empty-inventory-search", new
+            {
+                Result = "DENIED_UNSTABLE_OR_UNSAFE",
+                InputSent = false
+            }, cancellationToken);
+            return false;
+        }
+
+        foreach (var frame in frames)
+            await SaveEvidenceAsync("verified-empty-inventory-search", frame, cancellationToken);
+        await WriteAuditAsync("verified-empty-inventory-search", new
+        {
+            Result = "EMPTY_VERIFIED",
+            StableFrameCount = frames.Count,
+            InputSent = false
+        }, cancellationToken);
+        return true;
     }
 
     public async Task<PokemonIdentityConsensus> CaptureIdentityAsync(CancellationToken cancellationToken)

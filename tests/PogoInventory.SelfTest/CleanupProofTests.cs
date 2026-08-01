@@ -19,6 +19,7 @@ internal static class CleanupProofTests
         await PartialObservationDoesNotTerminateBatchAsync();
         await UnsafeObservationStopsBeforeCursorAsync();
         await DatabaseRoundTripUsesReloadedRowsAsync();
+        await VerifiedEmptySearchCompletesOracleBucketAsync();
         ExactInferiorDuplicateProducesDeleteCandidate();
         UnknownProtectionProducesReview();
         FinalGroupMemberIsKept();
@@ -410,6 +411,42 @@ internal static class CleanupProofTests
         return await new CleanupProofRunner().RunAsync(fake, request);
     }
 
+    private static async Task VerifiedEmptySearchCompletesOracleBucketAsync()
+    {
+        var root = CreateTemporaryDirectory();
+        try
+        {
+            var database = Path.Combine(root, "cleanup-proof.sqlite");
+            await new InventoryPersistenceService(database).UpsertWorkBucketAsync(new PersistentWorkBucket
+            {
+                LogicalBucketId = "2020-unown-201", AbsoluteDateStart = new DateOnly(2020, 1, 1),
+                AbsoluteDateEnd = new DateOnly(2020, 12, 31), DerivedPhoneQuery = "year2020&201"
+            });
+            var request = new CleanupProofRequest
+            {
+                SpeciesQuery = "year2020&201", ItemLimit = 6, DatabasePath = database,
+                OutputDirectory = root, DeviceSerial = "synthetic", ContinueOnPartial = true,
+                WorkBucketId = "2020-unown-201"
+            };
+            var result = await new CleanupProofRunner().RunAsync(
+                new FakeCleanupOperations(await CreateEvidenceAsync(root), partial: true,
+                    openFirstState: VerifiedSequenceState.NoEffectOrEndOfFilter), request);
+            AssertEqual("Completed", result.Status, "empty exact query completion status: " + result.StopReason);
+            AssertEqual("VerifiedEmptySearchResult", result.StopReason, "empty exact query stop reason");
+            await using var connection = new SqliteConnection($"Data Source={database}");
+            await connection.OpenAsync();
+            await using var command = connection.CreateCommand();
+            command.CommandText = "SELECT COUNT(*) FROM SearchOracleEvidence WHERE LogicalBucketId='2020-unown-201' AND Outcome='EmptyVerified' AND EmptyVerified=1 AND ObservedResultCount=0;";
+            AssertEqual(1L, Convert.ToInt64(await command.ExecuteScalarAsync()), "persistent empty-query oracle evidence");
+            command.CommandText = "SELECT Status FROM WorkBuckets WHERE LogicalBucketId='2020-unown-201';";
+            AssertEqual("Complete", Convert.ToString(await command.ExecuteScalarAsync()), "empty exact query bucket completion");
+        }
+        finally
+        {
+            DeleteDirectory(root);
+        }
+    }
+
     private static string CliMethod(string source, string method, string nextMethod)
     {
         var start = source.IndexOf($"Task<int> {method}(", StringComparison.Ordinal);
@@ -434,6 +471,7 @@ internal static class CleanupProofTests
         private readonly Func<CleanupFinalMapVerification>? _finalMapVerificationOverride;
         private readonly VerifiedSequenceState _exitAppraisalResult;
         private readonly Func<CleanupFinalMapVerification>? _exitSettleVerificationOverride;
+        private readonly VerifiedSequenceState _openFirstState;
         private int _tagReadCount;
         public int FinalMapVerificationCallCount { get; private set; }
         public int ExitSettleVerificationCallCount { get; private set; }
@@ -459,7 +497,8 @@ internal static class CleanupProofTests
             string closeInventoryFinalState = "GameplayMap",
             Func<CleanupFinalMapVerification>? finalMapVerificationOverride = null,
             VerifiedSequenceState exitAppraisalResult = VerifiedSequenceState.PokemonDetails,
-            Func<CleanupFinalMapVerification>? exitSettleVerificationOverride = null)
+            Func<CleanupFinalMapVerification>? exitSettleVerificationOverride = null,
+            VerifiedSequenceState openFirstState = VerifiedSequenceState.PokemonDetails)
         {
             _evidence = evidence;
             _partial = partial;
@@ -473,13 +512,14 @@ internal static class CleanupProofTests
             _finalMapVerificationOverride = finalMapVerificationOverride;
             _exitAppraisalResult = exitAppraisalResult;
             _exitSettleVerificationOverride = exitSettleVerificationOverride;
+            _openFirstState = openFirstState;
         }
 
         public Task<VerifiedSequenceState> EnsureFilteredInventoryAsync(string query, CancellationToken cancellationToken) =>
             Task.FromResult(VerifiedSequenceState.Inventory);
 
         public Task<VerifiedSequenceState> OpenFirstPokemonAsync(CancellationToken cancellationToken) =>
-            Task.FromResult(VerifiedSequenceState.PokemonDetails);
+            Task.FromResult(_openFirstState);
 
         public Task<PokemonIdentityConsensus> CaptureIdentityAsync(CancellationToken cancellationToken) =>
             Task.FromResult(Consensus(PokemonIdentityObservationStatus.Complete, "partial-fingerprint"));

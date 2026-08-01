@@ -2003,7 +2003,7 @@ static async Task<int> RunCleanupProofAsync(
         WriteIndented = true,
         Converters = { new JsonStringEnumConverter() }
     }));
-    return result.CapturedItems >= 6 &&
+    return (result.CapturedItems >= 6 || result.StopReason == "VerifiedEmptySearchResult") &&
         result.Status is "Completed" or "CompletedPartial" ? 0 : 1;
 }
 

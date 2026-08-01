@@ -3,6 +3,7 @@ using PogoInventory.Device.Adb;
 using PogoInventory.Device.Models;
 using PogoInventory.Device.Transport;
 using PogoInventory.Exploration.Services;
+using PogoInventory.Vision.Imaging;
 
 internal static class InventorySearchTests
 {
@@ -88,7 +89,43 @@ internal static class InventorySearchTests
                 Evidence(query: true, keyboard: true) with { QueryInkWidth = 80 },
                 "age0-1825"),
             "Enter-query postcondition rejected compatible visible query evidence.");
+        var locator = new VisualControlLocator();
+        AssertTrue(locator.LocateInventoryCard(PngEncoder.Encode(InventoryFixture(hasCard: true))) is not null &&
+            !locator.IsVerifiedEmptyInventorySearchResult(PngEncoder.Encode(InventoryFixture(hasCard: true))),
+            "a visible first-row card is never reclassified as an empty search");
+        AssertTrue(locator.LocateInventoryCard(PngEncoder.Encode(InventoryFixture(hasCard: false))) is null &&
+            locator.IsVerifiedEmptyInventorySearchResult(PngEncoder.Encode(InventoryFixture(hasCard: false))),
+            "three-cell empty inventory geometry becomes an oracle empty proof before any first-card tap");
         return Task.CompletedTask;
+    }
+
+    private static PixelImage InventoryFixture(bool hasCard)
+    {
+        const int width = 360;
+        const int height = 720;
+        var rgba = Enumerable.Repeat((byte)255, width * height * 4).ToArray();
+        for (var index = 3; index < rgba.Length; index += 4) rgba[index] = 255;
+        Fill(rgba, width, height, .04, .24, .96, .90, 220, 230, 210);
+        Fill(rgba, width, height, .08, .15, .92, .22, 210, 225, 205);
+        Fill(rgba, width, height, .20, .08, .80, .15, 190, 200, 190);
+        if (hasCard)
+        {
+            Fill(rgba, width, height, .08, .34, .28, .44, 35, 125, 150);
+            Fill(rgba, width, height, .38, .34, .58, .44, 35, 125, 150);
+            Fill(rgba, width, height, .70, .34, .90, .44, 35, 125, 150);
+        }
+        return new PixelImage(width, height, rgba);
+    }
+
+    private static void Fill(byte[] rgba, int width, int height, double left, double top, double right, double bottom,
+        byte r, byte g, byte b)
+    {
+        for (var y = (int)(height * top); y < (int)(height * bottom); y++)
+        for (var x = (int)(width * left); x < (int)(width * right); x++)
+        {
+            var offset = (y * width + x) * 4;
+            rgba[offset] = r; rgba[offset + 1] = g; rgba[offset + 2] = b; rgba[offset + 3] = 255;
+        }
     }
 
     private static InventorySearchVisualEvidence Evidence(

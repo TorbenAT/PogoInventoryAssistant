@@ -60,6 +60,12 @@ expose Back. Only exact three-stable-frame KnownExitDialog recovery has the
 separate `StateBoundAndroidBackFallback` capability; every other state,
 untrusted overlay, failed visual control or timeout is zero-input terminal.
 
+Exact empty species/date child queries are now a first-class Search Oracle
+outcome. The locator must prove stable Inventory/search geometry plus no
+content in all three first-row card cells across three frames. Only then may
+the runner persist `EmptyVerified`, observed count zero and complete that exact
+bucket; it must never tap the nominal first-card position on an empty grid.
+
 `device-run-cleanup-proof` begins directly through
 `EnsureFilteredInventoryAsync`; it must not close to the map before each
 batch. Resume the next bounded persisted batch only after a verified Inventory

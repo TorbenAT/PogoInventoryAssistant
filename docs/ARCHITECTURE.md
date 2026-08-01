@@ -229,6 +229,13 @@ recommendations and `RecommendationGenerated` events are written back before
 CSV, Markdown and JSON reports are generated. No tag or destructive executor
 is reachable from this command.
 
+Before the first-card operation, `VisualControlLocator` distinguishes a
+populated first row from a verified empty search. The empty outcome requires
+Inventory/search geometry and no card-content pixels in all three first-row
+cells across three fresh frames. `CleanupProofRunner` records that as
+`SearchOracleEvidence.EmptyVerified` with count zero and complete evidence for
+only the exact logical bucket; it is not inferred from a traversal limit.
+
 ## Action authorization and unsafe confirmation interlock
 
 `MainMenuPreconditionValidator` is the typed boundary for the MainMenu to

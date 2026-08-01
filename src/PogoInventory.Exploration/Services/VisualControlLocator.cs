@@ -33,7 +33,7 @@ public sealed class VisualControlLocator
         var searchBar = RegionMatch(image, 0.08, 0.15, 0.92, 0.22, IsInventorySearchBackground);
         var grid = RegionMatch(image, 0.04, 0.24, 0.96, 0.90, IsInventoryPage);
         var header = RegionMatch(image, 0.20, 0.08, 0.80, 0.15, IsInventoryHeader);
-        if (searchBar < 0.55 || grid < 0.45 || header < 0.35)
+        if (searchBar < 0.55 || grid < 0.45 || header < 0.35 || !HasInventoryCardContent(image))
         {
             return null;
         }
@@ -50,6 +50,36 @@ public sealed class VisualControlLocator
                 "InventoryHeaderDetected"
             }
         };
+    }
+
+    /// <summary>
+    /// Proves only the visual fact that a verified Inventory search has no
+    /// first-row card content. It is deliberately narrower than a generic
+    /// blank-screen rule: Inventory geometry, its search field and all three
+    /// first-row card cells must be present/empty together.
+    /// </summary>
+    public bool IsVerifiedEmptyInventorySearchResult(byte[] screenshotPng)
+    {
+        var image = PngDecoder.Decode(screenshotPng);
+        var searchBar = RegionMatch(image, 0.08, 0.15, 0.92, 0.22, IsInventorySearchBackground);
+        var grid = RegionMatch(image, 0.04, 0.24, 0.96, 0.90, IsInventoryPage);
+        var header = RegionMatch(image, 0.20, 0.08, 0.80, 0.15, IsInventoryHeader);
+        return searchBar >= 0.55 && grid >= 0.45 && header >= 0.35 && !HasInventoryCardContent(image);
+    }
+
+    private static bool HasInventoryCardContent(PixelImage image)
+    {
+        // CP/name/sprite/progress-bar pixels occur in every populated first
+        // row, including pale species. Three disjoint cells prevent the
+        // search query text or the evolutionary-line toggle from standing in
+        // for an item card.
+        var cells = new[]
+        {
+            RegionMatch(image, 0.06, 0.31, 0.31, 0.48, IsInventoryCardContent),
+            RegionMatch(image, 0.35, 0.31, 0.64, 0.48, IsInventoryCardContent),
+            RegionMatch(image, 0.67, 0.31, 0.95, 0.48, IsInventoryCardContent)
+        };
+        return cells.Any(score => score >= 0.02);
     }
 
     public LocatedControl? LocateDetailsMenu(byte[] screenshotPng)
@@ -543,6 +573,10 @@ public sealed class VisualControlLocator
 
     private static bool IsInventoryHeader(Rgba32 pixel) =>
         pixel.R >= 175 && pixel.G >= 185 && pixel.B >= 175;
+
+    private static bool IsInventoryCardContent(Rgba32 pixel) =>
+        Math.Max(pixel.R, Math.Max(pixel.G, pixel.B)) - Math.Min(pixel.R, Math.Min(pixel.G, pixel.B)) >= 30 &&
+        Math.Min(pixel.R, Math.Min(pixel.G, pixel.B)) < 180;
 
     private static bool IsDarkTeal(Rgba32 pixel) =>
         pixel.G >= 75 && pixel.B >= 75 && pixel.R <= 80 && pixel.G > pixel.R * 1.4;

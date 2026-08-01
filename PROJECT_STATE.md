@@ -12,6 +12,14 @@ transport Back call only inside exact three-stable-frame KnownExitDialog
 recovery. All other states, failed visual controls, timeout paths and
 modal-like overlays are evidence-plus-zero-input terminal stops.
 
+The first attempted `year2020&201` child query exposed a separate oracle
+defect, not a phone blocker: its screen showed a stable zero-result search but
+the generic inventory-grid locator tapped a nominal first-card coordinate and
+then safe-stopped. The locator now requires first-row card-content geometry.
+Three stable Inventory/search frames with all three first-row cells empty
+persist `EmptyVerified` evidence and complete only that exact bucket with zero
+further input; a bounded traversal is still never treated as filter-end.
+
 `KnownBenignInterruptDetector` now has separate, visually grounded classifiers
 for the captured `Oh?` egg frame, Weekly Challenge CTA and the exact app-exit
 dialog's separate CANCEL glyph band. It is integrated centrally in

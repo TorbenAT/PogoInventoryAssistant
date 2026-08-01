@@ -191,6 +191,11 @@ public sealed class CleanupProofRunner
                     return await FinishAsync("SafeStopped", stopReason, captures, runId, persistence, request, timing, cancellationToken);
                 }
                 var opened = await operations.OpenFirstPokemonAsync(cancellationToken);
+                if (opened == VerifiedSequenceState.NoEffectOrEndOfFilter)
+                {
+                    stopReason = "VerifiedEmptySearchResult";
+                    return await FinishAsync("Completed", stopReason, captures, runId, persistence, request, timing, cancellationToken);
+                }
                 if (opened != VerifiedSequenceState.PokemonDetails)
                 {
                     stopReason = "FirstPokemonDetailsNotVerified";
@@ -706,17 +711,28 @@ public sealed class CleanupProofRunner
         if (request.WorkBucketId is not null)
         {
             var traversalLimited = string.Equals(stopReason, "ItemLimitReached", StringComparison.Ordinal);
+            var emptyVerified = string.Equals(stopReason, "VerifiedEmptySearchResult", StringComparison.Ordinal);
             await persistence.RecordSearchOracleEvidenceAsync(new PersistentSearchOracleEvidence
             {
                 LogicalBucketId = request.WorkBucketId, RunId = runId, Query = request.SpeciesQuery,
-                Outcome = traversalLimited ? "TraversalLimited" : "TraversalStopped",
-                ObservedResultCount = captures.Count, EmptyVerified = false,
+                Outcome = emptyVerified ? "EmptyVerified" : traversalLimited ? "TraversalLimited" : "TraversalStopped",
+                ObservedResultCount = captures.Count, EmptyVerified = emptyVerified,
                 ObservedAtUtc = DateTimeOffset.UtcNow,
                 EvidencePath = Path.Combine(Path.GetFullPath(request.OutputDirectory), "proof-summary.md"),
                 DetailJson = JsonSerializer.Serialize(new { status, stopReason, bounded = true, filterEndProven = false }, JsonOptions)
             }, cancellationToken);
             await persistence.SetWorkBucketStatusAsync(request.WorkBucketId,
+                emptyVerified ? PersistentWorkBucketStatus.Complete :
                 status == "SafeStopped" ? PersistentWorkBucketStatus.Blocked : PersistentWorkBucketStatus.ReconciliationRequired,
+                emptyVerified ? JsonSerializer.Serialize(new
+                {
+                    emptyQueryVerified = true,
+                    reconciled = true,
+                    query = request.SpeciesQuery,
+                    runId,
+                    observedResultCount = captures.Count,
+                    evidencePath = Path.Combine(Path.GetFullPath(request.OutputDirectory), "proof-summary.md")
+                }, JsonOptions) : null,
                 cancellationToken: cancellationToken);
         }
 

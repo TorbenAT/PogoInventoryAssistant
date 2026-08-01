@@ -10,6 +10,13 @@
   concrete call in exact `KnownExitDialog` recovery. Every other named state,
   unknown/modal-like overlay, failed visual close and timeout has zero Back
   authority.
+- Empty-query oracle correction: the preserved `year2020&201` phone evidence
+  showed the submitted query and `(0)` count with an empty first-card region.
+  The old generic grid locator sent one otherwise-safe first-card tap and then
+  stopped before capture. The replacement requires three fresh, stable
+  Inventory/search frames and empty geometry in all first-row cells, then
+  records `EmptyVerified`/zero results and completes only that exact bucket.
+  Synthetic positive-card and negative-empty-grid regressions pass.
 
 - `dotnet build .\PogoInventoryAssistant.sln --no-restore`: PASS, 0 warnings
   and 0 errors.

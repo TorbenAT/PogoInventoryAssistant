@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- Added a three-frame, geometry-bound empty Inventory-search proof. A verified
+  empty exact query now persists `SearchOracleEvidence: EmptyVerified` and
+  completes only that exact work bucket; no first-card tap is sent.
 - Removed the generic recovery `PressBack` action and all generic CLI
   open/close/Back commands after the preserved 17:45:28 audit evidence showed
   `ReturnToInventoryAsync` could issue a normal `KEYCODE_BACK`. The sole
