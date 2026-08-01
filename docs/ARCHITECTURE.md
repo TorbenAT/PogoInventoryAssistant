@@ -229,6 +229,26 @@ interlock before every named tap, search text/submit, Back and cursor swipe.
 Unsafe evidence is saved and audited with `InputSent: false`; no automatic
 Cancel operation exists. Normal Details action buttons are not modal evidence.
 
+`KnownBenignInterruptDetector` is a higher-priority, separate classifier for
+three evidence-backed Pokémon GO interruptions: `EggHatch`/`Oh?`,
+`WeeklyChallenge`, and the app's exact `KnownExitDialog`. It must establish
+three compatible observations in a five-frame window, then re-locate the
+permitted control on a fresh frame immediately before one named tap. For the
+exact KnownExitDialog only, a separate named Android-Back fallback may run
+after the same fresh three-stable precondition; no generic caller receives
+Back authority. Its
+central `KnownBenignInterruptRecovery` is called from the same verified host's
+state waits and input authorization path, so inventory setup, cleanup batches,
+stream-reader setup and resume share the recovery rather than adding bespoke
+popup handling. A recovery has a six-input absolute budget (the current
+families each use one); its next screen must be a stable known non-interrupt
+state. Otherwise it records evidence and stops with no follow-up input.
+
+This precedence does not weaken destructive protection: explicit Power Up,
+Evolve, Transfer, Purify and purchase/item topology is denied even if another
+visual rule matches. Generic or unrecognised modals stay unsafe/unknown; only
+the dedicated exit rule may tap the separate CANCEL control, never OK.
+
 ## Verified inventory task sequence
 
 `VerifiedInventoryTaskSequence` is the single sequential orchestration
@@ -246,7 +266,8 @@ recovery states are controlled-stopped.
 
 `AndroidVerifiedInventoryNamedOperations` is the concrete real-device host.
 It uses `IAndroidAutomationTransport`, `PokemonGoGameStateDetector`,
-`GuardedInventorySearch`, `GuardedInventoryRecovery`, `VisualControlLocator`
+`GuardedInventorySearch`, `GuardedInventoryRecovery`,
+`KnownBenignInterruptDetector`, `VisualControlLocator`
 and `PokemonDetailsIdentityAnalyzer`; raw ADB construction remains inside
 `PogoInventory.Device`. `device-run-index-sequence` is bounded and read-only
 by default. Tag mutation is intentionally disabled for the first acceptance.

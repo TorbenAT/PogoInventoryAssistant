@@ -1,5 +1,28 @@
 # Project state
 
+## Guarded benign-interrupt recovery (2026-08-01, live hardening in progress)
+
+`KnownBenignInterruptDetector` now has separate, visually grounded classifiers
+for the captured `Oh?` egg frame, Weekly Challenge CTA and the exact app-exit
+dialog's separate CANCEL glyph band. It is integrated centrally in
+`AndroidVerifiedInventoryNamedOperations` state waiting and named-input
+authorization; destructive confirmation topology remains an explicit denial.
+The offline local truth frames classify as EggHatch, WeeklyChallenge and
+KnownExitDialog respectively, and the package-free suite is 281/281.
+
+Two fresh visually grounded CANCEL taps (one fixed-band centre and one glyph
+centroid) had no effect on the exact exit dialog. This is an unresolved
+Android/UI hit-testing root cause, not something hidden by the fallback. With
+the user's approval, exactly one state-bound `KEYCODE_BACK` then ran after a
+three-compatible-frame KnownExitDialog precondition. The dialog disappeared;
+a later read-only frame classified GameplayMap at 1.000, and the guarded route
+then reached Inventory. The old five-frame postcondition settled too early, so
+the code now waits only within the profile state timeout and stops terminally
+at no-effect/Unknown. Re-exercise current code opportunistically before
+calling the family fully accepted. A loose Weekly classifier also matched a
+gameplay map; it now requires the white cloud card and pink title, with a
+map-like negative regression.
+
 ## Persistent oldest-first frontier (2026-08-01, in progress)
 
 SQLite schema v5 now contains restartable `WorkBuckets`, `WorkItems` and
@@ -8,15 +31,12 @@ then established 2020 as the first non-empty year (1025 results).
 `year2020&1` isolated one favorite Bulbasaur; its `!favorite` complement was
 empty. No tag or destructive action has been sent.
 
-The first persistent batch did not begin because a spontaneous egg-hatching
-screen appeared during the then-redundant pre-batch canonical close. The
-current screen remains visibly `Oh?`/egg and is classified conservatively as
-an unsafe confirmation surface; only read-only evidence has been captured.
-The cleanup command no longer
-closes to the map before a batch: `EnsureFilteredInventoryAsync` owns safe
-inventory reuse and query establishment, so this incidental transition cannot
-recur. The database remains the required durable destination for each real
-observation; no count of 19 is used as an account-total assertion.
+The first persistent batch was interrupted by a spontaneous `Oh?` egg screen
+during the then-redundant pre-batch close. `EnsureFilteredInventoryAsync` now
+owns safe Inventory reuse and query establishment, and the shared interruption
+layer is central rather than a cleanup special case. The database remains the
+required durable destination for each real observation; no count of 19 is used
+as an account-total assertion.
 
 The first bounded persisted probe for `year2020&234,1,296` has now completed
 its six-item phone sequence: four records are Complete and two Partial. The
@@ -27,6 +47,24 @@ first batch item, but both are Partial and their visual fingerprints differ;
 they remain explicitly reconciliation-required rather than being deleted or
 silently merged. Cleanup report validation now compares the current run's
 reloaded rows with its own persisted capture count, never with global totals.
+
+The recovery-era `year2020&!234&!296&!1` batch then persisted six further
+records: Fennekin, Delibird and Jigglypuff Complete; Vanillite, Pikachu and
+Riolu Partial. SQLite integrity remained `ok`; the ledger now has five scan
+runs, 13 records and 45 append-only events. No records were auto-merged.
+
+The next disjoint query, `year2020&!1&!25&!39&!225&!234&!296&!447&!582&!653`,
+completed 6/6: Regice, one Kyurem, Cubchoo and Hoothoot Complete; the other
+Kyurem and Mareep Partial. Its reloaded SQLite proof is `ok`, leaving six scan
+runs, 19 records and 63 events. All 19 recommendations remain REVIEW; no tag,
+transfer, delete, power-up, evolve, purify, purchase or location action was
+sent. The OCR runtime emitted non-fatal Tesseract object-cache warnings during
+process shutdown; persistence and run completion were unaffected.
+
+One further disjoint six-item batch completed: Poochyena, two Weedle and
+Vulpix were Complete; Snorunt and Eevee Partial. SQLite remains `ok` at seven
+scan runs, 25 records and 81 events. All records remain REVIEW and no cleanup
+game action was sent.
 
 Two old CLI shortcuts were discovered to send unguarded Android Back. From
 the gameplay map that opens an app-exit confirmation, not inventory. Both

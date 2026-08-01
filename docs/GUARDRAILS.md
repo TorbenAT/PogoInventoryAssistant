@@ -52,6 +52,9 @@ SubmitInventorySearch
 OpenPokemonTagSelector
 SetExistingPokemonTag
 CommitPokemonTagSelection
+AdvanceKnownEggHatch
+ContinueKnownWeeklyChallenge
+CancelKnownExitDialog
 ```
 
 Coordinates come from a validated local automation profile and are converted from normalised values to the locked screen geometry.
@@ -109,6 +112,29 @@ The automation must not act when:
 - two states conflict
 - confidence is below threshold
 - popup or network error is present
+
+### Known benign Pokémon GO interruptions
+
+Known benign interruptions are not treated as ordinary navigation states and
+are never dismissed by a generic Back or centre-screen tap. The shared
+`KnownBenignInterruptRecovery` layer may act only after 3 compatible frames
+among the latest 5, a fresh pre-input frame, and a visually located named
+control. Its whole interruption budget is six inputs; the currently proven
+families use exactly one input: `AdvanceKnownEggHatch` on the visible egg,
+`ContinueKnownWeeklyChallenge` on its green CTA, and
+`CancelKnownExitDialog` on the separate CANCEL glyph band. A single Android
+Back is an exceptional named fallback only when the precise three-stable
+KnownExitDialog topology has just been revalidated; it is not available to
+EggHatch, WeeklyChallenge, Unknown or unsafe dialogs. Every input is
+audited and must reach a stable, known, non-interrupt postcondition. These are
+implemented recovery candidates, not live-accepted until their individual
+real-phone postcondition has been observed.
+
+If the post-tap screen is animated, unknown, conflicting, or another
+unrecognised modal, the layer sends zero further input, saves evidence and
+stops. `UnsafeConfirmationSurfaceDetector` still denies Power Up, Evolve,
+Transfer, Purify and purchase/item confirmations before they can be confused
+with a benign recovery.
 
 ## Identity rules
 

@@ -36,6 +36,7 @@ public sealed class AndroidVerifiedInventoryNamedOperations : ICleanupProofNamed
     private readonly PokemonGoGameStateDetector _detector = new();
     private readonly VisualControlLocator _locator = new();
     private readonly UnsafeConfirmationSurfaceDetector _unsafeSurfaceDetector = new();
+    private readonly KnownBenignInterruptDetector _knownBenignInterruptDetector = new();
     private readonly InventorySearchVisualAnalyzer _searchAnalyzer = new();
     private readonly PokemonDetailsIdentityAnalyzer _identityAnalyzer;
     private readonly GuardedInventoryRecovery _recovery = new();
@@ -47,6 +48,8 @@ public sealed class AndroidVerifiedInventoryNamedOperations : ICleanupProofNamed
     private int _evidenceOrdinal;
     private readonly List<string> _lastCleanupAppraisalEvidence = new();
     private byte[]? _lastCleanupAppraisalScreenshot;
+    private bool _interruptRecoveryActive;
+    private const int MaxKnownBenignInterruptInputs = 6;
     public int LastCleanupRecoveryInputCount { get; private set; }
     public int LastAppraisalCarouselSwipeInputCount { get; private set; }
     public int LastCaptureAppraisalInputCount { get; private set; }
@@ -84,6 +87,11 @@ public sealed class AndroidVerifiedInventoryNamedOperations : ICleanupProofNamed
                 PokemonGoGameState.PokemonMenu, PokemonGoGameState.Appraisal },
             cancellationToken,
             allowVisualDetailsFallback: true);
+        // A failed interrupt recovery is terminal for this invocation. Never
+        // fall through into a second wait which could spend another recovery
+        // input on the same still-visible interruption.
+        if (state.State == PokemonGoGameState.Unknown)
+            return VerifiedSequenceState.Unknown;
         if (state.State is PokemonGoGameState.PokemonDetails or PokemonGoGameState.PokemonMenu or
             PokemonGoGameState.Appraisal)
         {
@@ -1480,6 +1488,17 @@ public sealed class AndroidVerifiedInventoryNamedOperations : ICleanupProofNamed
         while (DateTime.UtcNow < deadline)
         {
             screenshot = await CaptureAsync("state", cancellationToken);
+            var interruption = _knownBenignInterruptDetector.Detect(screenshot);
+            if (!_interruptRecoveryActive && interruption.Kind != KnownBenignInterruptKind.None)
+            {
+                var recovery = await RecoverKnownBenignInterruptAsync(screenshot, cancellationToken);
+                if (!recovery.Succeeded)
+                    return (PokemonGoGameState.Unknown, recovery.LastScreenshot);
+                last = null;
+                consecutive = 0;
+                screenshot = recovery.LastScreenshot;
+                continue;
+            }
             var detection = _detector.Detect(screenshot, _appraisalProfile);
             var observedState = detection.State;
             if (allowVisualDetailsFallback && observedState == PokemonGoGameState.Unknown &&
@@ -1527,7 +1546,7 @@ public sealed class AndroidVerifiedInventoryNamedOperations : ICleanupProofNamed
     {
         var screenshot = authorization?.FreshScreenshot ??
             await CaptureAsync($"pre-{name}", cancellationToken);
-        await EnsureNoUnsafeConfirmationAsync(name, screenshot, cancellationToken);
+        screenshot = await EnsureNoUnsafeConfirmationAsync(name, screenshot, cancellationToken);
         var detection = _detector.Detect(screenshot, _appraisalProfile);
         var visualFallbackState = detection.State == PokemonGoGameState.Unknown &&
             _locator.LocateDetailsPageTopology(screenshot) is not null
@@ -1573,8 +1592,11 @@ public sealed class AndroidVerifiedInventoryNamedOperations : ICleanupProofNamed
                 visualFallbackState,
                 null,
                 cancellationToken);
-        var (width, height) = await ScreenSizeAsync(cancellationToken);
-        var (x, y) = point.ToPixels(width, height);
+        // This target was located in this fresh screenshot. Do not remap it
+        // through metadata: the OnePlus reported an app-content height on one
+        // path while screencap was the physical 2340-pixel canvas.
+        var targetImage = PngDecoder.Decode(screenshot);
+        var (x, y) = point.ToPixels(targetImage.Width, targetImage.Height);
         await _transport.TapAsync(_serial, x, y, cancellationToken);
         if (_navigationTrace is not null)
             await _navigationTrace.RecordInputSentAsync("Tap", $"({x},{y})", cancellationToken);
@@ -1607,7 +1629,7 @@ public sealed class AndroidVerifiedInventoryNamedOperations : ICleanupProofNamed
             requiredState == PokemonGoGameState.PokemonDetails &&
             IsVerifiedDetailsRecoverySurface(screenshot);
         if (!verifiedDetailsRecoverySurface)
-            await EnsureNoUnsafeConfirmationAsync(name, screenshot, cancellationToken);
+            screenshot = await EnsureNoUnsafeConfirmationAsync(name, screenshot, cancellationToken);
         var detection = _detector.Detect(screenshot, _appraisalProfile);
         var visualFallbackState = detection.State == PokemonGoGameState.Unknown &&
             _locator.LocateDetailsPageTopology(screenshot) is not null
@@ -1659,11 +1681,19 @@ public sealed class AndroidVerifiedInventoryNamedOperations : ICleanupProofNamed
         _locator.LocateDetailsPageTopology(screenshot) is not null &&
         _locator.LocateCanonicalCloseControl(screenshot) is not null;
 
-    private async Task EnsureNoUnsafeConfirmationAsync(
+    private async Task<byte[]> EnsureNoUnsafeConfirmationAsync(
         string action, byte[] screenshot, CancellationToken cancellationToken)
     {
+        if (!_interruptRecoveryActive &&
+            _knownBenignInterruptDetector.Detect(screenshot).Kind != KnownBenignInterruptKind.None)
+        {
+            var recovery = await RecoverKnownBenignInterruptAsync(screenshot, cancellationToken);
+            if (!recovery.Succeeded)
+                throw new InvalidOperationException("Known benign interrupt recovery did not establish a safe postcondition.");
+            screenshot = recovery.LastScreenshot;
+        }
         var unsafeSurface = _unsafeSurfaceDetector.Detect(screenshot, action);
-        if (!unsafeSurface.IsUnsafe) return;
+        if (!unsafeSurface.IsUnsafe) return screenshot;
         if (_navigationTrace is not null)
         {
             var detection = _detector.Detect(screenshot, _appraisalProfile);
@@ -1694,6 +1724,182 @@ public sealed class AndroidVerifiedInventoryNamedOperations : ICleanupProofNamed
         }, cancellationToken);
         throw new UnsafeConfirmationSurfaceException(action, unsafeSurface.Kind);
     }
+
+    /// <summary>
+    /// Resolves only a named, visually stable Pokémon GO interruption. It is
+    /// deliberately one fresh, grounded tap per recognised surface; after the
+    /// tap the next screen must become a stable non-interrupt known game state.
+    /// An animation or unknown screen receives no follow-up input.
+    /// </summary>
+    private async Task<KnownBenignInterruptRecoveryResult> RecoverKnownBenignInterruptAsync(
+        byte[] initialScreenshot, CancellationToken cancellationToken)
+    {
+        if (_interruptRecoveryActive)
+            return new KnownBenignInterruptRecoveryResult(false, initialScreenshot);
+
+        _interruptRecoveryActive = true;
+        try
+        {
+            var frames = new List<(byte[] Screenshot, KnownBenignInterruptDetection Detection)>
+            {
+                (initialScreenshot, _knownBenignInterruptDetector.Detect(initialScreenshot))
+            };
+            for (var index = 1; index < 5; index++)
+            {
+                await SettleAsync("KnownBenignInterruptStability", _automationProfile.StatePollMilliseconds, cancellationToken);
+                var screenshot = await CaptureAsync($"interrupt-pre-{index + 1}", cancellationToken);
+                frames.Add((screenshot, _knownBenignInterruptDetector.Detect(screenshot)));
+            }
+
+            var stable = frames.TakeLast(5).Where(frame => frame.Detection.Kind != KnownBenignInterruptKind.None)
+                .GroupBy(frame => frame.Detection.Kind)
+                .Select(group => new { Kind = group.Key, Frames = group.ToArray() })
+                .SingleOrDefault(group => group.Frames.Length >= 3 &&
+                    group.Frames.All(frame => frame.Detection.Target is not null) &&
+                    group.Frames.Select(frame => frame.Detection.Target!).All(target =>
+                        Distance(target, group.Frames[0].Detection.Target!) <= 0.018));
+            if (stable is null)
+            {
+                await WriteAuditAsync("known-benign-interrupt", new
+                {
+                    Result = "DENIED_UNSTABLE_OR_UNRECOGNISED",
+                    InputSent = false,
+                    FrameKinds = frames.Select(frame => frame.Detection.Kind).ToArray()
+                }, cancellationToken);
+                return new KnownBenignInterruptRecoveryResult(false, frames[^1].Screenshot);
+            }
+
+            var current = stable.Frames[^1];
+            var unsafeSurface = _unsafeSurfaceDetector.Detect(current.Screenshot, "known-benign-interrupt");
+            if (unsafeSurface.Kind is UnsafeConfirmationKind.PowerUp or UnsafeConfirmationKind.Evolve or
+                UnsafeConfirmationKind.Transfer or UnsafeConfirmationKind.Purify or UnsafeConfirmationKind.PurchaseOrItem)
+            {
+                await SaveEvidenceAsync($"UnsafeConfirmation-{unsafeSurface.Kind}", current.Screenshot, cancellationToken);
+                await WriteAuditAsync("known-benign-interrupt", new
+                {
+                    Result = "DENIED_DESTRUCTIVE_CONFIRMATION",
+                    Interrupt = stable.Kind,
+                    UnsafeConfirmation = unsafeSurface.Kind,
+                    InputSent = false
+                }, cancellationToken);
+                return new KnownBenignInterruptRecoveryResult(false, current.Screenshot);
+            }
+
+            // Fresh frame and locator agreement immediately before the sole input.
+            var fresh = await CaptureAsync("interrupt-fresh-pre-tap", cancellationToken);
+            var freshDetection = _knownBenignInterruptDetector.Detect(fresh);
+            if (freshDetection.Kind != stable.Kind || freshDetection.Target is null ||
+                Distance(freshDetection.Target, current.Detection.Target!) > 0.018)
+            {
+                await WriteAuditAsync("known-benign-interrupt", new
+                {
+                    Result = "DENIED_FRESH_PRECONDITION_CHANGED",
+                    Interrupt = stable.Kind,
+                    InputSent = false
+                }, cancellationToken);
+                return new KnownBenignInterruptRecoveryResult(false, fresh);
+            }
+
+            string inputMechanism;
+            int? x = null;
+            int? y = null;
+            if (stable.Kind == KnownBenignInterruptKind.KnownExitDialog)
+            {
+                // This is not a general Back capability. The visual CANCEL
+                // target was freshly located above, the known dialog was
+                // stable in three frames, and destructive modal topology was
+                // rejected. Android Back is the one platform-native Cancel
+                // fallback after the real-device Unity label tap proved to
+                // have no observed effect.
+                await _transport.PressBackAsync(_serial, cancellationToken);
+                inputMechanism = "StateBoundAndroidBackFallback";
+            }
+            else
+            {
+                var targetImage = PngDecoder.Decode(fresh);
+                (x, y) = freshDetection.Target.ToPixels(targetImage.Width, targetImage.Height);
+                await _transport.TapAsync(_serial, x.Value, y.Value, cancellationToken);
+                inputMechanism = "VisuallyGroundedTap";
+            }
+            if (_navigationTrace is not null)
+                await _navigationTrace.RecordInputSentAsync(
+                    stable.Kind == KnownBenignInterruptKind.KnownExitDialog ? "PressBack" : "Tap",
+                    KnownBenignActionName(stable.Kind), cancellationToken);
+            await WriteAuditAsync("known-benign-interrupt", new
+            {
+                Result = "AUTHORIZED",
+                Interrupt = stable.Kind,
+                Action = KnownBenignActionName(stable.Kind),
+                StableFrameCount = stable.Frames.Length,
+                InputBudget = MaxKnownBenignInterruptInputs,
+                InputCount = 1,
+                Target = freshDetection.Target,
+                TargetPixels = x is null || y is null ? null : new { X = x, Y = y },
+                InputMechanism = inputMechanism,
+                FallbackReason = stable.Kind == KnownBenignInterruptKind.KnownExitDialog
+                    ? "Two evidence-captured visually grounded Unity CANCEL taps had no observed effect."
+                    : null,
+                Evidence = freshDetection.Evidence,
+                InputSent = true
+            }, cancellationToken);
+
+            // Recovery never spends a second input while a normal map/loading
+            // animation settles. Reuse the profile's bounded state deadline
+            // rather than mistaking five capture intervals for a terminal
+            // postcondition timeout on a busy real device.
+            var postDeadline = DateTime.UtcNow.AddSeconds(_automationProfile.StateTimeoutSeconds);
+            var postStates = new List<PokemonGoGameState>();
+            byte[] last = fresh;
+            var postFrameCount = 0;
+            while (DateTime.UtcNow < postDeadline)
+            {
+                postFrameCount++;
+                await SettleAsync("KnownBenignInterruptPostcondition", _automationProfile.PostActionSettleMilliseconds, cancellationToken);
+                last = await CaptureAsync($"interrupt-post-{postFrameCount}", cancellationToken);
+                if (_knownBenignInterruptDetector.Detect(last).Kind != KnownBenignInterruptKind.None)
+                    continue;
+                var state = _detector.Detect(last, _appraisalProfile).State;
+                postStates.Add(state);
+                var window = postStates.TakeLast(3).ToArray();
+                if (window.Length == 3 && window.All(value => value == window[0]) &&
+                    window[0] != PokemonGoGameState.Unknown)
+                {
+                    await WriteAuditAsync("known-benign-interrupt-postcondition", new
+                    {
+                        Interrupt = stable.Kind,
+                        Result = "STABLE_KNOWN_POSTCONDITION",
+                        StateAfter = window[0],
+                        InputCount = 1,
+                        PostFrameCount = postFrameCount
+                    }, cancellationToken);
+                    return new KnownBenignInterruptRecoveryResult(true, last);
+                }
+            }
+            await WriteAuditAsync("known-benign-interrupt-postcondition", new
+            {
+                Interrupt = stable.Kind,
+                Result = "UNKNOWN_OR_UNSTABLE_POSTCONDITION_STOP",
+                InputCount = 1,
+                InputBudget = MaxKnownBenignInterruptInputs,
+                PostFrameCount = postFrameCount
+            }, cancellationToken);
+            return new KnownBenignInterruptRecoveryResult(false, last);
+        }
+        finally
+        {
+            _interruptRecoveryActive = false;
+        }
+    }
+
+    private static string KnownBenignActionName(KnownBenignInterruptKind kind) => kind switch
+    {
+        KnownBenignInterruptKind.EggHatch => "AdvanceKnownEggHatch",
+        KnownBenignInterruptKind.WeeklyChallenge => "ContinueKnownWeeklyChallenge",
+        KnownBenignInterruptKind.KnownExitDialog => "CancelKnownExitDialog",
+        _ => throw new InvalidOperationException("No named action exists for an unknown interrupt.")
+    };
+
+    private sealed record KnownBenignInterruptRecoveryResult(bool Succeeded, byte[] LastScreenshot);
 
     private async Task<VerifiedMainMenuPrecondition?> CaptureVerifiedMainMenuPreconditionAsync(
         CancellationToken cancellationToken)

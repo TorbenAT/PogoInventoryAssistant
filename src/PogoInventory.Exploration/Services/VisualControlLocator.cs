@@ -305,7 +305,11 @@ public sealed class VisualControlLocator
         var radius = Math.Max(24, image.Width / 18);
         Candidate? best = null;
 
-        for (var y = (int)(image.Height * 0.72); y < (int)(image.Height * 0.94); y += 4)
+        // The gameplay action button is in the lower safe zone. A temporary
+        // "New: Schedule Raids!" banner around 0.81 matched the old
+        // red/light/neutral colour test and must never be treated as the
+        // PokéBall control.
+        for (var y = (int)(image.Height * 0.84); y < (int)(image.Height * 0.94); y += 4)
         {
             for (var x = (int)(image.Width * 0.35); x < (int)(image.Width * 0.65); x += 4)
             {

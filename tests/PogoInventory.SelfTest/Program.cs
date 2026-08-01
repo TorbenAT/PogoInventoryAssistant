@@ -246,6 +246,7 @@ var tests = new (string Name, Func<Task> Run)[]
     ,("Verified sequence is bounded, checkpointed and fail-closed", VerifiedInventorySequenceTests.RunAsync)
     ,("Android sequence runtime guards remain named and fail-closed", VerifiedSequenceRuntimeTests.RunAsync)
     ,("Wrong-screen navigation and destructive confirmation authorization", WrongScreenAuthorizationTests.RunAsync)
+    ,("Known benign interrupts are explicit, grounded and fail closed", KnownBenignInterruptDetectorTests.RunAsync)
     ,("Deterministic navigation safety trace is phase-aligned", NavigationSafetyTraceTests.RunAsync)
     ,("Cleanup proof persists partial observations and reopens SQLite", CleanupProofTests.RunAsync)
     ,("Cleanup value proof persists before appraisal and keeps review advisory", CleanupProofTests.RunValueProofAsync)

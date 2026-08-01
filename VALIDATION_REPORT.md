@@ -1,3 +1,36 @@
+## Guarded benign-interrupt recovery and persistent ingestion - 2026-08-01
+
+- `dotnet build .\PogoInventoryAssistant.sln --no-restore`: PASS, 0 warnings
+  and 0 errors.
+- Package-free self-test: PASS **281/281**, including explicit positive
+  EggHatch/WeeklyChallenge/KnownExitDialog and map-like negative fixtures.
+- Offline read-only analysis of the three local real-phone truth frames:
+  EggHatch, WeeklyChallenge and KnownExitDialog were each classified with a
+  visually grounded target.
+- Live exit-dialog investigation: two visually grounded CANCEL taps (one band
+  centre and one glyph centroid) did not remove the dialog. This remains an
+  unresolved UI hit-testing root cause; neither attempt changed inventory,
+  game or account state. With explicit approval, one named
+  `StateBoundAndroidBackFallback` ran only after the exact stable
+  KnownExitDialog precondition. The modal disappeared and a later read-only
+  screenshot classified GameplayMap at 1.000; the named guarded route then
+  reached Inventory. The older five-frame in-operation postcondition expired
+  before map settling, so code now uses the bounded profile state timeout and
+  terminally stops at no-effect/Unknown. Repetition on current code is needed
+  for full family acceptance.
+- A gameplay map falsely matched the initial Weekly classifier and received
+  one safe no-effect continuation target; no state transition followed. The
+  classifier now requires cloud-card and pink-title evidence as well as
+  sky/ground/CTA, with a map-like negative regression.
+- Real persistent ingestion: `year2020&!234&!296&!1`, item limit 6, completed
+  with 3 Complete and 3 Partial records. The following disjoint six-item query
+  `year2020&!1&!25&!39&!225&!234&!296&!447&!582&!653` completed with 4
+  Complete and 2 Partial records. A third disjoint six-item query completed
+  with 4 Complete and 2 Partial records. SQLite reports `integrity_check=ok`,
+  seven scan runs, 25 records and 81 events. Process shutdown emitted
+  non-fatal Tesseract object-cache disposal warnings; persistence was
+  unaffected.
+
 ## Streaming Vision Phase 5 Appraisal gate calibration - 2026-07-28
 
 - Current phone state was detected with 4 compatible `PokemonDetails` frames

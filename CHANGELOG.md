@@ -2,6 +2,25 @@
 
 ## Unreleased
 
+- Added a user-approved, single named `StateBoundAndroidBackFallback` only for
+  a three-stable exact KnownExitDialog. No-effect or Unknown is terminal and
+  destructive confirmation topology remains denied.
+- Recorded that two visual CANCEL targets did not dismiss the real exit dialog;
+  the fallback does not conceal this unresolved UI hit-testing root cause.
+- Tightened Weekly interruption matching with cloud-card/pink-title evidence
+  after a gameplay-map false match, and added a map-like negative regression.
+- Completed a six-item `year2020&!234&!296&!1` persistent ingestion batch;
+  SQLite integrity remained verified.
+
+- Added a shared, fail-closed `KnownBenignInterruptRecovery` path for the
+  captured `Oh?` egg frame, Weekly Challenge and the exact Pokémon GO exit
+  dialog. It requires 3-of-5 compatible frames, a fresh visually located
+  target, a named single tap and a stable known postcondition; unknown next
+  frames stop with evidence and no follow-up input. Explicit destructive
+  confirmation topology remains denied. Live acceptance is still pending: the
+  initial exit-dialog tap did not establish its postcondition, and a terminal
+  stop now prevents retrying it within one operation.
+
 - Made cleanup-batch reconciliation run-local: an accumulated SQLite database
   no longer rejects a later batch merely because global row totals exceed that
   batch's row count. Each just-persisted observation must still be reloaded

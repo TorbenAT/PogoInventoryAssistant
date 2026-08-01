@@ -38,12 +38,24 @@ source of observed records, work buckets and attempts. The initial live
 year-search oracle established `year2020` as the earliest non-empty year and
 must be extended with only verified search evidence.
 
-`device-run-cleanup-proof` now begins directly through
+The shared `KnownBenignInterruptRecovery` layer classifies saved `Oh?`, Weekly
+Challenge and exit-dialog frames, requires three compatible frames in five
+plus a fresh visually grounded target, has a six-input ceiling, and ends
+terminally at no-effect/Unknown. Two visually located CANCEL taps had no
+effect; retain that unresolved hit-testing root cause. Under explicit user
+approval, one precisely classified KnownExitDialog used the named state-bound
+Android Back fallback and the dialog was later proven gone by a read-only
+GameplayMap frame (1.000), followed by a guarded route to Inventory. The
+postcondition timeout has since been corrected; re-exercise it opportunistically
+before calling the family fully production-proven. A map false-positive Weekly
+match was fixed by requiring cloud-card and pink-title evidence; a map-like
+negative regression covers it. Never use generic Back, centre taps, or retries
+for unknown/unsafe overlays. Egg and Weekly still need live recovery proof.
+
+`device-run-cleanup-proof` begins directly through
 `EnsureFilteredInventoryAsync`; it must not close to the map before each
-batch. The currently recorded `Oh?` egg-hatching screen is classified as an
-unsafe confirmation surface in version 0.14.3: capture-only checks are
-permitted, but no raw or newly invented tap may be sent. Resume the next bounded persisted
-batch only after a verified Inventory state is observed. Never mistake a
+batch. Resume the next bounded persisted batch only after a verified Inventory
+state is observed. Never mistake a
 batch limit, stream sample, or empty unsupported query for the complete
 inventory.
 
@@ -51,8 +63,14 @@ The first persisted `year2020&234,1,296` run contains 6 rows (4 Complete,
 2 Partial), plus one earlier interrupted Partial Stantler row. SQLite
 integrity is `ok`, but the two Partial Stantler rows have the same semantic key
 without exact identity proof; retain both evidence records and place that
-pair in reconciliation rather than auto-merging. Do not start the next phone
-bucket until the finite result count and this resume boundary are reconciled.
+pair in reconciliation rather than auto-merging. The recovery-era
+`year2020&!234&!296&!1` batch persisted six additional rows; keep moving
+through genuinely non-overlapping verified filters using SQLite as the ledger.
+Two following disjoint six-item queries completed, leaving SQLite at seven
+scan runs, 25 records and 81 events with `integrity_check=ok`. Every record is
+still REVIEW; no cleanup action is authorized. Continue from a fresh,
+non-overlapping verified query rather than treating this bounded frontier as
+the account total.
 
 Do not use `device-open-inventory` or `device-press-back`: they are retired
 to prevent blind Back actions. Use only a state-verified named workflow.

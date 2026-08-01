@@ -220,6 +220,12 @@ static async Task<int> MainAsync(string[] args)
             "screen-detect" => await DetectScreenAsync(
                 args.Skip(1).ToArray(),
                 cancellationSource.Token),
+            "known-interrupt-detect-image" => await DetectKnownBenignInterruptImageAsync(
+                args.Skip(1).ToArray(), cancellationSource.Token),
+            "main-menu-locate-image" => await LocateMainMenuImageAsync(
+                args.Skip(1).ToArray(), cancellationSource.Token),
+            "device-recover-known-interrupt" => await RecoverKnownBenignInterruptAsync(
+                args.Skip(1).ToArray(), cancellationSource.Token),
             "screen-fingerprint" => await ExtractScreenFingerprintAsync(
                 args.Skip(1).ToArray(),
                 cancellationSource.Token),
@@ -2519,6 +2525,67 @@ static async Task<int> DetectGameStateImageAsync(string[] args, CancellationToke
         new JsonSerializerOptions { WriteIndented = true }), cancellationToken);
     Console.WriteLine($"State: {detection.State}; confidence: {detection.Confidence:F3}");
     return 0;
+}
+
+static async Task<int> DetectKnownBenignInterruptImageAsync(string[] args, CancellationToken cancellationToken)
+{
+    var options = ParseOptions(args);
+    var imagePath = Require(options, "image");
+    var output = Path.GetFullPath(Require(options, "out"));
+    Directory.CreateDirectory(Path.GetDirectoryName(output) ?? ".");
+    var detection = new KnownBenignInterruptDetector().Detect(
+        await File.ReadAllBytesAsync(imagePath, cancellationToken));
+    await File.WriteAllTextAsync(output, JsonSerializer.Serialize(detection,
+        new JsonSerializerOptions { WriteIndented = true, Converters = { new JsonStringEnumConverter() } }), cancellationToken);
+    Console.WriteLine($"Known interrupt: {detection.Kind}; confidence: {detection.Confidence:F3}");
+    // This is a read-only diagnostic: None is a valid finding, not a process
+    // failure. Recovery is never authorized by this command.
+    return 0;
+}
+
+static async Task<int> LocateMainMenuImageAsync(string[] args, CancellationToken cancellationToken)
+{
+    var options = ParseOptions(args);
+    var imagePath = Require(options, "image");
+    var output = Path.GetFullPath(Require(options, "out"));
+    Directory.CreateDirectory(Path.GetDirectoryName(output) ?? ".");
+    var control = new VisualControlLocator().LocateMainMenuPokeball(
+        await File.ReadAllBytesAsync(imagePath, cancellationToken));
+    await File.WriteAllTextAsync(output, JsonSerializer.Serialize(control,
+        new JsonSerializerOptions { WriteIndented = true }), cancellationToken);
+    Console.WriteLine(control is null
+        ? "Main-menu locator: None"
+        : $"Main-menu locator: {control.ControlName}; target={control.Target.X:F4},{control.Target.Y:F4}; confidence={control.Confidence:F3}");
+    return control is null ? 2 : 0;
+}
+
+static async Task<int> RecoverKnownBenignInterruptAsync(string[] args, CancellationToken cancellationToken)
+{
+    var options = ParseOptions(args);
+    var output = Path.GetFullPath(Require(options, "out"));
+    Directory.CreateDirectory(output);
+    var profilePath = Optional(options, "automation-profile") ??
+        Optional(options, "profile") ?? Path.Combine("local-data", "automation-profile.local.json");
+    var automationProfile = await AutomationProfileLoader.LoadAsync(profilePath, cancellationToken);
+    var appraisalPath = Optional(options, "appraisal-profile") ??
+        Path.Combine("local-data", "phone-preparation", "appraisal-profile.device.generated.json");
+    AppraisalVisualProfile? appraisalProfile = File.Exists(appraisalPath)
+        ? await AppraisalProfileLoader.LoadAsync(appraisalPath, cancellationToken)
+        : null;
+    var transport = CreateRealAndroidTransport(options);
+    var selected = DeviceSnapshotService.SelectDevice(
+        await transport.ListDevicesAsync(cancellationToken), Optional(options, "serial"));
+    var operations = new AndroidVerifiedInventoryNamedOperations(
+        transport, selected.Serial, automationProfile, Path.Combine(output, "evidence"), appraisalProfile);
+    var state = await operations.OpenInventoryAsync(cancellationToken);
+    await File.WriteAllTextAsync(Path.Combine(output, "result.json"), JsonSerializer.Serialize(new
+    {
+        result = state.ToString(),
+        operation = "RecoverKnownBenignInterruptThenOpenInventory",
+        inputAuthority = "state-verified named actions only"
+    }, new JsonSerializerOptions { WriteIndented = true }), cancellationToken);
+    Console.WriteLine($"Recovery result: {state}");
+    return state == VerifiedSequenceState.Inventory ? 0 : 1;
 }
 
 static async Task<int> RecoverInventoryAsync(string[] args, CancellationToken cancellationToken)
