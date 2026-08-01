@@ -2,6 +2,17 @@
 
 ## Unreleased
 
+- Made cleanup-batch reconciliation run-local: an accumulated SQLite database
+  no longer rejects a later batch merely because global row totals exceed that
+  batch's row count. Each just-persisted observation must still be reloaded
+  from the exact run. Added a two-batch regression test and expanded the
+  read-only inventory DB summary with per-run item identity fields.
+
+- Retired the blind `device-open-inventory` and `device-press-back` CLI
+  shortcuts. Android Back is now available only within state-verified named
+  operations; the shortcuts can no longer trigger an app-exit confirmation
+  from the gameplay map.
+
 - Removed the redundant cleanup-proof pre-batch close-to-map transition.
   Batches now start through the existing guarded inventory establishment path,
   which reuses a verified inventory state and sends no input for an unknown or

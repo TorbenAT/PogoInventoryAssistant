@@ -375,10 +375,39 @@ static async Task<int> SummarizeInventoryDbAsync(
     var options = ParseOptions(args);
     var path = Optional(options, "db") ?? Path.Combine("local-data", "inventory", "pogo-inventory.db");
     var service = new InventoryPersistenceService(path);
-    var count = await service.CountObservationsAsync(cancellationToken);
-    Console.WriteLine($"Database: {Path.GetFullPath(path)}");
-    Console.WriteLine($"Observations: {count}");
-    return 0;
+    var summary = await service.ReadCleanupProofSqlSummaryAsync(cancellationToken);
+    var runs = new List<object>();
+    foreach (var runId in await service.LoadAllCleanupRunIdsAsync(cancellationToken))
+    {
+        var rows = await service.LoadCleanupProofRowsAsync(runId, cancellationToken);
+        runs.Add(new
+        {
+            runId,
+            rows = rows.Count,
+            uniqueOrdinals = rows.Select(row => row.Ordinal).Distinct().Count(),
+            complete = rows.Count(row => row.ObservationStatus == "Complete"),
+            partial = rows.Count(row => row.ObservationStatus == "Partial"),
+            unresolved = rows.Count(row => row.ObservationStatus == "Unresolved"),
+            items = rows.Select(row => new
+            {
+                row.Ordinal,
+                row.LocalPokemonId,
+                row.Observation.Species,
+                row.Observation.Cp,
+                row.Observation.AttackIv,
+                row.Observation.DefenseIv,
+                row.Observation.HpIv,
+                row.ObservationStatus,
+                row.StableFingerprint,
+                row.SemanticKey,
+                row.SemanticKeyCompleteness
+            })
+        });
+    }
+
+    Console.WriteLine(JsonSerializer.Serialize(new { database = Path.GetFullPath(path), summary, runs },
+        new JsonSerializerOptions { WriteIndented = true }));
+    return string.Equals(summary.IntegrityCheck, "ok", StringComparison.OrdinalIgnoreCase) ? 0 : 1;
 }
 
 static async Task<int> AnalyzeAsync(
@@ -2243,26 +2272,21 @@ static async Task<int> OpenInventoryAsync(
     string[] args,
     CancellationToken cancellationToken)
 {
-    var options = ParseOptions(args);
-    var transport = CreateRealAndroidTransport(options);
-    var devices = await transport.ListDevicesAsync(cancellationToken);
-    var selected = DeviceSnapshotService.SelectDevice(devices, Optional(options, "serial"));
-    await transport.OpenPokemonInventoryAsync(selected.Serial, cancellationToken);
-    Console.WriteLine($"Sent one allow-listed OpenPokemonInventory action to {selected.Serial}.");
-    return 0;
+    _ = args;
+    _ = cancellationToken;
+    throw new InvalidOperationException(
+        "device-open-inventory is retired: Android Back cannot safely open inventory from an arbitrary state. " +
+        "Use a verified named workflow that establishes and checks its state.");
 }
 
 static async Task<int> PressBackAsync(
     string[] args,
     CancellationToken cancellationToken)
 {
-    var options = ParseOptions(args);
-    var transport = CreateRealAndroidTransport(options);
-    var devices = await transport.ListDevicesAsync(cancellationToken);
-    var selected = DeviceSnapshotService.SelectDevice(devices, Optional(options, "serial"));
-    await transport.PressBackAsync(selected.Serial, cancellationToken);
-    Console.WriteLine($"Pressed Back once on {selected.Serial}.");
-    return 0;
+    _ = args;
+    _ = cancellationToken;
+    throw new InvalidOperationException(
+        "device-press-back is retired: Back is allowed only inside a state-verified named operation.");
 }
 
 static async Task<int> ContinueAppraisalIntroAsync(string[] args, CancellationToken cancellationToken)

@@ -46,3 +46,13 @@ permitted, but no raw or newly invented tap may be sent. Resume the next bounded
 batch only after a verified Inventory state is observed. Never mistake a
 batch limit, stream sample, or empty unsupported query for the complete
 inventory.
+
+The first persisted `year2020&234,1,296` run contains 6 rows (4 Complete,
+2 Partial), plus one earlier interrupted Partial Stantler row. SQLite
+integrity is `ok`, but the two Partial Stantler rows have the same semantic key
+without exact identity proof; retain both evidence records and place that
+pair in reconciliation rather than auto-merging. Do not start the next phone
+bucket until the finite result count and this resume boundary are reconciled.
+
+Do not use `device-open-inventory` or `device-press-back`: they are retired
+to prevent blind Back actions. Use only a state-verified named workflow.

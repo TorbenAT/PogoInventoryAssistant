@@ -984,3 +984,19 @@ Main consolidation merge: `192d1c7`.
   SQLite database, reopened it with `PRAGMA integrity_check = ok`, and safely
   stopped with 0 observations and 0 input milliseconds because the screen was
   classified as an unsafe confirmation surface.
+
+## Persistent six-item probe and reconciliation correction - 2026-08-01
+
+- The real `year2020&234,1,296` sequence reached six phone items and wrote
+  six durable rows: 4 Complete and 2 Partial. A preceding host-timeout run
+  had already persisted the first Partial Stantler; SQLite currently retains
+  7 rows and passes `PRAGMA integrity_check = ok`.
+- The same-key Partial Stantler pair is retained for reconciliation. It was
+  not deleted, merged, tagged or used as cleanup authority.
+- Corrected report validation to prove run-local reload completeness instead
+  of falsely equating global accumulated totals with a single batch.
+- Retired blind Android-Back CLI shortcuts after a real map-state invocation
+  revealed the Pokémon GO exit-confirmation dialog. No confirmation button
+  was pressed.
+- `dotnet build .\\PogoInventoryAssistant.sln --no-restore -v:minimal`:
+  **PASS**, 0 warnings, 0 errors. Package-free self-test: **PASS 280/280**.

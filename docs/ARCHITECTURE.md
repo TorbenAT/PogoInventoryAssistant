@@ -200,6 +200,12 @@ Partial, and unresolved or unsafe surfaces stop input without a blind retry.
 `InventoryPersistenceService` in a transaction that inserts `Observations`,
 `PokemonRecords` and an `Observed` `InventoryEvents` row. The write service is
 disposed before a new service instance reloads the batch. The existing
+report validation compares this exact run-local reload with the in-memory
+captured records; global database totals are only required to contain that
+subset because a persistent inventory database accumulates prior batches.
+An interrupted Partial observation is never silently merged into a later
+matching Partial observation; it remains reconciliation-required until exact
+identity evidence exists.
 `InventoryAnalyzer` then evaluates only reloaded `PokemonObservation` rows;
 recommendations and `RecommendationGenerated` events are written back before
 CSV, Markdown and JSON reports are generated. No tag or destructive executor

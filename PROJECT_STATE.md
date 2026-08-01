@@ -18,6 +18,20 @@ inventory reuse and query establishment, so this incidental transition cannot
 recur. The database remains the required durable destination for each real
 observation; no count of 19 is used as an account-total assertion.
 
+The first bounded persisted probe for `year2020&234,1,296` has now completed
+its six-item phone sequence: four records are Complete and two Partial. The
+SQLite file passes `integrity_check` and retains those six rows. A prior host
+timeout had already persisted the first Stantler as one Partial row, yielding
+seven stored rows for the six-result query. Its semantic key matches the
+first batch item, but both are Partial and their visual fingerprints differ;
+they remain explicitly reconciliation-required rather than being deleted or
+silently merged. Cleanup report validation now compares the current run's
+reloaded rows with its own persisted capture count, never with global totals.
+
+Two old CLI shortcuts were discovered to send unguarded Android Back. From
+the gameplay map that opens an app-exit confirmation, not inventory. Both
+shortcuts are retired; only state-verified named operations can now send Back.
+
 ## Phase 6C protection enrichment (2026-08-01)
 
 Phase 6C is implemented offline-first but is **PARTIAL**, not a production

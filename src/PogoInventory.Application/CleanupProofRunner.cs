@@ -649,7 +649,7 @@ public sealed class CleanupProofRunner
         var sqlSummary = await new InventoryPersistenceService(Path.GetFullPath(request.DatabasePath))
             .ReadCleanupProofSqlSummaryAsync(cancellationToken);
         var comparative = CleanupProofComparativeAnalyzer.BuildComparativeSuggestions(rows);
-        ValidateReports(rows, sqlSummary, request.OutputDirectory);
+        ValidateReports(captures, rows, sqlSummary, request.OutputDirectory);
         await WriteReportsAsync(
             request, runId, status, stopReason, captures, rows, sqlSummary, comparative, timing, cancellationToken,
             finalMapVerification, exitSettleVerification);
@@ -670,14 +670,22 @@ public sealed class CleanupProofRunner
     }
 
     private static void ValidateReports(
+        IReadOnlyList<CleanupProofObservationRecord> captures,
         IReadOnlyList<CleanupProofDatabaseRow> rows,
         CleanupProofSqlSummary summary,
         string output)
     {
         if (!string.Equals(summary.IntegrityCheck, "ok", StringComparison.OrdinalIgnoreCase))
             throw new InvalidOperationException("SQLite integrity_check did not return ok.");
-        if (summary.ObservationCount != rows.Count || summary.PokemonRecordCount != rows.Count)
-            throw new InvalidOperationException("SQLite observation and record counts do not match the reloaded batch.");
+        // The database intentionally accumulates many batches.  The global
+        // SQLite totals therefore cannot equal this run's rows once a second
+        // batch has been persisted.  Validate the exact run-local reload
+        // against the in-memory records instead, then require the global
+        // totals merely to include that durable subset.
+        if (rows.Count != captures.Count)
+            throw new InvalidOperationException("SQLite did not reload every observation persisted by this batch.");
+        if (summary.ObservationCount < rows.Count || summary.PokemonRecordCount < rows.Count)
+            throw new InvalidOperationException("SQLite global totals cannot contain the reloaded batch.");
         if (rows.Select(row => (row.RunId, row.Ordinal)).Distinct().Count() != rows.Count)
             throw new InvalidOperationException("Duplicate RunId/Ordinal in cleanup proof rows.");
         foreach (var path in rows.SelectMany(row => row.ScreenshotPaths.Concat(row.AppraisalEvidence)))

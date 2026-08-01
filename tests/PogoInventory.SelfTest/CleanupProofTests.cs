@@ -74,6 +74,12 @@ internal static class CleanupProofTests
                 "baseline persistence precedes appraisal");
             var cliSource = File.ReadAllText(RepositoryPath("src", "PogoInventory.Cli", "Program.cs"));
             AssertTrue(cliSource.Contains("CanonicalCloseUnwindService", StringComparison.Ordinal), "cleanup CLI uses canonical close unwind");
+            var openInventoryCommand = CliMethod(cliSource, "OpenInventoryAsync", "PressBackAsync");
+            var pressBackCommand = CliMethod(cliSource, "PressBackAsync", "CloseInventoryAsync");
+            AssertTrue(!openInventoryCommand.Contains("await transport.OpenPokemonInventoryAsync", StringComparison.Ordinal),
+                "CLI must not expose a blind Android Back as inventory opening");
+            AssertTrue(!pressBackCommand.Contains("await transport.PressBackAsync", StringComparison.Ordinal),
+                "CLI must not expose a blind Android Back command");
             var androidSource = File.ReadAllText(RepositoryPath("src", "PogoInventory.Exploration", "Services", "AndroidVerifiedInventoryNamedOperations.cs"));
             AssertTrue(androidSource.Contains("CapturePostExitDetailsFramesAsync", StringComparison.Ordinal), "post-exit fallback exists");
             AssertTrue(File.ReadAllText(RepositoryPath("src", "PogoInventory.Application", "CleanupProofComparativeModels.cs"))
@@ -335,6 +341,19 @@ internal static class CleanupProofTests
             AssertEqual(18L, result.SqlSummary.InventoryEventCount, "Observed plus AppraisalEnriched plus RecommendationGenerated events");
             var roundTrip = await File.ReadAllTextAsync(Path.Combine(root, "db-roundtrip.json"));
             AssertTrue(roundTrip.Contains("databaseReopenedBeforeAnalysis", StringComparison.Ordinal), "roundtrip marker");
+
+            // A persistent inventory database contains earlier batches. The
+            // second run must validate its own six reloaded rows, not require
+            // global SQLite counts to equal six.
+            var secondRoot = Path.Combine(root, "second-batch");
+            Directory.CreateDirectory(secondRoot);
+            var second = await RunProofAsync(
+                secondRoot,
+                new FakeCleanupOperations(evidence, partial: true),
+                database);
+            AssertEqual(6, second.CapturedItems, "second batch reloaded its own rows");
+            AssertEqual(12L, second.SqlSummary.ObservationCount, "SQLite retains both batches");
+            AssertEqual(12L, second.SqlSummary.PokemonRecordCount, "SQLite retains both record sets");
         }
         finally
         {
@@ -376,18 +395,30 @@ internal static class CleanupProofTests
         AssertTrue(!source.Contains("DeleteAsync", StringComparison.Ordinal), "cleanup runner must not delete");
     }
 
-    private static async Task<CleanupProofRunResult> RunProofAsync(string root, FakeCleanupOperations fake)
+    private static async Task<CleanupProofRunResult> RunProofAsync(
+        string root,
+        FakeCleanupOperations fake,
+        string? databasePath = null)
     {
         var request = new CleanupProofRequest
         {
             SpeciesQuery = "Pidgey",
             ItemLimit = 6,
-            DatabasePath = Path.Combine(root, "cleanup-proof.sqlite"),
+            DatabasePath = databasePath ?? Path.Combine(root, "cleanup-proof.sqlite"),
             OutputDirectory = root,
             DeviceSerial = "synthetic",
             ContinueOnPartial = true
         };
         return await new CleanupProofRunner().RunAsync(fake, request);
+    }
+
+    private static string CliMethod(string source, string method, string nextMethod)
+    {
+        var start = source.IndexOf($"Task<int> {method}(", StringComparison.Ordinal);
+        var end = source.IndexOf($"Task<int> {nextMethod}(", StringComparison.Ordinal);
+        if (start < 0 || end <= start)
+            throw new InvalidOperationException($"Could not locate CLI method '{method}'.");
+        return source[start..end];
     }
 
     /// <summary>Internal (not private) so other test files in this assembly (e.g. HeaderSemanticsCleanupTests) can reuse it.</summary>
