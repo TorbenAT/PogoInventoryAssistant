@@ -169,12 +169,13 @@ single named horizontal swipe. Appraisal is exited once at the end, then the
 existing canonical unwind and SQLite report generation run. Details-only tags
 remain Unknown in this pass.
 
-The permanent value proof calls `CanonicalCloseUnwindService` before inventory
-search. `LocateCanonicalCloseControl` derives the lower-centre target from the
-current screenshot and requires three compatible targets, fresh revalidation,
-one tap and a stable changed post-state. The unwind stops on missing controls,
-unsafe ambiguity, loops or five inputs; it never falls back to Android Back.
-Once a Details identity and read-only tags
+The permanent value proof starts directly with
+`EnsureFilteredInventoryAsync`. It reuses an already verified Inventory state
+or establishes Inventory through its own named, bounded operations; no
+pre-batch close-to-map action is sent. This avoids an unnecessary transition
+and still fails closed on an unknown, popup or unsafe state before input.
+`CanonicalCloseUnwindService` remains the separately verified end-of-run
+recovery path. Once a Details identity and read-only tags
 are captured, the runner writes `ScanRuns`, `Observations`, `PokemonRecords`
 and an `Observed` event before it attempts appraisal. Appraisal is an
 enrichment, not a persistence gate. A single authorized appraisal-exit tap may

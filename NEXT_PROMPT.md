@@ -28,3 +28,21 @@ the derived replay report is under
 
 Use `FramesEvicted` for bounded-buffer retention telemetry. Do not describe it
 as dropped decoder or transport frames.
+
+## Active full-inventory ingestion
+
+Continue the persistent, oldest-first inventory ingestion rather than treating
+component or batch acceptance as completion. The account inventory display is
+1857/1925; 19 was only an earlier bounded run size. Use SQLite as the durable
+source of observed records, work buckets and attempts. The initial live
+year-search oracle established `year2020` as the earliest non-empty year and
+must be extended with only verified search evidence.
+
+`device-run-cleanup-proof` now begins directly through
+`EnsureFilteredInventoryAsync`; it must not close to the map before each
+batch. The currently recorded `Oh?` egg-hatching screen is classified as an
+unsafe confirmation surface in version 0.14.3: capture-only checks are
+permitted, but no raw or newly invented tap may be sent. Resume the next bounded persisted
+batch only after a verified Inventory state is observed. Never mistake a
+batch limit, stream sample, or empty unsupported query for the complete
+inventory.

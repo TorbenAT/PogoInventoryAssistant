@@ -1917,21 +1917,16 @@ static async Task<int> RunCleanupProofAsync(
     var operations = new AndroidVerifiedInventoryNamedOperations(
         transport, selected.Serial, automationProfile, evidence, appraisalProfile,
         timingCollector: timing);
-    var recovery = await new CanonicalCloseUnwindService().UnwindToGameplayMapAsync(
-        operations, cancellationToken);
-    await File.WriteAllTextAsync(
-        Path.Combine(output, "start-state-recovery.json"),
-        JsonSerializer.Serialize(recovery, new JsonSerializerOptions { WriteIndented = true }),
-        cancellationToken);
+    // A cleanup batch starts through EnsureFilteredInventoryAsync below.  That
+    // named operation is deliberately able to reuse a verified Inventory
+    // state, so closing all the way to GameplayMap here is both redundant and
+    // unsafe: an unrelated in-game overlay can appear during the extra
+    // transition.  No input is sent before EnsureFilteredInventoryAsync has
+    // captured and authorized its own current state.
     await File.WriteAllTextAsync(
         Path.Combine(output, "start-state-recovery.md"),
-        $"# Start-state recovery\n\n- Initial state: `{recovery.InitialState}`\n- Recovery path: `{string.Join(" -> ", recovery.Path)}`\n- Actions: `{string.Join(", ", recovery.Actions)}`\n- Input count: `{recovery.InputCount}`\n- Ready state: `{recovery.FinalState}`\n- Result: `{recovery.Result}`\n- Blocker: `{recovery.Blocker ?? "NONE"}`\n",
+        "# Start-state handling\n\n- No pre-batch close-to-map action was sent.\n- `EnsureFilteredInventoryAsync` owns verified inventory reuse/opening and bounded query establishment.\n- Any unknown or popup state stops before input.\n",
         cancellationToken);
-    if (!recovery.Succeeded)
-    {
-        Console.Error.WriteLine($"CLEANUP_START_RECOVERY_BLOCKED: {recovery.Blocker ?? recovery.Result}");
-        return 1;
-    }
 
     var speciesReferencePath = Optional(options, "species-reference") ??
         Path.Combine("data", "reference", "species-reference.json");

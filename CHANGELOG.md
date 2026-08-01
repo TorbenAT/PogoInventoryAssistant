@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+- Removed the redundant cleanup-proof pre-batch close-to-map transition.
+  Batches now start through the existing guarded inventory establishment path,
+  which reuses a verified inventory state and sends no input for an unknown or
+  popup state.
+
 - Added schema-v5 persistent work-ledger foundations: absolute-date logical
   buckets, durable work items and append-only attempts make the oldest
   unfinished unit restartable from SQLite.

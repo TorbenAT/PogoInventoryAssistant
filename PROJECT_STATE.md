@@ -8,6 +8,16 @@ then established 2020 as the first non-empty year (1025 results).
 `year2020&1` isolated one favorite Bulbasaur; its `!favorite` complement was
 empty. No tag or destructive action has been sent.
 
+The first persistent batch did not begin because a spontaneous egg-hatching
+screen appeared during the then-redundant pre-batch canonical close. The
+current screen remains visibly `Oh?`/egg and is classified conservatively as
+an unsafe confirmation surface; only read-only evidence has been captured.
+The cleanup command no longer
+closes to the map before a batch: `EnsureFilteredInventoryAsync` owns safe
+inventory reuse and query establishment, so this incidental transition cannot
+recur. The database remains the required durable destination for each real
+observation; no count of 19 is used as an account-total assertion.
+
 ## Phase 6C protection enrichment (2026-08-01)
 
 Phase 6C is implemented offline-first but is **PARTIAL**, not a production

@@ -968,3 +968,19 @@ Main consolidation merge: `192d1c7`.
   `192.168.1.185:37877` / ONEPLUS A6013 and completed its snapshot. It found
   `NotAppraisal` with candidate/unverified readiness, so no navigation or
   extraction authority was enabled.
+# Cleanup start-state transition correction - 2026-08-01
+
+- Reproduced a real-device pre-batch interruption with read-only evidence:
+  the OnePlus A6013 at `192.168.1.185:37877` showed the in-game `Oh?` egg
+  sequence. No input was sent during the confirming capture.
+- Removed the redundant cleanup-proof close-to-map preflight. The command now
+  delegates starting state to the already guarded `EnsureFilteredInventoryAsync`.
+  An unknown or popup state remains a zero-input stop.
+- `dotnet build .\\PogoInventoryAssistant.sln --no-restore -v:minimal`:
+  **PASS**, 0 warnings, 0 errors.
+- Package-free self-test: **PASS 280/280**.
+- The new real command path was then exercised against the still-visible egg
+  screen. It persisted run `cleanup-20260801-103906-ebc18452a56` to the local
+  SQLite database, reopened it with `PRAGMA integrity_check = ok`, and safely
+  stopped with 0 observations and 0 input milliseconds because the screen was
+  classified as an unsafe confirmation surface.
