@@ -84,5 +84,12 @@ visible; every actual/unknown modal remains blocked. Preserve the historical
 Unity CANCEL no-effect gap—the old audit lacks actual pixel evidence—and do
 not generalize Android Back.
 
+The initial resumed frontier attempt bound five new items before its post-swipe
+frame was stable AppraisalIntro (Grimer), a normal known appraisal state. The
+runner now has `--resume-run`: it reloads existing rows, resumes at the next
+ordinal/current carousel state, and uses only the existing one-tap guarded
+AppraisalIntro continuation before fresh Bars evidence. Do not reopen the
+filter or reobserve ordinals 1–5 on this run.
+
 Do not use `device-open-inventory` or `device-press-back`: they are retired
 to prevent blind Back actions. Use only a state-verified named workflow.

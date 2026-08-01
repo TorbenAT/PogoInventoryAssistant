@@ -1997,6 +1997,7 @@ static async Task<int> RunCleanupProofAsync(
         OutputDirectory = output,
         DeviceSerial = selected.Serial,
         WorkBucketId = workBucketId,
+        ResumeRunId = Optional(options, "resume-run"),
         ContinueOnPartial = true,
         MaximumCaptureFrames = ParsePositiveInt(options, "maximum-capture-frames", 8),
         MinimumCompleteFrames = ParsePositiveInt(options, "minimum-complete-frames", 3),
@@ -3917,6 +3918,7 @@ static void PrintHelp()
     Console.WriteLine("  device-run-cleanup-proof --species <query> --item-limit <6-50> --database <sqlite> --out <directory> --continue-on-partial");
     Console.WriteLine("                           [--species-reference <species-reference.json>] [--policy <rule-policy.json>]");
     Console.WriteLine("                           [--work-bucket <id> --bucket-start <yyyy-MM-dd> --bucket-end <yyyy-MM-dd>]");
+    Console.WriteLine("                           [--resume-run <safe-stopped-run-id>] (continues persisted ordinals without re-opening the filter)");
     Console.WriteLine("                           [--tessdata <directory>] (header OCR engine: Tesseract, default tools/tessdata-best)");
     Console.WriteLine("  analyze-cleanup-evidence --database <cleanup-proof.sqlite> --evidence-root <dir> --out <dir>");
     Console.WriteLine("                           [--species-reference <species-reference.json>] [--policy <rule-policy.json>]");

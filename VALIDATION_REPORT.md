@@ -44,6 +44,10 @@
   controls (scores 0.722/0.817/0.784). The central Details/canonical-close
   interlock replays that exact frame as `None`; build is green and self-test is
   281/281. No phone input was sent during this investigation.
+- Frontier resume hardening: the five persisted frontier items stopped on a
+  stable AppraisalIntro after one already-authorized carousel swipe, not on a
+  modal or filter end. The DB-backed `--resume-run` path and bounded carousel
+  intro continuation build cleanly and pass the 281/281 package-free suite.
 
 ## Streaming Vision Phase 5 Appraisal gate calibration - 2026-07-28
 

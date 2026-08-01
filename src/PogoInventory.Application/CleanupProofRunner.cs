@@ -23,6 +23,8 @@ public sealed record CleanupProofRequest
     public required string DeviceSerial { get; init; }
     /// <summary>Optional durable full-ingestion bucket owning this bounded run.</summary>
     public string? WorkBucketId { get; init; }
+    /// <summary>Existing safe-stopped run to continue from its durable rows.</summary>
+    public string? ResumeRunId { get; init; }
     public bool ContinueOnPartial { get; init; }
     public int MaximumCaptureFrames { get; init; } = 8;
     public int MinimumCompleteFrames { get; init; } = 3;
@@ -57,6 +59,7 @@ public sealed record CleanupProofRequest
         ArgumentException.ThrowIfNullOrWhiteSpace(OutputDirectory);
         ArgumentException.ThrowIfNullOrWhiteSpace(DeviceSerial);
         if (WorkBucketId is not null) ArgumentException.ThrowIfNullOrWhiteSpace(WorkBucketId);
+        if (ResumeRunId is not null) ArgumentException.ThrowIfNullOrWhiteSpace(ResumeRunId);
         if (MaximumCaptureFrames is < 1 or > 8)
             throw new ArgumentOutOfRangeException(nameof(MaximumCaptureFrames));
         if (MinimumCompleteFrames < 3 || MinimumCompleteFrames > MaximumCaptureFrames)
@@ -128,17 +131,37 @@ public sealed class CleanupProofRunner
         var database = Path.GetFullPath(request.DatabasePath);
         Directory.CreateDirectory(output);
         Directory.CreateDirectory(Path.Combine(output, "evidence"));
-        var runId = $"cleanup-{DateTimeOffset.UtcNow:yyyyMMdd-HHmmss}-{Guid.NewGuid():N}"[..35];
         var persistence = new InventoryPersistenceService(database);
-        await persistence.StartCleanupRunAsync(new CleanupProofRunStart
+        var runId = request.ResumeRunId ?? $"cleanup-{DateTimeOffset.UtcNow:yyyyMMdd-HHmmss}-{Guid.NewGuid():N}"[..35];
+        var captures = new List<CleanupProofObservationRecord>();
+        if (request.ResumeRunId is null)
         {
-            RunId = runId,
-            SearchQuery = request.SpeciesQuery,
-            StartedAtUtc = DateTimeOffset.UtcNow,
-            DeviceSerial = request.DeviceSerial,
-            RequestedItems = request.ItemLimit,
-            SourceDirectory = output
-        }, cancellationToken);
+            await persistence.StartCleanupRunAsync(new CleanupProofRunStart
+            {
+                RunId = runId,
+                SearchQuery = request.SpeciesQuery,
+                StartedAtUtc = DateTimeOffset.UtcNow,
+                DeviceSerial = request.DeviceSerial,
+                RequestedItems = request.ItemLimit,
+                SourceDirectory = output
+            }, cancellationToken);
+        }
+        else
+        {
+            var persisted = await persistence.LoadCleanupProofRowsAsync(runId, cancellationToken);
+            captures.AddRange(persisted.Select(row => new CleanupProofObservationRecord
+            {
+                RunId = row.RunId, Ordinal = row.Ordinal, LocalPokemonId = row.LocalPokemonId,
+                CapturedAtUtc = row.CapturedAtUtc, Observation = row.Observation,
+                ObservationStatus = row.ObservationStatus, IdentityConfidenceValue = row.IdentityConfidenceValue,
+                ProtectionConfidenceValue = row.ProtectionConfidenceValue, StableFingerprint = row.StableFingerprint,
+                ScreenshotPaths = row.ScreenshotPaths, ScreenshotHashes = row.ScreenshotHashes,
+                AppraisalEvidence = row.AppraisalEvidence, FieldEvidenceSources = row.FieldEvidenceSources
+            }));
+            if (captures.Count >= request.ItemLimit)
+                throw new InvalidOperationException("Resume run already satisfies its item limit.");
+            await persistence.ResumeCleanupRunAsync(runId, cancellationToken);
+        }
         if (request.WorkBucketId is not null)
         {
             await persistence.SetWorkBucketStatusAsync(request.WorkBucketId,
@@ -152,28 +175,29 @@ public sealed class CleanupProofRunner
             }, cancellationToken);
         }
 
-        var captures = new List<CleanupProofObservationRecord>();
         var stopReason = "ItemLimitReached";
         var safeState = false;
         CleanupFinalMapVerification? finalMapVerification = null;
         CleanupFinalMapVerification? exitSettleVerification = null;
         try
         {
-            var inventory = await operations.EnsureFilteredInventoryAsync(request.SpeciesQuery, cancellationToken);
-            if (inventory != VerifiedSequenceState.Inventory)
+            var appraisalOpen = request.ResumeRunId is not null;
+            if (!appraisalOpen)
             {
-                stopReason = "FilteredInventoryNotVerified";
-                return await FinishAsync("SafeStopped", stopReason, captures, runId, persistence, request, timing, cancellationToken);
+                var inventory = await operations.EnsureFilteredInventoryAsync(request.SpeciesQuery, cancellationToken);
+                if (inventory != VerifiedSequenceState.Inventory)
+                {
+                    stopReason = "FilteredInventoryNotVerified";
+                    return await FinishAsync("SafeStopped", stopReason, captures, runId, persistence, request, timing, cancellationToken);
+                }
+                var opened = await operations.OpenFirstPokemonAsync(cancellationToken);
+                if (opened != VerifiedSequenceState.PokemonDetails)
+                {
+                    stopReason = "FirstPokemonDetailsNotVerified";
+                    return await FinishAsync("SafeStopped", stopReason, captures, runId, persistence, request, timing, cancellationToken);
+                }
             }
-            var opened = await operations.OpenFirstPokemonAsync(cancellationToken);
-            if (opened != VerifiedSequenceState.PokemonDetails)
-            {
-                stopReason = "FirstPokemonDetailsNotVerified";
-                return await FinishAsync("SafeStopped", stopReason, captures, runId, persistence, request, timing, cancellationToken);
-            }
-
-            var appraisalOpen = false;
-            for (var ordinal = 1; ordinal <= request.ItemLimit; ordinal++)
+            for (var ordinal = captures.Count + 1; ordinal <= request.ItemLimit; ordinal++)
             {
                 cancellationToken.ThrowIfCancellationRequested();
                 timing.BeginItem(ordinal);

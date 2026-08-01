@@ -778,6 +778,7 @@ public sealed class AndroidVerifiedInventoryNamedOperations : ICleanupProofNamed
     {
         using var _ = _timing.Measure(TimingCategory.NamedOperation, nameof(CaptureCleanupAppraisalIdentityAsync));
         var frames = await CaptureRecoveryFramesAsync("carousel-appraisal-identity", cancellationToken);
+        frames = await ContinueCarouselAppraisalIntroIfNeededAsync(frames, cancellationToken);
         if (!GuardedInventoryRecovery.TryGetStableFrame(frames, out var stable) ||
             stable is null || stable.Kind != RecoveryFrameKind.AppraisalBars)
         {
@@ -899,12 +900,14 @@ public sealed class AndroidVerifiedInventoryNamedOperations : ICleanupProofNamed
                 "Swipe", $"({start.X},{start.Y})->({end.X},{end.Y})", cancellationToken);
 
         var post = await CaptureRecoveryFramesAsync("carousel-appraisal-post-swipe", cancellationToken);
+        post = await ContinueCarouselAppraisalIntroIfNeededAsync(post, cancellationToken);
         if (!GuardedInventoryRecovery.TryGetStableFrame(post, out var stablePost) ||
             stablePost is null || stablePost.Kind != RecoveryFrameKind.AppraisalBars)
         {
             // One bounded observation window is allowed for a transient Unknown;
             // it never sends another swipe.
             post = await CaptureRecoveryFramesAsync("carousel-appraisal-recovery", cancellationToken);
+            post = await ContinueCarouselAppraisalIntroIfNeededAsync(post, cancellationToken);
             if (!GuardedInventoryRecovery.TryGetStableFrame(post, out stablePost) ||
                 stablePost is null || stablePost.Kind != RecoveryFrameKind.AppraisalBars)
                 return AppraisalCarouselAdvanceResult.UNKNOWN_STOP;
@@ -926,6 +929,40 @@ public sealed class AndroidVerifiedInventoryNamedOperations : ICleanupProofNamed
             Result = result.ToString()
         }, cancellationToken);
         return result;
+    }
+
+    /// <summary>
+    /// A carousel swipe can legitimately reveal the same one-tap Appraisal
+    /// Intro surface used when appraisal is first opened. It is not a retry of
+    /// the swipe: at most one existing, visually located intro continuation is
+    /// authorized, followed by a fresh stable AppraisalBars observation.
+    /// </summary>
+    private async Task<IReadOnlyList<RecoveryFrame>> ContinueCarouselAppraisalIntroIfNeededAsync(
+        IReadOnlyList<RecoveryFrame> frames, CancellationToken cancellationToken)
+    {
+        if (!GuardedInventoryRecovery.TryGetStableFrame(frames, out var stable) || stable is null)
+            return frames;
+        if (stable.Kind == RecoveryFrameKind.AppraisalBars)
+            return frames;
+        if (stable.Kind != RecoveryFrameKind.AppraisalIntro ||
+            stable.LocatorTarget is null || !stable.HasIntroAnchor || stable.HasBarsAnchor)
+            return frames;
+
+        _recovery.Begin(frames);
+        var authorization = _recovery.AuthorizeNextAction();
+        if (authorization is null || authorization.Action != RecoveryInputAction.ExitAppraisal ||
+            authorization.Target is null)
+            return frames;
+        await ExecuteRecoveryActionAsync(authorization, cancellationToken);
+        await WriteRecoveryAuditAsync(authorization, "AppraisalBars", cancellationToken);
+        var after = await CaptureRecoveryFramesAsync("carousel-appraisal-intro-post", cancellationToken);
+        if (!GuardedInventoryRecovery.TryGetStableFrame(after, out var afterStable) || afterStable is null ||
+            afterStable.Kind != RecoveryFrameKind.AppraisalBars)
+            return frames;
+
+        // Preserve the fresh postcondition window for the caller's identity
+        // and fingerprint checks; no second carousel swipe is sent here.
+        return after;
     }
 
     private CleanupProofAppraisalCapture AnalyzeLastCleanupAppraisal()

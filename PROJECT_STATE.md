@@ -78,6 +78,13 @@ and named-tap audit records now retain canvas/mapping evidence. The old Unity
 CANCEL no-effect root cause remains separately unresolved because its historic
 audit omitted actual target pixels.
 
+The first resumed 50-item traversal persisted five frontier items (Woobat,
+Sandshrew, Darumaka, Wobbuffet and Swinub) before a normal carousel transition
+settled at AppraisalIntro for Grimer. No new swipe was sent after that state.
+Resume is now DB-backed: it starts from existing durable ordinals and advances
+the stable intro through the already guarded one-tap Appraisal continuation,
+not by reopening the filter or replaying prior items.
+
 Two old CLI shortcuts were discovered to send unguarded Android Back. From
 the gameplay map that opens an app-exit confirmation, not inventory. Both
 shortcuts are retired; only state-verified named operations can now send Back.

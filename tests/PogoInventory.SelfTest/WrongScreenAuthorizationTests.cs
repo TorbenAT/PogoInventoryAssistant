@@ -67,6 +67,10 @@ internal static class WrongScreenAuthorizationTests
                source.Contains("CoordinateTransform", StringComparison.Ordinal) &&
                source.Contains("pre-input-", StringComparison.Ordinal),
             "every visually located target records fresh-canvas geometry and pre-input evidence for transform reconstruction");
+        Assert(source.Contains("ContinueCarouselAppraisalIntroIfNeededAsync", StringComparison.Ordinal) &&
+               source.Contains("carousel-appraisal-intro-post", StringComparison.Ordinal) &&
+               source.Contains("no second carousel swipe", StringComparison.Ordinal),
+            "a stable carousel AppraisalIntro continues through one bounded existing intro action, never a retry swipe");
         return Task.CompletedTask;
     }
 

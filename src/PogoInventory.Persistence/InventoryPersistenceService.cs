@@ -964,6 +964,19 @@ public sealed class InventoryPersistenceService
         if (bucket.PokedexStart is <= 0 || bucket.PokedexEnd is <= 0 || bucket.PokedexStart > bucket.PokedexEnd) throw new InvalidOperationException("Work bucket Pokédex bounds are invalid.");
     }
 
+    public async Task ResumeCleanupRunAsync(string runId, CancellationToken cancellationToken = default)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(runId);
+        await InitializeAsync(cancellationToken);
+        await using var connection = Open();
+        await connection.OpenAsync(cancellationToken);
+        await using var command = connection.CreateCommand();
+        command.CommandText = "UPDATE ScanRuns SET Status='Running', EndedAtUtc=NULL, StopReason=NULL WHERE RunId=@run;";
+        command.Parameters.AddWithValue("@run", runId);
+        if (await command.ExecuteNonQueryAsync(cancellationToken) != 1)
+            throw new InvalidOperationException($"Cannot resume unknown cleanup run '{runId}'.");
+    }
+
     private static void AddBucket(SqliteCommand command, PersistentWorkBucket bucket)
     {
         command.Parameters.AddWithValue("@id", bucket.LogicalBucketId); command.Parameters.AddWithValue("@start", bucket.AbsoluteDateStart.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture)); command.Parameters.AddWithValue("@end", bucket.AbsoluteDateEnd.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture)); command.Parameters.AddWithValue("@dexStart", (object?)bucket.PokedexStart ?? DBNull.Value); command.Parameters.AddWithValue("@dexEnd", (object?)bucket.PokedexEnd ?? DBNull.Value); command.Parameters.AddWithValue("@query", bucket.DerivedPhoneQuery); command.Parameters.AddWithValue("@status", bucket.Status.ToString()); command.Parameters.AddWithValue("@started", bucket.StartedAtUtc?.ToString("O") ?? (object)DBNull.Value); command.Parameters.AddWithValue("@completed", bucket.CompletedAtUtc?.ToString("O") ?? (object)DBNull.Value); command.Parameters.AddWithValue("@observed", bucket.ItemsObserved); command.Parameters.AddWithValue("@indexed", bucket.ItemsIndexed); command.Parameters.AddWithValue("@review", bucket.ItemsReview); command.Parameters.AddWithValue("@delete", bucket.ItemsDeleteCandidate); command.Parameters.AddWithValue("@failures", bucket.Failures); command.Parameters.AddWithValue("@retries", bucket.Retries); command.Parameters.AddWithValue("@last", (object?)bucket.LastSuccessfulItem ?? DBNull.Value); command.Parameters.AddWithValue("@evidence", (object?)bucket.CompletionEvidenceJson ?? DBNull.Value);
